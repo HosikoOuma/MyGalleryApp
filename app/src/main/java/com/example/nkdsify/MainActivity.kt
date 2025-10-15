@@ -1,4 +1,4 @@
-package com.android.nkdsify
+package com.example.nkdsify
 
 import android.Manifest
 import android.content.ContentUris
@@ -27,9 +27,12 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -45,6 +48,8 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
+import androidx.core.content.edit
+import androidx.core.net.toUri
 import androidx.media3.common.MediaItem as Media3Item
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.PlayerView
@@ -55,23 +60,34 @@ import coil.decode.ImageDecoderDecoder
 import coil.decode.VideoFrameDecoder
 import coil.request.ImageRequest
 import coil.size.Size
-import com.example.mygalleryapp.ui.theme.MyPhotoAppTheme
+import com.example.nkdsify.ui.theme.NkdsifyAppTheme
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import androidx.compose.foundation.gestures.awaitFirstDown
-import androidx.compose.foundation.gestures.calculatePan
-import androidx.compose.foundation.gestures.calculateZoom
+import kotlinx.coroutines.withContext
 
+@Immutable
 data class MediaItem(val uri: Uri, val isVideo: Boolean)
+
+@Immutable
 data class MediaFolder(val id: Long, val name: String, val coverUri: Uri, val items: List<MediaItem>)
+
+@Immutable
 data class MediaViewerState(val items: List<MediaItem>, val startIndex: Int)
+
 enum class SortType { DATE_MODIFIED, DATE_ADDED, NAME }
+
+sealed class Screen {
+    object Folders : Screen()
+    data class FolderContent(val folder: MediaFolder) : Screen()
+    object Favorites : Screen()
+}
 
 class MainActivity : ComponentActivity() {
     @OptIn(ExperimentalMaterial3Api::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            MyPhotoAppTheme {
+            NkdsifyAppTheme {
                 MyApp()
             }
         }
@@ -96,14 +112,13 @@ fun MyApp() {
     var folders by remember { mutableStateOf<List<MediaFolder>>(emptyList()) }
     var viewerState by remember { mutableStateOf<MediaViewerState?>(null) }
 
-    var currentScreen by remember { mutableStateOf("folders") }
-    var selectedFolder by remember { mutableStateOf<MediaFolder?>(null) }
+    var currentScreen by remember { mutableStateOf<Screen>(Screen.Folders) }
 
     var sortType by remember { mutableStateOf(SortType.DATE_MODIFIED) }
     var sortAscending by remember { mutableStateOf(false) }
 
     val favorites = remember {
-        val initialFavorites = FavoritesRepository.getFavorites(context).map { Uri.parse(it) }
+        val initialFavorites = FavoritesRepository.getFavorites(context).map { it.toUri() }
         mutableStateListOf(*initialFavorites.toTypedArray())
     }
 
@@ -124,6 +139,11 @@ fun MyApp() {
         hasPermissions = permissions.values.all { it }
     }
 
+    LaunchedEffect(favorites.toList()) {
+        val favoriteStrings = favorites.map { it.toString() }.toSet()
+        FavoritesRepository.saveFavorites(context, favoriteStrings)
+    }
+
     LaunchedEffect(Unit) {
         if (!hasPermissions) {
             permissionLauncher.launch(permissionsToRequest)
@@ -132,28 +152,20 @@ fun MyApp() {
 
     LaunchedEffect(hasPermissions, sortType, sortAscending) {
         if(hasPermissions) {
-            folders = loadMediaFolders(context, sortType, sortAscending)
-        }
-    }
-
-    LaunchedEffect(folders) {
-        if (currentScreen == "images_in_folder" && selectedFolder != null) {
-            val updatedFolder = folders.find { it.id == selectedFolder?.id }
-            if (updatedFolder != null) {
-                selectedFolder = updatedFolder
+            folders = withContext(Dispatchers.IO) {
+                loadMediaFolders(context, sortType, sortAscending)
             }
         }
     }
 
-    Box(Modifier.fillMaxSize()) {
-        BackHandler(enabled = currentScreen == "images_in_folder") { currentScreen = "folders" }
+    val title = when (val screen = currentScreen) {
+        is Screen.Folders -> "Folders"
+        is Screen.FolderContent -> screen.folder.name
+        is Screen.Favorites -> "Favorites"
+    }
 
-        val title = when (currentScreen) {
-            "folders" -> "В С Ё"
-            "images_in_folder" -> selectedFolder?.name ?: ""
-            "favorites" -> "NSFW"
-            else -> ""
-        }
+    Box(Modifier.fillMaxSize()) {
+        BackHandler(enabled = currentScreen is Screen.FolderContent) { currentScreen = Screen.Folders }
 
         Scaffold(
             topBar = {
@@ -161,14 +173,14 @@ fun MyApp() {
                     title = { Text(title) },
                     modifier = Modifier.statusBarsPadding(),
                     navigationIcon = {
-                        if (currentScreen == "images_in_folder") {
-                            IconButton(onClick = { currentScreen = "folders" }) {
-                                Icon(Icons.Filled.ArrowBack, contentDescription = "Back")
+                        if (currentScreen is Screen.FolderContent) {
+                            IconButton(onClick = { currentScreen = Screen.Folders }) {
+                                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                             }
                         }
                     },
                     actions = {
-                        if (currentScreen == "images_in_folder" || currentScreen == "favorites") {
+                        if (currentScreen is Screen.FolderContent || currentScreen is Screen.Favorites) {
                             var menuExpanded by remember { mutableStateOf(false) }
 
                             IconButton(onClick = { sortAscending = !sortAscending }) {
@@ -180,22 +192,22 @@ fun MyApp() {
 
                             Box {
                                 IconButton(onClick = { menuExpanded = true }) {
-                                    Icon(Icons.Default.Sort, contentDescription = "Sort By")
+                                    Icon(Icons.AutoMirrored.Filled.Sort, contentDescription = "Sort By")
                                 }
                                 DropdownMenu(
                                     expanded = menuExpanded,
                                     onDismissRequest = { menuExpanded = false }
                                 ) {
                                     DropdownMenuItem(
-                                        text = { Text("По дате изменения") },
+                                        text = { Text("By Date Modified") },
                                         onClick = { sortType = SortType.DATE_MODIFIED; menuExpanded = false }
                                     )
                                     DropdownMenuItem(
-                                        text = { Text("По дате добавления") },
+                                        text = { Text("By Date Added") },
                                         onClick = { sortType = SortType.DATE_ADDED; menuExpanded = false }
                                     )
                                     DropdownMenuItem(
-                                        text = { Text("По имени") },
+                                        text = { Text("By Name") },
                                         onClick = { sortType = SortType.NAME; menuExpanded = false }
                                     )
                                 }
@@ -207,39 +219,39 @@ fun MyApp() {
             bottomBar = {
                 NavigationBar {
                     NavigationBarItem(
-                        icon = { Icon(Icons.Filled.PhotoLibrary, contentDescription = "Photos") },
-                        label = { Text("В С Ё") },
-                        selected = currentScreen == "folders" || currentScreen == "images_in_folder",
-                        onClick = { currentScreen = "folders" }
+                        icon = { Icon(Icons.Filled.PhotoLibrary, contentDescription = "Folders") },
+                        label = { Text("Folders") },
+                        selected = currentScreen is Screen.Folders || currentScreen is Screen.FolderContent,
+                        onClick = { currentScreen = Screen.Folders }
                     )
                     NavigationBarItem(
                         icon = { Icon(Icons.Filled.Favorite, contentDescription = "Favorites") },
-                        label = { Text("NSFW") },
-                        selected = currentScreen == "favorites",
-                        onClick = { currentScreen = "favorites" }
+                        label = { Text("Favorites") },
+                        selected = currentScreen is Screen.Favorites,
+                        onClick = { currentScreen = Screen.Favorites }
                     )
                 }
             }
         ) { innerPadding ->
             Box(modifier = Modifier.padding(innerPadding)) {
                 if (hasPermissions) {
-                    when (currentScreen) {
-                        "folders" -> FoldersGrid(folders = folders, imageLoader = imageLoader, onFolderClick = {
-                            selectedFolder = it
-                            currentScreen = "images_in_folder"
+                    when (val screen = currentScreen) {
+                        is Screen.Folders -> FoldersGrid(folders = folders, imageLoader = imageLoader, onFolderClick = {
+                            currentScreen = Screen.FolderContent(it)
                         })
-                        "images_in_folder" -> {
-                            selectedFolder?.let { folder ->
-                                MediaGrid(items = folder.items, favorites = favorites, imageLoader = imageLoader, onItemClick = { item ->
-                                    viewerState = MediaViewerState(items = folder.items, startIndex = folder.items.indexOf(item))
-                                })
-                            }
+                        is Screen.FolderContent -> {
+                            val folder = folders.find { it.id == screen.folder.id } ?: screen.folder
+                            MediaGrid(items = folder.items, favorites = favorites, imageLoader = imageLoader, onItemClick = { item ->
+                                viewerState = MediaViewerState(items = folder.items, startIndex = folder.items.indexOf(item))
+                            })
                         }
-                        "favorites" -> {
+                        is Screen.Favorites -> {
                             var favoriteItems by remember { mutableStateOf<List<MediaItem>>(emptyList()) }
 
                             LaunchedEffect(favorites.toList(), sortType, sortAscending) {
-                                favoriteItems = loadFavoriteMediaItems(context, favorites.toSet(), sortType, sortAscending)
+                                favoriteItems = withContext(Dispatchers.IO) {
+                                    loadFavoriteMediaItems(context, favorites.toSet(), sortType, sortAscending)
+                                }
                             }
 
                             MediaGrid(
@@ -255,10 +267,10 @@ fun MyApp() {
                 } else {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text("Для доступа к медиафайлам необходимо разрешение.")
+                            Text("Permission required to access media.")
                             Spacer(Modifier.height(8.dp))
                             Button(onClick = { permissionLauncher.launch(permissionsToRequest) }) {
-                                Text("Предоставить разрешение")
+                                Text("Grant Permission")
                             }
                         }
                     }
@@ -382,11 +394,12 @@ fun loadMediaFolders(context: Context, sortType: SortType, sortAscending: Boolea
     }.sortedBy { it.name }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun FoldersGrid(folders: List<MediaFolder>, imageLoader: ImageLoader, onFolderClick: (MediaFolder) -> Unit) {
     if (folders.isEmpty()) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Text("Папок не найдено")
+            Text("No folders found")
         }
         return
     }
@@ -397,9 +410,8 @@ fun FoldersGrid(folders: List<MediaFolder>, imageLoader: ImageLoader, onFolderCl
             state = gridState,
             contentPadding = PaddingValues(8.dp),
             modifier = Modifier.fillMaxSize()
-        ) {        items(folders) { folder ->
-            Card(modifier = Modifier.padding(8.dp).aspectRatio(1f).pointerInput(folder) { detectTapGestures(onTap = { _ -> onFolderClick(folder) }) }, elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)) {
-                Column {
+        ) {        items(folders, key = { it.id }, contentType = { "folder" }) { folder ->
+            Card(modifier = Modifier.padding(8.dp).aspectRatio(1f).pointerInput(folder) { detectTapGestures(onTap = { _ -> onFolderClick(folder) }) }, elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)) {                Column {
                     Image(painter = rememberAsyncImagePainter(model = folder.coverUri, imageLoader = imageLoader), contentDescription = "Folder cover", contentScale = ContentScale.Crop, modifier = Modifier.weight(1f).fillMaxWidth())
                     Text(text = folder.name, modifier = Modifier.padding(8.dp), maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
@@ -410,11 +422,12 @@ fun FoldersGrid(folders: List<MediaFolder>, imageLoader: ImageLoader, onFolderCl
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun MediaGrid(items: List<MediaItem>, favorites: MutableList<Uri>, imageLoader: ImageLoader, onItemClick: (MediaItem) -> Unit) {
     if (items.isEmpty()) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Text("Нет медиафайлов")
+            Text("No media files found")
         }
         return
     }
@@ -427,16 +440,15 @@ fun MediaGrid(items: List<MediaItem>, favorites: MutableList<Uri>, imageLoader: 
             contentPadding = PaddingValues(4.dp),
             modifier = Modifier.fillMaxSize()
         ) {
-            items(items) { item ->
-                Box(modifier = Modifier.padding(4.dp)) {
-                    Card(modifier = Modifier.fillMaxSize().aspectRatio(1f).pointerInput(item) { detectTapGestures(onTap = { _ -> onItemClick(item) }, onLongPress = { _ -> if (favorites.contains(item.uri)) favorites.remove(item.uri) else favorites.add(item.uri); haptics.performHapticFeedback(HapticFeedbackType.LongPress) }) }) {
+            items(items, key = { it.uri }, contentType = { "media" }) { item ->
+                Box(modifier = Modifier.padding(4.dp)) {                    Card(modifier = Modifier.fillMaxSize().aspectRatio(1f).pointerInput(item) { detectTapGestures(onTap = { _ -> onItemClick(item) }, onLongPress = { _ -> if (favorites.contains(item.uri)) favorites.remove(item.uri) else favorites.add(item.uri); haptics.performHapticFeedback(HapticFeedbackType.LongPress) }) }) {
                         Image(painter = rememberAsyncImagePainter(model = item.uri, imageLoader = imageLoader), contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
                     }
                     if (item.isVideo) {
                         Icon(imageVector = Icons.Filled.PlayCircle, contentDescription = "Video", tint = Color.White, modifier = Modifier.align(Alignment.BottomEnd).padding(4.dp).size(24.dp))
                     }
                     if (favorites.contains(item.uri)) {
-                        Icon(imageVector = Icons.Filled.Favorite, contentDescription = "Избранное", tint = Color.Red, modifier = Modifier.align(Alignment.TopEnd).size(24.dp))
+                        Icon(imageVector = Icons.Filled.Favorite, contentDescription = "Favorite", tint = Color.Red, modifier = Modifier.align(Alignment.TopEnd).size(24.dp))
                     }
                 }
             }
@@ -457,22 +469,20 @@ private fun CustomVerticalScrollbar(
         modifier = modifier
             .fillMaxHeight()
             .width(16.dp)
-            .pointerInput(gridState) {
-                detectDragGestures {
-                    change, _ ->
-                    change.consume()
-                    val trackHeight = size.height.toFloat()
-                    val dragProgress = (change.position.y / trackHeight).coerceIn(0f, 1f)
+            .pointerInput(gridState) { detectDragGestures { change, _ ->
+                change.consume()
+                val trackHeight = size.height.toFloat()
+                val dragProgress = (change.position.y / trackHeight).coerceIn(0f, 1f)
 
-                    val totalItems = gridState.layoutInfo.totalItemsCount
-                    if (totalItems > 0) {
-                        coroutineScope.launch {
-                            val targetIndex = (dragProgress * totalItems).toInt()
-                            gridState.scrollToItem(targetIndex)
-                        }
+                val totalItems = gridState.layoutInfo.totalItemsCount
+                if (totalItems > 0) {
+                    coroutineScope.launch {
+                        val numRows = (totalItems + gridState.layoutInfo.visibleItemsInfo.first().row - 1) / gridState.layoutInfo.visibleItemsInfo.first().row
+                        val targetIndex = (dragProgress * numRows).toInt() * gridState.layoutInfo.visibleItemsInfo.first().row
+                        gridState.scrollToItem(targetIndex)
                     }
                 }
-            }
+            } }
     ) {
         AnimatedVisibility(
             visible = isScrollInProgress,
@@ -512,11 +522,11 @@ fun MediaViewer(items: List<MediaItem>, startIndex: Int, onDismiss: () -> Unit, 
     val pagerState = rememberPagerState(initialPage = startIndex, pageCount = { items.size })
 
     Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
-        HorizontalPager(state = pagerState, modifier = Modifier.fillMaxSize()) {
-            page ->
+        HorizontalPager(state = pagerState, modifier = Modifier.fillMaxSize(), key = { items[it].uri }) { page ->
             val item = items[page]
+            val isVisible by remember { derivedStateOf { pagerState.currentPage == page } }
             if (item.isVideo) {
-                VideoPlayerPage(uri = item.uri, isVisible = pagerState.currentPage == page)
+                VideoPlayerPage(uri = item.uri, isVisible = isVisible)
             } else {
                 ZoomableImage(uri = item.uri, imageLoader = imageLoader)
             }
@@ -529,9 +539,9 @@ fun MediaViewer(items: List<MediaItem>, startIndex: Int, onDismiss: () -> Unit, 
 
 @Composable
 fun ZoomableImage(uri: Uri, imageLoader: ImageLoader) {
-    var scale by remember { mutableStateOf(1f) }
-    var offsetX by remember { mutableStateOf(0f) }
-    var offsetY by remember { mutableStateOf(0f) }
+    var scale by rememberSaveable { mutableStateOf(1f) }
+    var offsetX by rememberSaveable { mutableStateOf(0f) }
+    var offsetY by rememberSaveable { mutableStateOf(0f) }
     var size by remember { mutableStateOf(IntSize.Zero) }
 
     LaunchedEffect(key1 = uri) {
@@ -544,38 +554,36 @@ fun ZoomableImage(uri: Uri, imageLoader: ImageLoader) {
         modifier = Modifier
             .fillMaxSize()
             .pointerInput(Unit) {
-                forEachGesture {
-                    awaitPointerEventScope {
-                        awaitFirstDown(requireUnconsumed = false)
-                        do {
-                            val event = awaitPointerEvent()
+                awaitEachGesture {
+                    awaitFirstDown(requireUnconsumed = false)
+                    do {
+                        val event = awaitPointerEvent()
 
-                            val zoom = event.calculateZoom()
-                            val pan = event.calculatePan()
+                        val zoom = event.calculateZoom()
+                        val pan = event.calculatePan()
 
-                            val newScale = (scale * zoom).coerceIn(1f, 5f)
+                        val newScale = (scale * zoom).coerceIn(1f, 5f)
 
-                            if (newScale <= 1f) {
-                                offsetX = 0f
-                                offsetY = 0f
-                                scale = 1f
-                            } else {
-                                val maxOffsetX = (size.width * (newScale - 1)) / 2f
-                                val maxOffsetY = (size.height * (newScale - 1)) / 2f
+                        if (newScale <= 1f) {
+                            offsetX = 0f
+                            offsetY = 0f
+                            scale = 1f
+                        } else {
+                            val maxOffsetX = (size.width * (newScale - 1)) / 2f
+                            val maxOffsetY = (size.height * (newScale - 1)) / 2f
 
-                                val newOffsetX = (offsetX + pan.x).coerceIn(-maxOffsetX, maxOffsetX)
-                                val newOffsetY = (offsetY + pan.y).coerceIn(-maxOffsetY, maxOffsetY)
+                            val newOffsetX = (offsetX + pan.x).coerceIn(-maxOffsetX, maxOffsetX)
+                            val newOffsetY = (offsetY + pan.y).coerceIn(-maxOffsetY, maxOffsetY)
 
-                                if (zoom != 1f || pan != androidx.compose.ui.geometry.Offset.Zero) {
-                                    event.changes.forEach { it.consume() }
-                                }
-
-                                scale = newScale
-                                offsetX = newOffsetX
-                                offsetY = newOffsetY
+                            if (zoom != 1f || pan != androidx.compose.ui.geometry.Offset.Zero) {
+                                event.changes.forEach { it.consume() }
                             }
-                        } while (event.changes.any { it.pressed })
-                    }
+
+                            scale = newScale
+                            offsetX = newOffsetX
+                            offsetY = newOffsetY
+                        }
+                    } while (event.changes.any { it.pressed })
                 }
             },
         contentAlignment = Alignment.Center
@@ -640,6 +648,6 @@ object FavoritesRepository {
     fun getFavorites(context: Context): Set<String> = getSharedPreferences(context).getStringSet(FAVORITES_KEY, emptySet()) ?: emptySet()
 
     fun saveFavorites(context: Context, favorites: Set<String>) {
-        getSharedPreferences(context).edit().putStringSet(FAVORITES_KEY, favorites).apply()
+        getSharedPreferences(context).edit { putStringSet(FAVORITES_KEY, favorites) }
     }
 }

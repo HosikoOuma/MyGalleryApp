@@ -4,18 +4,18 @@ plugins {
     id("org.jetbrains.kotlin.plugin.compose")
 }
 
-
-
 android {
-    namespace = "com.example.mygalleryapp"
+    namespace = "com.example.nkdsify"
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.example.mygalleryapp"
+        applicationId = "com.example.nkdsify"
         minSdk = 29
         targetSdk = 36
         versionCode = 1
         versionName = "1.0"
+
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
     buildTypes {
@@ -33,7 +33,7 @@ android {
     }
 
     composeOptions {
-        kotlinCompilerExtensionVersion = "1.5.3"
+        kotlinCompilerExtensionVersion = "1.5.11"
     }
 
     packaging {
@@ -53,26 +53,38 @@ android {
 }
 
 dependencies {
-    implementation(libs.androidx.ui)
-    implementation(libs.androidx.compose.foundation)
+    // Import the Compose BOM. This should be first to control the versions of other Compose libraries.
     val composeBom = platform("androidx.compose:compose-bom:2024.05.00")
-
     implementation(composeBom)
     androidTestImplementation(composeBom)
 
-    implementation("androidx.core:core-ktx:1.13.1")
-    implementation("androidx.activity:activity-compose:1.9.2")
-    implementation("androidx.compose.ui:ui")
-    implementation("androidx.compose.material3:material3")
-    implementation("androidx.compose.ui:ui-tooling-preview")
-    implementation("io.coil-kt:coil-compose:2.6.0")
+    // AndroidX Core and Activity
+    implementation(libs.androidx.core.ktx.v1131)
+    implementation(libs.androidx.activity.compose.v192)
 
-    debugImplementation("androidx.compose.ui:ui-tooling")
+    // Compose UI Components. These are now managed by the BOM.
+    // No need to specify foundation separately, it's included transitively.
+    implementation(libs.androidx.ui)
+    implementation(libs.androidx.material3)
+    implementation("androidx.compose.material:material-icons-extended-android")
+
+    // Compose Tooling
+    implementation(libs.androidx.ui.tooling.preview)
+    debugImplementation(libs.androidx.ui.tooling)
+
+    // Coil for image loading (versions are not in Compose BOM)
+    implementation("io.coil-kt:coil-compose:2.7.0")
+    implementation("io.coil-kt:coil-gif:2.7.0")
+    implementation("io.coil-kt:coil-video:2.7.0")
+
+    // Media3 for video playback (versions are not in Compose BOM)
+    implementation("androidx.media3:media3-exoplayer:1.8.0")
+    implementation("androidx.media3:media3-ui:1.8.0")
+
+    // Test Dependencies
+    testImplementation("junit:junit:4.13.2")
+    androidTestImplementation("androidx.test.ext:junit:1.1.5")
+    androidTestImplementation("androidx.test.espresso:espresso-core:3.5.1")
+    androidTestImplementation("androidx.compose.ui:ui-test-junit4")
     debugImplementation("androidx.compose.ui:ui-test-manifest")
-    implementation("androidx.compose.material:material-icons-extended-android:1.6.7")
-    implementation("androidx.media3:media3-exoplayer:1.3.1")
-    implementation("androidx.media3:media3-ui:1.3.1")
-    implementation("io.coil-kt:coil-gif:2.6.0")
-    implementation("io.coil-kt:coil-video:2.6.0")
-
 }

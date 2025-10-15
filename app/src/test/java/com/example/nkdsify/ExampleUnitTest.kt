@@ -1,4 +1,4 @@
-package com.example.mygalleryapp
+package com.example.nkdsify
 
 import org.junit.Test
 

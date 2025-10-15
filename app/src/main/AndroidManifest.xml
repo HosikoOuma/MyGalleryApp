@@ -9,8 +9,9 @@
 
     <application
         android:allowBackup="true"
-        android:label="MyPhotoApp"
-        android:theme="@style/Theme.Mygalleryapp">
+        android:label="NKDSify"
+        android:theme="@style/Theme.Mygalleryapp"
+        android:icon="@mipmap/ic_launcher">
         <activity
             android:name=".MainActivity"
             android:exported="true">

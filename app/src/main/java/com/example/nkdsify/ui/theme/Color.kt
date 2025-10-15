@@ -1,4 +1,4 @@
-package com.example.mygalleryapp.ui.theme
+package com.example.nkdsify.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
