@@ -63,6 +63,7 @@ import com.example.nkdsify.ui.utils.ExternalMediaErrorDialog
 import com.example.nkdsify.ui.utils.MediaDetailsDialog
 import com.example.nkdsify.ui.utils.getMediaDetails
 import androidx.compose.foundation.gestures.awaitFirstDown
+import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable

@@ -6,6 +6,7 @@ import android.content.ContentUris
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.media.MediaPlayer
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -87,6 +88,7 @@ import com.example.nkdsify.ui.utils.deleteMediaPermanently
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.time.Instant.now
 
 class MainActivity : ComponentActivity() {
     @OptIn(ExperimentalMaterial3Api::class)
@@ -120,6 +122,8 @@ fun MyApp(initialUri: Uri? = null) {
     var folders by remember { mutableStateOf<List<MediaFolder>>(emptyList()) }
     var viewerState by remember { mutableStateOf<MediaViewerState?>(null) }
 
+    var tapCount by remember { mutableStateOf(0) }
+    var lastTap by remember { mutableStateOf(0L) }
     var currentScreen by remember { mutableStateOf<Screen>(Screen.Folders) }
 
     var sortType by remember { mutableStateOf(SortType.DATE_MODIFIED) }
@@ -131,6 +135,7 @@ fun MyApp(initialUri: Uri? = null) {
         val initialFavorites = FavoritesRepository.getFavorites(context).map { it.toUri() }
         mutableStateListOf(*initialFavorites.toTypedArray())
     }
+    val now = System.currentTimeMillis()
     var favoriteItems by remember { mutableStateOf<List<MediaItem>>(emptyList()) }
 
     var showConfirmDeleteDialog by remember { mutableStateOf(false) }
@@ -412,6 +417,19 @@ fun MyApp(initialUri: Uri? = null) {
                         onClick = {
                             haptics.performHapticFeedback(HapticFeedbackType.LongPress)
                             currentScreen = Screen.Favorites
+                            if (now - lastTap < 500) {
+                                tapCount++
+                            } else {
+                                tapCount = 1
+                            }
+                            lastTap = now
+
+                            if (tapCount == 5) {
+                                tapCount = 0
+                                val mediaPlayer = MediaPlayer.create(context, R.raw.uwu)
+                                mediaPlayer.setOnCompletionListener { it.release() }
+                                mediaPlayer.start()
+                            }
                         }
                     )
                 }
