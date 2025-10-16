@@ -21,6 +21,7 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.Label
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
@@ -57,12 +58,11 @@ import coil.compose.rememberAsyncImagePainter
 import coil.request.ImageRequest
 import coil.size.Size
 import com.example.nkdsify.R
-import com.example.nkdsify.data.MediaItem
 import com.example.nkdsify.data.MediaDetails
+import com.example.nkdsify.data.MediaItem
 import com.example.nkdsify.ui.utils.ExternalMediaErrorDialog
 import com.example.nkdsify.ui.utils.MediaDetailsDialog
 import com.example.nkdsify.ui.utils.getMediaDetails
-import androidx.compose.foundation.gestures.awaitFirstDown
 import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -70,10 +70,12 @@ import kotlinx.coroutines.delay
 fun MediaViewer(
     items: List<MediaItem>,
     startIndex: Int,
-    favorites: MutableList<Uri>,
+    favorites: List<Uri>,
     onDismiss: () -> Unit,
     imageLoader: ImageLoader,
     onDeletePermanently: (List<Uri>) -> Unit,
+    onShowTagDialog: (Uri) -> Unit,
+    onToggleFavorite: (Uri) -> Unit,
     isExternal: Boolean = false
 ) {
     val pagerState = rememberPagerState(initialPage = startIndex, pageCount = { items.size })
@@ -117,52 +119,62 @@ fun MediaViewer(
             }
             Spacer(Modifier.weight(1f))
 
-            IconButton(onClick = {
-                val currentItem = items[pagerState.currentPage]
-                val shareIntent = Intent().apply {
-                    action = Intent.ACTION_SEND
-                    putExtra(Intent.EXTRA_STREAM, currentItem.uri)
-                    type = if (currentItem.isVideo) "video/*" else "image/*"
-                }
-                context.startActivity(Intent.createChooser(shareIntent, null))
-            }) {
-                Icon(Icons.Filled.Share, contentDescription = "Share", tint = Color.White)
-            }
-            IconButton(onClick = { 
-                val currentItem = items[pagerState.currentPage]
-                onDeletePermanently(listOf(currentItem.uri))
-             }) {
-                Icon(Icons.Filled.Delete, contentDescription = "Delete", tint = Color.White)
-            }
-            IconButton(onClick = {
-                if (isExternal) {
-                    showExternalMediaError = true
-                } else {
-                    haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-                    val currentItem = items[pagerState.currentPage]
-                    if (favorites.contains(currentItem.uri)) {
-                        favorites.remove(currentItem.uri)
-                    } else {
-                        favorites.add(currentItem.uri)
-                    }
-                }
-            }) {
-                val currentItem = items[pagerState.currentPage]
-                Icon(
-                    imageVector = if (favorites.contains(currentItem.uri)) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
-                    contentDescription = "Favorite",
-                    tint = if (favorites.contains(currentItem.uri)) Color.Red else Color.White
-                )
-            }
+            val currentPage = pagerState.currentPage
+            if (currentPage >= 0 && currentPage < items.size) {
+                val currentItem = items[currentPage]
 
-            IconButton(onClick = {
-                val currentItem = items[pagerState.currentPage]
-                mediaDetails = getMediaDetails(context, currentItem.uri)
-                if (mediaDetails != null) {
-                    showDetailsDialog = true
+                IconButton(onClick = {
+                    if (isExternal) {
+                        showExternalMediaError = true
+                    } else {
+                        onShowTagDialog(currentItem.uri)
+                    }
+                }) {
+                    Icon(Icons.AutoMirrored.Filled.Label, contentDescription = "Tags", tint = Color.White)
                 }
-            }) {
-                Icon(Icons.Filled.Info, contentDescription = "Info", tint = Color.White)
+
+                IconButton(onClick = {
+                    val shareIntent = Intent().apply {
+                        action = Intent.ACTION_SEND
+                        putExtra(Intent.EXTRA_STREAM, currentItem.uri)
+                        type = if (currentItem.isVideo) "video/*" else "image/*"
+                    }
+                    context.startActivity(Intent.createChooser(shareIntent, null))
+                }) {
+                    Icon(Icons.Filled.Share, contentDescription = "Share", tint = Color.White)
+                }
+                IconButton(onClick = {
+                    if (isExternal) {
+                        showExternalMediaError = true
+                    } else {
+                        onDeletePermanently(listOf(currentItem.uri))
+                    }
+                }) {
+                    Icon(Icons.Filled.Delete, contentDescription = "Delete", tint = Color.White)
+                }
+                IconButton(onClick = {
+                    if (isExternal) {
+                        showExternalMediaError = true
+                    } else {
+                        haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                        onToggleFavorite(currentItem.uri)
+                    }
+                }) {
+                    Icon(
+                        imageVector = if (favorites.contains(currentItem.uri)) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
+                        contentDescription = "Favorite",
+                        tint = if (favorites.contains(currentItem.uri)) Color.Red else Color.White
+                    )
+                }
+
+                IconButton(onClick = {
+                    mediaDetails = getMediaDetails(context, currentItem.uri)
+                    if (mediaDetails != null) {
+                        showDetailsDialog = true
+                    }
+                }) {
+                    Icon(Icons.Filled.Info, contentDescription = "Info", tint = Color.White)
+                }
             }
         }
     }
@@ -210,7 +222,7 @@ fun ZoomableImage(uri: Uri, imageLoader: ImageLoader) {
             }
             .pointerInput(Unit) {
                 awaitEachGesture {
-                    awaitFirstDown()
+                    //awaitFirstDown()
                     do {
                         val event = awaitPointerEvent()
                         val zoom = event.calculateZoom()

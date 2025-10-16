@@ -66,6 +66,7 @@ dependencies {
     // No need to specify foundation separately, it's included transitively.
     implementation(libs.androidx.ui)
     implementation(libs.androidx.material3)
+    implementation("androidx.compose.material:material")
     implementation("androidx.compose.material:material-icons-extended-android")
 
     // Compose Tooling
@@ -80,6 +81,8 @@ dependencies {
     // Media3 for video playback (versions are not in Compose BOM)
     implementation("androidx.media3:media3-exoplayer:1.8.0")
     implementation("androidx.media3:media3-ui:1.8.0")
+    
+    implementation("com.google.code.gson:gson:2.10.1")
 
     // Test Dependencies
     testImplementation("junit:junit:4.13.2")

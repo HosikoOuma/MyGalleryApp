@@ -9,6 +9,7 @@ import android.graphics.BitmapFactory
 import android.net.Uri
 import android.os.Build
 import android.provider.MediaStore
+import android.util.Log
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.material3.AlertDialog
@@ -22,8 +23,9 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.edit
 import com.example.nkdsify.data.MediaDetails
 import java.io.InputStream
-import java.text.SimpleDateFormat
-import java.util.Date
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 import java.util.Locale
 
 fun getMediaDetails(context: Context, uri: Uri): MediaDetails? {
@@ -63,7 +65,7 @@ fun getMediaDetails(context: Context, uri: Uri): MediaDetails? {
                         }
                     }
                 } catch (e: Exception) {
-                    // Ignore
+                    Log.e("getMediaDetails", "Failed to get resolution for URI: $uri", e)
                 } finally {
                     inputStream?.close()
                 }
@@ -81,6 +83,7 @@ fun getMediaDetails(context: Context, uri: Uri): MediaDetails? {
             }
         }
     } catch (e: Exception) {
+        Log.e("getMediaDetails", "Failed to get media details for URI: $uri", e)
         return null
     }
 }
@@ -94,8 +97,9 @@ fun formatFileSize(sizeInBytes: Long): String {
 
 fun formatTimestamp(timestamp: Long): String {
     if (timestamp == 0L) return "Unknown"
-    val sdf = SimpleDateFormat("dd/MM/yyyy HH:mm:ss", Locale.getDefault())
-    return sdf.format(Date(timestamp * 1000))
+    val instant = Instant.ofEpochSecond(timestamp)
+    val formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss").withZone(ZoneId.systemDefault())
+    return formatter.format(instant)
 }
 
 @Composable
