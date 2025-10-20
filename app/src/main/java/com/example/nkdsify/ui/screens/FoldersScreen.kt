@@ -20,6 +20,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
@@ -30,7 +31,12 @@ import com.example.nkdsify.data.MediaFolder
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun FoldersGrid(folders: List<MediaFolder>, imageLoader: ImageLoader, onFolderClick: (MediaFolder) -> Unit) {
+fun FoldersGrid(
+    folders: List<MediaFolder>,
+    imageLoader: ImageLoader,
+    onFolderClick: (MediaFolder) -> Unit,
+    isBlurEnabled: Boolean
+) {
     if (folders.isEmpty()) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             Text("No folders found")
@@ -49,9 +55,13 @@ fun FoldersGrid(folders: List<MediaFolder>, imageLoader: ImageLoader, onFolderCl
                 .padding(8.dp)
                 .aspectRatio(1f)
                 .pointerInput(folder) { detectTapGestures(onTap = { _ -> onFolderClick(folder) }) }, elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)) {                Column {
-                    Image(painter = rememberAsyncImagePainter(model = folder.coverUri, imageLoader = imageLoader), contentDescription = "Folder cover", contentScale = ContentScale.Crop, modifier = Modifier
+                    Image(painter = rememberAsyncImagePainter(model = folder.coverUri, imageLoader = imageLoader), 
+                          contentDescription = "Folder cover", 
+                          contentScale = ContentScale.Crop, 
+                          modifier = Modifier
                         .weight(1f)
-                        .fillMaxWidth())
+                        .fillMaxWidth()
+                        .then(if (isBlurEnabled) Modifier.blur(16.dp) else Modifier))
                     Text(text = folder.name, modifier = Modifier.padding(8.dp), maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
             }

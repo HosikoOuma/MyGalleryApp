@@ -41,4 +41,12 @@ object TagsRepository {
         }
         saveTags(context, allTags)
     }
+
+    fun removeTagFromAllItems(context: Context, tag: String) {
+        val allTags = getTags(context).toMutableMap()
+        val updatedTags = allTags.mapValues {
+            it.value.toMutableSet().apply { remove(tag) }
+        }.filterValues { it.isNotEmpty() }
+        saveTags(context, updatedTags)
+    }
 }

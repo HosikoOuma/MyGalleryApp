@@ -41,6 +41,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
@@ -85,7 +86,7 @@ fun MediaGrid(
                     Card(modifier = Modifier
                         .fillMaxSize()
                         .aspectRatio(1f)
-                        .pointerInput(item) {
+                        .pointerInput(item, isSelectionMode) {
                             detectTapGestures(onTap = {
                                 if (isSelectionMode) {
                                     onToggleSelection(item)
@@ -99,33 +100,58 @@ fun MediaGrid(
                                 }
                             })
                         }) {
-                        Image(painter = rememberAsyncImagePainter(model = item.uri, imageLoader = imageLoader), contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+                        Image(
+                            painter = rememberAsyncImagePainter(
+                                model = item.uri,
+                                imageLoader = imageLoader
+                            ),
+                            contentDescription = null,
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .then(if (isSelected) Modifier.alpha(0.5f) else Modifier)
+                        )
                     }
                     if (item.isVideo) {
-                        Icon(imageVector = Icons.Filled.PlayCircle, contentDescription = "Video", tint = Color.White, modifier = Modifier
-                            .align(Alignment.BottomEnd)
-                            .padding(4.dp)
-                            .size(24.dp))
+                        Icon(
+                            imageVector = Icons.Filled.PlayCircle,
+                            contentDescription = "Video",
+                            tint = Color.White,
+                            modifier = Modifier
+                                .align(Alignment.BottomEnd)
+                                .padding(4.dp)
+                                .size(24.dp)
+                        )
                     }
                     if (favorites.contains(item.uri) && !isSelected) {
-                        Icon(imageVector = Icons.Filled.Favorite, contentDescription = "Favorite", tint = Color.Red, modifier = Modifier
-                            .align(Alignment.TopEnd)
-                            .size(24.dp))
+                        Icon(
+                            imageVector = Icons.Filled.Favorite,
+                            contentDescription = "Favorite",
+                            tint = Color.Red,
+                            modifier = Modifier
+                                .align(Alignment.TopEnd)
+                                .size(24.dp)
+                        )
                     }
                     if (isSelected) {
-                        Box(modifier = Modifier
-                            .fillMaxSize()
-                            .background(Color.Black.copy(alpha = 0.5f)))
-                        Icon(imageVector = Icons.Filled.CheckCircle, contentDescription = "Selected", tint = Color.White, modifier = Modifier
-                            .align(Alignment.Center)
-                            .size(36.dp))
+                        Icon(
+                            imageVector = Icons.Filled.CheckCircle,
+                            contentDescription = "Selected",
+                            tint = Color.White,
+                            modifier = Modifier
+                                .align(Alignment.Center)
+                                .size(36.dp)
+                        )
                     }
                 }
             }
         }
-        CustomVerticalScrollbar(gridState = gridState, modifier = Modifier
-            .align(Alignment.CenterEnd)
-            .padding(end = 4.dp))
+        CustomVerticalScrollbar(
+            gridState = gridState,
+            modifier = Modifier
+                .align(Alignment.CenterEnd)
+                .padding(end = 4.dp)
+        )
     }
 }
 
@@ -155,34 +181,41 @@ private fun CustomVerticalScrollbar(
                 }
             } }
     ) {
+        val scrollbarState by remember(gridState) {
+            derivedStateOf {
+                val layoutInfo = gridState.layoutInfo
+                val totalItems = layoutInfo.totalItemsCount
+                if (totalItems == 0 || layoutInfo.visibleItemsInfo.isEmpty()) {
+                    null
+                } else {
+                    val visibleItemsCount = layoutInfo.visibleItemsInfo.size.toFloat()
+                    val scrollableItems = (totalItems - visibleItemsCount).coerceAtLeast(1f)
+                    val scrollProgress = gridState.firstVisibleItemIndex.toFloat() / scrollableItems
+                    val thumbHeight = (maxHeight * (visibleItemsCount / totalItems)).coerceAtLeast(20.dp)
+                    val thumbOffsetY = (maxHeight - thumbHeight) * scrollProgress
+                    Pair(thumbHeight, thumbOffsetY)
+                }
+            }
+        }
+
         AnimatedVisibility(
-            visible = isScrollInProgress,
+            visible = isScrollInProgress && scrollbarState != null,
             enter = fadeIn(),
             exit = fadeOut(),
             modifier = Modifier.align(Alignment.TopCenter)
         ) {
-            val layoutInfo = gridState.layoutInfo
-            val totalItems = layoutInfo.totalItemsCount
-            if (totalItems == 0 || layoutInfo.visibleItemsInfo.isEmpty()) return@AnimatedVisibility
-
-            val visibleItemsCount = layoutInfo.visibleItemsInfo.size.toFloat()
-            val scrollableItems = (totalItems - visibleItemsCount).coerceAtLeast(1f)
-
-            val scrollProgress = gridState.firstVisibleItemIndex.toFloat() / scrollableItems
-
-            val thumbHeight = (maxHeight * (visibleItemsCount / totalItems)).coerceAtLeast(20.dp)
-            val thumbOffsetY = (maxHeight - thumbHeight) * scrollProgress
-
-            Box(
-                modifier = Modifier
-                    .width(4.dp)
-                    .height(thumbHeight)
-                    .offset(y = thumbOffsetY)
-                    .background(
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
-                        shape = CircleShape
-                    )
-            )
+            scrollbarState?.let { (thumbHeight, thumbOffsetY) ->
+                Box(
+                    modifier = Modifier
+                        .width(4.dp)
+                        .height(thumbHeight)
+                        .offset(y = thumbOffsetY)
+                        .background(
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+                            shape = CircleShape
+                        )
+                )
+            }
         }
     }
 }

@@ -26,6 +26,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import coil.ImageLoader
@@ -41,7 +42,8 @@ fun FavoritesScreen(
     imageLoader: ImageLoader,
     tags: Map<String, Set<String>>,
     onItemClick: (MediaItem) -> Unit,
-    onToggleSelection: (MediaItem) -> Unit
+    onToggleSelection: (MediaItem) -> Unit,
+    isBlurEnabled: Boolean
 ) {
     val taggedAlbums = items
         .flatMap { item -> (tags[item.uri.toString()] ?: emptySet()).map { tag -> tag to item } }
@@ -107,6 +109,7 @@ fun FavoritesScreen(
                                 modifier = Modifier
                                     .weight(1f)
                                     .fillMaxWidth()
+                                    .then(if (isBlurEnabled) Modifier.blur(16.dp) else Modifier)
                             )
                             Text(text = albumName, modifier = Modifier.padding(8.dp))
                         }

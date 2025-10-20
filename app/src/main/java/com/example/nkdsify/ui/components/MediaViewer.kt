@@ -22,6 +22,8 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Label
+import androidx.compose.material.icons.automirrored.filled.VolumeOff
+import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
@@ -63,7 +65,6 @@ import com.example.nkdsify.data.MediaItem
 import com.example.nkdsify.ui.utils.ExternalMediaErrorDialog
 import com.example.nkdsify.ui.utils.MediaDetailsDialog
 import com.example.nkdsify.ui.utils.getMediaDetails
-import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -76,7 +77,8 @@ fun MediaViewer(
     onDeletePermanently: (List<Uri>) -> Unit,
     onShowTagDialog: (Uri) -> Unit,
     onToggleFavorite: (Uri) -> Unit,
-    isExternal: Boolean = false
+    isExternal: Boolean = false,
+    isMuteVideoByDefault: Boolean
 ) {
     val pagerState = rememberPagerState(initialPage = startIndex, pageCount = { items.size })
     val context = LocalContext.current
@@ -84,6 +86,7 @@ fun MediaViewer(
     var showDetailsDialog by remember { mutableStateOf(false) }
     var showExternalMediaError by remember { mutableStateOf(false) }
     var mediaDetails by remember { mutableStateOf<MediaDetails?>(null) }
+    var isMuted by remember(pagerState.currentPage) { mutableStateOf(isMuteVideoByDefault) }
 
     if (showDetailsDialog && mediaDetails != null) {
         MediaDetailsDialog(details = mediaDetails!!, onDismiss = { showDetailsDialog = false })
@@ -100,7 +103,7 @@ fun MediaViewer(
             val item = items[page]
             val isVisible by remember { derivedStateOf { pagerState.currentPage == page } }
             if (item.isVideo) {
-                VideoPlayerPage(uri = item.uri, isVisible = isVisible)
+                VideoPlayerPage(uri = item.uri, isVisible = isVisible, isMuted = isMuted)
             } else {
                 ZoomableImage(uri = item.uri, imageLoader = imageLoader)
             }
@@ -122,6 +125,16 @@ fun MediaViewer(
             val currentPage = pagerState.currentPage
             if (currentPage >= 0 && currentPage < items.size) {
                 val currentItem = items[currentPage]
+
+                if (currentItem.isVideo) {
+                    IconButton(onClick = { isMuted = !isMuted }) {
+                        Icon(
+                            imageVector = if (isMuted) Icons.AutoMirrored.Filled.VolumeOff else Icons.AutoMirrored.Filled.VolumeUp,
+                            contentDescription = "Mute/Unmute",
+                            tint = Color.White
+                        )
+                    }
+                }
 
                 IconButton(onClick = {
                     if (isExternal) {
@@ -274,7 +287,7 @@ fun ZoomableImage(uri: Uri, imageLoader: ImageLoader) {
 }
 
 @Composable
-fun VideoPlayerPage(uri: Uri, isVisible: Boolean) {
+fun VideoPlayerPage(uri: Uri, isVisible: Boolean, isMuted: Boolean) {
     val context = LocalContext.current
     val exoPlayer = remember { ExoPlayer.Builder(context).build() }
 
@@ -286,6 +299,10 @@ fun VideoPlayerPage(uri: Uri, isVisible: Boolean) {
         } else {
             exoPlayer.pause()
         }
+    }
+
+    LaunchedEffect(isMuted) {
+        exoPlayer.volume = if (isMuted) 0f else 1f
     }
 
     DisposableEffect(exoPlayer) {

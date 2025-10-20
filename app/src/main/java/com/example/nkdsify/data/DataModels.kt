@@ -24,8 +24,11 @@ data class MediaViewerState(val items: List<MediaItem>, val startIndex: Int, val
 
 enum class SortType { DATE_MODIFIED, DATE_ADDED, NAME }
 
+enum class Theme { SYSTEM, LIGHT, DARK }
+
 sealed class Screen {
     object Folders : Screen()
     data class FolderContent(val folder: MediaFolder) : Screen()
     object Favorites : Screen()
+    object Settings : Screen()
 }
