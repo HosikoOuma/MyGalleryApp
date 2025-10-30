@@ -61,6 +61,7 @@ fun loadAllMedia(
         SortType.DATE_MODIFIED -> MediaStore.Files.FileColumns.DATE_MODIFIED
         SortType.DATE_ADDED -> MediaStore.Files.FileColumns.DATE_ADDED
         SortType.NAME -> MediaStore.Files.FileColumns.DISPLAY_NAME
+        SortType.SIZE -> MediaStore.Files.FileColumns.SIZE
     }
     val sortDirection = if (sortAscending) "ASC" else "DESC"
     val sortOrder = "$sortColumn $sortDirection"
@@ -95,7 +96,6 @@ fun loadMediaFolders(
 ): List<MediaFolder> {
     val foldersMap = mutableMapOf<Long, MutableList<MediaItem>>()
     val folderNames = mutableMapOf<Long, String>()
-    val folderPaths = mutableMapOf<Long, String>()
     val trashedUris = TrashRepository.getTrashedUris(context)
 
     val collection = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
@@ -139,6 +139,7 @@ fun loadMediaFolders(
         SortType.DATE_MODIFIED -> MediaStore.Files.FileColumns.DATE_MODIFIED
         SortType.DATE_ADDED -> MediaStore.Files.FileColumns.DATE_ADDED
         SortType.NAME -> MediaStore.Files.FileColumns.DISPLAY_NAME
+        SortType.SIZE -> MediaStore.Files.FileColumns.SIZE
     }
     val sortDirection = if (sortAscending) "ASC" else "DESC"
     val sortOrder = "$sortColumn $sortDirection"
@@ -161,7 +162,6 @@ fun loadMediaFolders(
             val bucketName = cursor.getString(bucketNameColumn)
             val mediaType = cursor.getInt(mediaTypeColumn)
             val name = cursor.getString(nameColumn)
-            val path = cursor.getString(dataColumn)
 
             val isVideo = mediaType == MediaStore.Files.FileColumns.MEDIA_TYPE_VIDEO
             val item = MediaItem(uri, name, isVideo)
@@ -169,7 +169,6 @@ fun loadMediaFolders(
             if (!foldersMap.containsKey(bucketId)) {
                 foldersMap[bucketId] = mutableListOf()
                 folderNames[bucketId] = bucketName
-                folderPaths[bucketId] = path.substringBeforeLast('/')
             }
             foldersMap[bucketId]?.add(item)
         }
@@ -177,11 +176,10 @@ fun loadMediaFolders(
 
     return foldersMap.mapNotNull { entry ->
         val folderName = folderNames[entry.key]
-        val folderPath = folderPaths[entry.key]
         val itemsInFolder = entry.value
         val coverItem = itemsInFolder.firstOrNull { !it.isVideo } ?: itemsInFolder.firstOrNull()
-        if (folderName != null && folderPath != null && coverItem != null) {
-            MediaFolder(id = entry.key, name = folderName, path = folderPath, coverUri = coverItem.uri, items = itemsInFolder)
+        if (folderName != null && coverItem != null) {
+            MediaFolder(id = entry.key, name = folderName, items = itemsInFolder, coverUri = coverItem.uri)
         } else {
             null
         }
@@ -243,6 +241,7 @@ fun loadFavoriteMediaItems(
         SortType.DATE_MODIFIED -> MediaStore.Files.FileColumns.DATE_MODIFIED
         SortType.DATE_ADDED -> MediaStore.Files.FileColumns.DATE_ADDED
         SortType.NAME -> MediaStore.Files.FileColumns.DISPLAY_NAME
+        SortType.SIZE -> MediaStore.Files.FileColumns.SIZE
     }
     val sortDirection = if (sortAscending) "ASC" else "DESC"
     val sortOrder = "$sortColumn $sortDirection"
@@ -297,6 +296,7 @@ fun loadTrashedMediaItems(
         SortType.DATE_MODIFIED -> MediaStore.Files.FileColumns.DATE_MODIFIED
         SortType.DATE_ADDED -> MediaStore.Files.FileColumns.DATE_ADDED
         SortType.NAME -> MediaStore.Files.FileColumns.DISPLAY_NAME
+        SortType.SIZE -> MediaStore.Files.FileColumns.SIZE
     }
     val sortDirection = if (sortAscending) "ASC" else "DESC"
     val sortOrder = "$sortColumn $sortDirection"

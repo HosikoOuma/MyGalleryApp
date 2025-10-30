@@ -14,6 +14,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.platform.SoftwareKeyboardController
 import coil.ImageLoader
+import com.canhub.cropper.CropImageContractOptions
 import com.example.nkdsify.data.MediaFolder
 import com.example.nkdsify.data.MediaItem
 import com.example.nkdsify.data.MediaViewerState
@@ -21,6 +22,7 @@ import com.example.nkdsify.data.Screen
 import com.example.nkdsify.data.Theme
 import com.example.nkdsify.data.ZoomType
 import com.example.nkdsify.ui.components.MediaGrid
+import com.example.nkdsify.ui.screens.EditScreen
 import com.example.nkdsify.ui.screens.FavoritesScreen
 import com.example.nkdsify.ui.screens.FoldersGrid
 import com.example.nkdsify.ui.screens.SettingsScreen
@@ -65,7 +67,10 @@ fun AppNavigation(
     onEditTag: (String, String) -> Unit,
     trashedItems: List<MediaItem>,
     onClearTrash: () -> Unit,
-    onBlurEnabledChange: (Boolean) -> Unit
+    onBlurEnabledChange: (Boolean) -> Unit,
+    isBlurAllMediaEnabled: Boolean,
+    onBlurAllMediaEnabledChange: (Boolean) -> Unit,
+    onCropImage: (CropImageContractOptions) -> Unit
 ) {
     val visibleFolders = remember(allFolders, hiddenFolders, isSearchActive, searchQuery) {
         val folders = allFolders.filterNot { hiddenFolders.contains(it.id.toString()) }
@@ -183,6 +188,8 @@ fun AppNavigation(
                     onTrashBlurEnabledChange = onTrashBlurEnabledChange,
                     isMuteVideoByDefault = isMuteVideoByDefault,
                     onMuteVideoByDefaultChange = onMuteVideoByDefaultChange,
+                    isBlurAllMediaEnabled = isBlurAllMediaEnabled,
+                    onBlurAllMediaEnabledChange = onBlurAllMediaEnabledChange,
                     onEasterEggClick = onEasterEggClick,
                     selectedTheme = selectedTheme,
                     onThemeChange = onThemeChange,
@@ -228,6 +235,7 @@ fun AppNavigation(
                     favorites = favorites,
                     selectedItems = selectedItems,
                     imageLoader = imageLoader,
+                    isBlurEnabled = isBlurAllMediaEnabled,
                     onItemClick = { item ->
                         keyboardController?.hide()
                         setViewerState(MediaViewerState(items = filteredAllMedia, startIndex = filteredAllMedia.indexOf(item)))
@@ -240,6 +248,9 @@ fun AppNavigation(
                         }
                     }
                 )
+            }
+            is Screen.Edit -> {
+                EditScreen(uri = screen.uri, onCropImage = onCropImage)
             }
         }
     }

@@ -105,14 +105,14 @@ fun TopBar(
             },
             modifier = Modifier.statusBarsPadding(),
             navigationIcon = {
-                if (currentScreen is Screen.FolderContent || currentScreen is Screen.TagManagement || currentScreen is Screen.AllMedia) {
+                if (currentScreen is Screen.FolderContent || currentScreen is Screen.TagManagement || currentScreen is Screen.AllMedia || currentScreen is Screen.Edit) {
                     IconButton(onClick = onBackClick) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 }
             },
             actions = {
-                if (currentScreen !is Screen.Settings && currentScreen !is Screen.TagManagement) {
+                if (currentScreen !is Screen.Settings && currentScreen !is Screen.TagManagement && currentScreen !is Screen.Edit) {
                     if (isSearchActive) {
                         IconButton(onClick = onCloseSearch) {
                             Icon(Icons.Filled.Close, contentDescription = "Close Search")
@@ -143,6 +143,10 @@ fun TopBar(
                                 DropdownMenuItem(
                                     text = { Text("By Name") },
                                     onClick = { onSortTypeChange(SortType.NAME); menuExpanded = false }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("By Size") },
+                                    onClick = { onSortTypeChange(SortType.SIZE); menuExpanded = false }
                                 )
                                 DropdownMenuItem(
                                     text = { Text("Reverse") },

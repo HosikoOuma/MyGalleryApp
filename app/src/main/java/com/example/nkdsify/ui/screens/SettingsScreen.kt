@@ -36,6 +36,8 @@ fun SettingsScreen(
     onTrashBlurEnabledChange: (Boolean) -> Unit,
     isMuteVideoByDefault: Boolean,
     onMuteVideoByDefaultChange: (Boolean) -> Unit,
+    isBlurAllMediaEnabled: Boolean,
+    onBlurAllMediaEnabledChange: (Boolean) -> Unit,
     onEasterEggClick: () -> Unit,
     selectedTheme: Theme,
     onThemeChange: (Theme) -> Unit,
@@ -87,6 +89,18 @@ fun SettingsScreen(
             Switch(
                 checked = isMuteVideoByDefault,
                 onCheckedChange = onMuteVideoByDefaultChange
+            )
+        }
+        Row(
+            modifier = Modifier
+                .fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text("Blur all media")
+            Switch(
+                checked = isBlurAllMediaEnabled,
+                onCheckedChange = onBlurAllMediaEnabledChange
             )
         }
         Row(

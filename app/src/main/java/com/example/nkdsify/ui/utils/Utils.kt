@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Wallpaper
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -243,7 +244,8 @@ fun deleteMediaPermanently(context: Context, uris: List<Uri>): IntentSender? {
 fun MediaDetailsDialog(
     details: MediaDetails,
     onDismiss: () -> Unit,
-    onSetAsWallpaper: () -> Unit
+    onSetAsWallpaper: () -> Unit,
+    onEdit: () -> Unit
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -262,6 +264,9 @@ fun MediaDetailsDialog(
             Row {
                 IconButton(onClick = onSetAsWallpaper) {
                     Icon(Icons.Default.Wallpaper, contentDescription = "Set as wallpaper")
+                }
+                IconButton(onClick = onEdit) {
+                    Icon(Icons.Default.Edit, contentDescription = "Edit")
                 }
             }
         },

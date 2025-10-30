@@ -13,6 +13,7 @@ object SettingsRepository {
     private const val HIDDEN_FOLDERS_KEY = "hidden_folders"
     private const val TRASH_BLUR_ENABLED_KEY = "trash_blur_enabled"
     private const val ZOOM_TYPE_KEY = "zoom_type"
+    private const val BLUR_ALL_MEDIA_ENABLED_KEY = "blur_all_media_enabled"
 
     fun setBlurEnabled(context: Context, enabled: Boolean) {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
@@ -86,5 +87,17 @@ object SettingsRepository {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         val zoomTypeName = prefs.getString(ZOOM_TYPE_KEY, ZoomType.PINCH.name) ?: ZoomType.PINCH.name
         return ZoomType.valueOf(zoomTypeName)
+    }
+
+    fun setBlurAllMediaEnabled(context: Context, enabled: Boolean) {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit {
+            putBoolean(BLUR_ALL_MEDIA_ENABLED_KEY, enabled)
+        }
+    }
+
+    fun isBlurAllMediaEnabled(context: Context): Boolean {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        return prefs.getBoolean(BLUR_ALL_MEDIA_ENABLED_KEY, false)
     }
 }

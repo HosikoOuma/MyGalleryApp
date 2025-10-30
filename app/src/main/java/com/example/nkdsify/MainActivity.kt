@@ -121,6 +121,8 @@ fun MyApp(initialUri: Uri? = null) {
         var viewerState by remember { mutableStateOf<MediaViewerState?>(null) }
 
         var currentScreen by remember { mutableStateOf<Screen>(Screen.Folders) }
+        var previousScreen by remember { mutableStateOf<Screen?>(null) }
+        var previousViewerState by remember { mutableStateOf<MediaViewerState?>(null) }
         val foldersGridState = rememberLazyGridState()
         val favoritesGridState = rememberLazyGridState()
 
@@ -131,6 +133,7 @@ fun MyApp(initialUri: Uri? = null) {
         var isBlurEnabled by remember { mutableStateOf(SettingsRepository.isBlurEnabled(context)) }
         var isTrashBlurEnabled by remember { mutableStateOf(SettingsRepository.isTrashBlurEnabled(context)) }
         var isMuteVideoByDefault by remember { mutableStateOf(SettingsRepository.isMuteVideoByDefault(context)) }
+        var isBlurAllMediaEnabled by remember { mutableStateOf(SettingsRepository.isBlurAllMediaEnabled(context)) }
         var hiddenFolders by remember { mutableStateOf(SettingsRepository.getHiddenFolders(context)) }
 
         var showTagDialog by remember { mutableStateOf<Uri?>(null) }
@@ -199,6 +202,18 @@ fun MyApp(initialUri: Uri? = null) {
 
                                 Toast.makeText(context, "Edited image saved as new file.", Toast.LENGTH_SHORT).show()
                                 refreshTrigger++
+                                if (currentScreen is Screen.Edit) {
+                                    if (previousViewerState != null) {
+                                        viewerState = previousViewerState
+                                        previousViewerState = null
+                                    }
+                                    if (previousScreen != null) {
+                                        currentScreen = previousScreen!!
+                                        previousScreen = null
+                                    } else {
+                                        currentScreen = Screen.Folders
+                                    }
+                                }
                             } else {
                                 Toast.makeText(context, "Could not create new image file.", Toast.LENGTH_SHORT).show()
                             }
@@ -388,6 +403,7 @@ fun MyApp(initialUri: Uri? = null) {
             is Screen.TagManagement -> "Manage Tags"
             is Screen.Trash -> "Trash"
             is Screen.AllMedia -> "All Media"
+            is Screen.Edit -> "Edit"
         }
         val isFavoritesScreen = currentScreen is Screen.Favorites
 
@@ -457,6 +473,13 @@ fun MyApp(initialUri: Uri? = null) {
                         )
                         val cropOptions = CropImageContractOptions(uri, cropImageOptions)
                         cropImageLauncher.launch(cropOptions)
+                    },
+                    onEdit = {
+                        previousScreen = currentScreen
+                        previousViewerState = viewerState
+                        currentScreen = Screen.Edit(uri)
+                        showDetailsDialog = null
+                        viewerState = null
                     }
                 )
             }
@@ -606,6 +629,18 @@ fun MyApp(initialUri: Uri? = null) {
             BackHandler(enabled = currentScreen is Screen.TagManagement && !isSelectionMode) { currentScreen = Screen.Settings }
             BackHandler(enabled = currentScreen is Screen.Trash && !isSelectionMode) { currentScreen = Screen.Folders }
             BackHandler(enabled = currentScreen is Screen.AllMedia && !isSelectionMode) { currentScreen = Screen.Folders }
+            BackHandler(enabled = currentScreen is Screen.Edit && !isSelectionMode) {
+                if (previousViewerState != null) {
+                    viewerState = previousViewerState
+                    previousViewerState = null
+                }
+                if (previousScreen != null) {
+                    currentScreen = previousScreen!!
+                    previousScreen = null
+                } else {
+                    currentScreen = Screen.Folders
+                }
+            }
 
             Scaffold(
                 topBar = {
@@ -665,9 +700,21 @@ fun MyApp(initialUri: Uri? = null) {
                         onSearchQueryChange = { searchQuery = it },
                         title = title,
                         onBackClick = {
-                            currentScreen = when (currentScreen) {
-                                is Screen.TagManagement -> Screen.Settings
-                                else -> Screen.Folders
+                            when (currentScreen) {
+                                is Screen.TagManagement -> currentScreen = Screen.Settings
+                                is Screen.Edit -> {
+                                    if (previousViewerState != null) {
+                                        viewerState = previousViewerState
+                                        previousViewerState = null
+                                    }
+                                    if (previousScreen != null) {
+                                        currentScreen = previousScreen!!
+                                        previousScreen = null
+                                    } else {
+                                        currentScreen = Screen.Folders
+                                    }
+                                }
+                                else -> currentScreen = Screen.Folders
                             }
                         },
                         onCloseSearch = {
@@ -684,12 +731,14 @@ fun MyApp(initialUri: Uri? = null) {
                     )
                 },
                 bottomBar = {
-                    BottomBar(
-                        currentScreen = currentScreen,
-                        haptics = haptics,
-                        onScreenChange = { currentScreen = it },
-                        context = context
-                    )
+                    if (currentScreen !is Screen.Edit) {
+                        BottomBar(
+                            currentScreen = currentScreen,
+                            haptics = haptics,
+                            onScreenChange = { currentScreen = it },
+                            context = context
+                        )
+                    }
                 }
             ) { innerPadding ->
                 Box(modifier = Modifier.padding(innerPadding).pullRefresh(pullRefreshState)) {
@@ -767,7 +816,13 @@ fun MyApp(initialUri: Uri? = null) {
                             onBlurEnabledChange = {
                                 isBlurEnabled = it
                                 SettingsRepository.setBlurEnabled(context, it)
-                            }
+                            },
+                            isBlurAllMediaEnabled = isBlurAllMediaEnabled,
+                            onBlurAllMediaEnabledChange = {
+                                isBlurAllMediaEnabled = it
+                                SettingsRepository.setBlurAllMediaEnabled(context, it)
+                            },
+                            onCropImage = cropImageLauncher::launch
                         )
                     } else {
                         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
