@@ -12,8 +12,8 @@ android {
         applicationId = "com.example.nkdsify"
         minSdk = 29
         targetSdk = 36
-        versionCode = 2
-        versionName = "1.1"
+        versionCode = 5
+        versionName = "1.4"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -77,6 +77,8 @@ dependencies {
     implementation("io.coil-kt:coil-compose:2.7.0")
     implementation("io.coil-kt:coil-gif:2.7.0")
     implementation("io.coil-kt:coil-video:2.7.0")
+    implementation("com.github.yalantis:ucrop:2.2.8")
+    implementation("com.vanniktech:android-image-cropper:4.5.0")
 
     // Media3 for video playback (versions are not in Compose BOM)
     implementation("androidx.media3:media3-exoplayer:1.8.0")

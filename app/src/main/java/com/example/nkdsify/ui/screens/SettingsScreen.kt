@@ -5,7 +5,9 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenu
@@ -24,20 +26,28 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import com.example.nkdsify.data.Theme
+import com.example.nkdsify.data.ZoomType
 
 @Composable
 fun SettingsScreen(
     isBlurEnabled: Boolean,
     onBlurEnabledChange: (Boolean) -> Unit,
+    isTrashBlurEnabled: Boolean,
+    onTrashBlurEnabledChange: (Boolean) -> Unit,
     isMuteVideoByDefault: Boolean,
     onMuteVideoByDefaultChange: (Boolean) -> Unit,
     onEasterEggClick: () -> Unit,
     selectedTheme: Theme,
     onThemeChange: (Theme) -> Unit,
-    onManageHiddenFoldersClick: () -> Unit
+    onManageHiddenFoldersClick: () -> Unit,
+    selectedZoomType: ZoomType,
+    onZoomTypeChange: (ZoomType) -> Unit,
+    onManageTagsClick: () -> Unit,
+    onBackupAndRestoreClick: () -> Unit
 ) {
     val context = LocalContext.current
     var themeMenuExpanded by remember { mutableStateOf(false) }
+    var zoomTypeMenuExpanded by remember { mutableStateOf(false) }
 
     Column(
         modifier = Modifier.padding(16.dp).fillMaxWidth(),
@@ -53,6 +63,18 @@ fun SettingsScreen(
             Switch(
                 checked = isBlurEnabled,
                 onCheckedChange = onBlurEnabledChange
+            )
+        }
+        Row(
+            modifier = Modifier
+                .fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text("Blur media in trash")
+            Switch(
+                checked = isTrashBlurEnabled,
+                onCheckedChange = onTrashBlurEnabledChange
             )
         }
         Row(
@@ -91,9 +113,41 @@ fun SettingsScreen(
                 }
             }
         }
+        Row(
+            modifier = Modifier
+                .fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text("Zoom Gesture")
+            Box {
+                TextButton(onClick = { zoomTypeMenuExpanded = true }) {
+                    Text(selectedZoomType.name)
+                }
+                DropdownMenu(
+                    expanded = zoomTypeMenuExpanded,
+                    onDismissRequest = { zoomTypeMenuExpanded = false }
+                ) {
+                    ZoomType.entries.forEach { zoomType ->
+                        DropdownMenuItem(
+                            text = { Text(zoomType.name) },
+                            onClick = { onZoomTypeChange(zoomType); zoomTypeMenuExpanded = false }
+                        )
+                    }
+                }
+            }
+        }
+        Spacer(modifier = Modifier.height(16.dp))
         Button(onClick = onManageHiddenFoldersClick) {
             Text("Manage Hidden Folders")
         }
+        Button(onClick = onManageTagsClick) {
+            Text("Manage Tags")
+        }
+        Button(onClick = onBackupAndRestoreClick) {
+            Text("Backup and Restore")
+        }
+        Spacer(modifier = Modifier.height(16.dp))
         Button(onClick = { 
             val intent = Intent(Intent.ACTION_VIEW, "https://github.com/HosikoOuma/MyGalleryApp".toUri())
             context.startActivity(intent)

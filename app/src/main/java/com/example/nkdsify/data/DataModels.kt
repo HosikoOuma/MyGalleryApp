@@ -4,7 +4,7 @@ import android.net.Uri
 import androidx.compose.runtime.Immutable
 
 @Immutable
-data class MediaItem(val uri: Uri, val isVideo: Boolean)
+data class MediaItem(val uri: Uri, val name: String, val isVideo: Boolean)
 
 @Immutable
 data class MediaDetails(
@@ -17,7 +17,7 @@ data class MediaDetails(
 )
 
 @Immutable
-data class MediaFolder(val id: Long, val name: String, val coverUri: Uri, val items: List<MediaItem>)
+data class MediaFolder(val id: Long, val name: String, val path: String, val coverUri: Uri, val items: List<MediaItem>)
 
 @Immutable
 data class MediaViewerState(val items: List<MediaItem>, val startIndex: Int, val isExternal: Boolean = false)
@@ -25,10 +25,14 @@ data class MediaViewerState(val items: List<MediaItem>, val startIndex: Int, val
 enum class SortType { DATE_MODIFIED, DATE_ADDED, NAME }
 
 enum class Theme { SYSTEM, LIGHT, DARK }
+enum class ZoomType { PINCH, DOUBLE_TAP }
 
 sealed class Screen {
     object Folders : Screen()
     data class FolderContent(val folder: MediaFolder) : Screen()
     object Favorites : Screen()
     object Settings : Screen()
+    object TagManagement : Screen()
+    object Trash : Screen()
+    object AllMedia : Screen()
 }

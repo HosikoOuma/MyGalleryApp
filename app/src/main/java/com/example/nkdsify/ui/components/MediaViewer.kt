@@ -3,6 +3,7 @@ package com.example.nkdsify.ui.components
 import android.content.Intent
 import android.media.MediaPlayer
 import android.net.Uri
+import androidx.compose.animation.core.animate
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -24,11 +25,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Label
 import androidx.compose.material.icons.automirrored.filled.VolumeOff
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.FavoriteBorder
-import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.runtime.Composable
@@ -36,12 +33,17 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
@@ -60,11 +62,10 @@ import coil.compose.rememberAsyncImagePainter
 import coil.request.ImageRequest
 import coil.size.Size
 import com.example.nkdsify.R
-import com.example.nkdsify.data.MediaDetails
 import com.example.nkdsify.data.MediaItem
+import com.example.nkdsify.data.ZoomType
 import com.example.nkdsify.ui.utils.ExternalMediaErrorDialog
-import com.example.nkdsify.ui.utils.MediaDetailsDialog
-import com.example.nkdsify.ui.utils.getMediaDetails
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -74,23 +75,19 @@ fun MediaViewer(
     favorites: List<Uri>,
     onDismiss: () -> Unit,
     imageLoader: ImageLoader,
-    onDeletePermanently: (List<Uri>) -> Unit,
+    onDelete: (List<Uri>) -> Unit,
     onShowTagDialog: (Uri) -> Unit,
     onToggleFavorite: (Uri) -> Unit,
+    onShowDetails: (Uri) -> Unit,
     isExternal: Boolean = false,
-    isMuteVideoByDefault: Boolean
+    isMuteVideoByDefault: Boolean,
+    zoomType: ZoomType
 ) {
     val pagerState = rememberPagerState(initialPage = startIndex, pageCount = { items.size })
     val context = LocalContext.current
     val haptics = LocalHapticFeedback.current
-    var showDetailsDialog by remember { mutableStateOf(false) }
     var showExternalMediaError by remember { mutableStateOf(false) }
-    var mediaDetails by remember { mutableStateOf<MediaDetails?>(null) }
     var isMuted by remember(pagerState.currentPage) { mutableStateOf(isMuteVideoByDefault) }
-
-    if (showDetailsDialog && mediaDetails != null) {
-        MediaDetailsDialog(details = mediaDetails!!, onDismiss = { showDetailsDialog = false })
-    }
 
     if (showExternalMediaError) {
         ExternalMediaErrorDialog(onDismiss = { showExternalMediaError = false })
@@ -105,7 +102,7 @@ fun MediaViewer(
             if (item.isVideo) {
                 VideoPlayerPage(uri = item.uri, isVisible = isVisible, isMuted = isMuted)
             } else {
-                ZoomableImage(uri = item.uri, imageLoader = imageLoader)
+                ZoomableImage(uri = item.uri, imageLoader = imageLoader, zoomType = zoomType)
             }
         }
 
@@ -160,7 +157,7 @@ fun MediaViewer(
                     if (isExternal) {
                         showExternalMediaError = true
                     } else {
-                        onDeletePermanently(listOf(currentItem.uri))
+                        onDelete(listOf(currentItem.uri))
                     }
                 }) {
                     Icon(Icons.Filled.Delete, contentDescription = "Delete", tint = Color.White)
@@ -180,12 +177,7 @@ fun MediaViewer(
                     )
                 }
 
-                IconButton(onClick = {
-                    mediaDetails = getMediaDetails(context, currentItem.uri)
-                    if (mediaDetails != null) {
-                        showDetailsDialog = true
-                    }
-                }) {
+                IconButton(onClick = { onShowDetails(currentItem.uri) }) {
                     Icon(Icons.Filled.Info, contentDescription = "Info", tint = Color.White)
                 }
             }
@@ -194,16 +186,17 @@ fun MediaViewer(
 }
 
 @Composable
-fun ZoomableImage(uri: Uri, imageLoader: ImageLoader) {
-    var scale by rememberSaveable { mutableStateOf(1f) }
-    var offsetX by rememberSaveable { mutableStateOf(0f) }
-    var offsetY by rememberSaveable { mutableStateOf(0f) }
+fun ZoomableImage(uri: Uri, imageLoader: ImageLoader, zoomType: ZoomType) {
+    var scale by rememberSaveable { mutableFloatStateOf(1f) }
+    var offsetX by rememberSaveable { mutableFloatStateOf(0f) }
+    var offsetY by rememberSaveable { mutableFloatStateOf(0f) }
     var size by remember { mutableStateOf(IntSize.Zero) }
+    val coroutineScope = rememberCoroutineScope()
     val context = LocalContext.current
     val haptics = LocalHapticFeedback.current
 
-    var tapCount by remember { mutableStateOf(0) }
-    var lastTap by remember { mutableStateOf(0L) }
+    var tapCount by remember { mutableIntStateOf(0) }
+    var lastTap by remember { mutableLongStateOf(0L) }
 
     LaunchedEffect(key1 = uri) {
         scale = 1f
@@ -211,31 +204,62 @@ fun ZoomableImage(uri: Uri, imageLoader: ImageLoader) {
         offsetY = 0f
     }
 
+    val doubleTapModifier = if (zoomType == ZoomType.DOUBLE_TAP) {
+        Modifier.pointerInput(Unit) {
+            detectTapGestures(
+                onDoubleTap = { tapOffset ->
+                    coroutineScope.launch {
+                        val startScale = scale
+                        val startOffsetX = offsetX
+                        val startOffsetY = offsetY
+
+                        val (targetScale, targetOffsetX, targetOffsetY) = if (startScale > 1f) {
+                            Triple(1f, 0f, 0f)
+                        } else {
+                            val targetS = 3f
+                            val center = Offset(size.width / 2f, size.height / 2f)
+                            val targetX = (tapOffset.x - center.x) * (1 - targetS)
+                            val targetY = (tapOffset.y - center.y) * (1 - targetS)
+                            Triple(targetS, targetX, targetY)
+                        }
+
+                        animate(0f, 1f) { fraction, _ ->
+                            scale = startScale + (targetScale - startScale) * fraction
+                            offsetX = startOffsetX + (targetOffsetX - startOffsetX) * fraction
+                            offsetY = startOffsetY + (targetOffsetY - startOffsetY) * fraction
+                        }
+                    }
+                }
+            )
+        }
+    } else {
+        Modifier.pointerInput(Unit) {
+            detectTapGestures(onTap = {
+                val now = System.currentTimeMillis()
+                if (now - lastTap < 500) { // 500ms between taps
+                    tapCount++
+                } else {
+                    tapCount = 1
+                }
+                lastTap = now
+
+                if (tapCount == 5) {
+                    tapCount = 0
+                    haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                    val mediaPlayer = MediaPlayer.create(context, R.raw.pii)
+                    mediaPlayer.setOnCompletionListener { it.release() }
+                    mediaPlayer.start()
+                }
+            })
+        }
+    }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .pointerInput(Unit) {
-                detectTapGestures(onTap = {
-                    val now = System.currentTimeMillis()
-                    if (now - lastTap < 500) { // 500ms between taps
-                        tapCount++
-                    } else {
-                        tapCount = 1
-                    }
-                    lastTap = now
-
-                    if (tapCount == 5) {
-                        tapCount = 0
-                        haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-                        val mediaPlayer = MediaPlayer.create(context, R.raw.pii)
-                        mediaPlayer.setOnCompletionListener { it.release() }
-                        mediaPlayer.start()
-                    }
-                })
-            }
+            .then(doubleTapModifier)
             .pointerInput(Unit) {
                 awaitEachGesture {
-                    //awaitFirstDown()
                     do {
                         val event = awaitPointerEvent()
                         val zoom = event.calculateZoom()
@@ -254,7 +278,7 @@ fun ZoomableImage(uri: Uri, imageLoader: ImageLoader) {
                             val newOffsetX = (offsetX + pan.x).coerceIn(-maxOffsetX, maxOffsetX)
                             val newOffsetY = (offsetY + pan.y).coerceIn(-maxOffsetY, maxOffsetY)
 
-                            if (zoom != 1f || pan != androidx.compose.ui.geometry.Offset.Zero) {
+                            if (zoom != 1f || pan != Offset.Zero) {
                                 event.changes.forEach { it.consume() }
                             }
 
