@@ -12,9 +12,14 @@ import android.provider.MediaStore
 import android.util.Log
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Wallpaper
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -27,6 +32,8 @@ import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
+import kotlin.math.log10
+import kotlin.math.pow
 
 fun getMediaDetails(context: Context, uri: Uri): MediaDetails? {
     val projection = if (uri.scheme == "content") {
@@ -91,8 +98,8 @@ fun getMediaDetails(context: Context, uri: Uri): MediaDetails? {
 fun formatFileSize(sizeInBytes: Long): String {
     if (sizeInBytes <= 0) return "0 B"
     val units = arrayOf("B", "KB", "MB", "GB", "TB")
-    val digitGroups = (Math.log10(sizeInBytes.toDouble()) / Math.log10(1024.0)).toInt()
-    return String.format(Locale.getDefault(), "%.1f %s", sizeInBytes / Math.pow(1024.0, digitGroups.toDouble()), units[digitGroups])
+    val digitGroups = (log10(sizeInBytes.toDouble()) / log10(1024.0)).toInt()
+    return String.format(Locale.getDefault(), "%.1f %s", sizeInBytes / 1024.0.pow(digitGroups), units[digitGroups])
 }
 
 fun formatTimestamp(timestamp: Long): String {
@@ -117,6 +124,54 @@ fun ConfirmDeleteDialog(
                 colors = ButtonDefaults.buttonColors(containerColor = Color.Red)
             ) {
                 Text("Delete")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
+}
+
+@Composable
+fun ConfirmTrashDialog(
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Confirm Move to Trash") },
+        text = { Text("Are you sure you want to move these items to the trash?") },
+        confirmButton = {
+            Button(
+                onClick = onConfirm,
+            ) {
+                Text("Move to Trash")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
+}
+
+@Composable
+fun ConfirmRestoreDialog(
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Confirm Restore") },
+        text = { Text("Are you sure you want to restore these items?") },
+        confirmButton = {
+            Button(
+                onClick = onConfirm,
+            ) {
+                Text("Restore")
             }
         },
         dismissButton = {
@@ -165,6 +220,7 @@ fun deleteMediaPermanently(context: Context, uris: List<Uri>): IntentSender? {
                     } else null
                 }
             } catch (e: Exception) {
+                Log.e("deleteMediaPermanently", "Error getting MediaStore URI for $uri", e)
                 null
             }
         }
@@ -184,7 +240,11 @@ fun deleteMediaPermanently(context: Context, uris: List<Uri>): IntentSender? {
 }
 
 @Composable
-fun MediaDetailsDialog(details: MediaDetails, onDismiss: () -> Unit) {
+fun MediaDetailsDialog(
+    details: MediaDetails,
+    onDismiss: () -> Unit,
+    onSetAsWallpaper: () -> Unit
+) {
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Details") },
@@ -199,6 +259,13 @@ fun MediaDetailsDialog(details: MediaDetails, onDismiss: () -> Unit) {
             }
         },
         confirmButton = {
+            Row {
+                IconButton(onClick = onSetAsWallpaper) {
+                    Icon(Icons.Default.Wallpaper, contentDescription = "Set as wallpaper")
+                }
+            }
+        },
+        dismissButton = {
             TextButton(onClick = onDismiss) {
                 Text("OK")
             }

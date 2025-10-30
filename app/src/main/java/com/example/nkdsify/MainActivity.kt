@@ -1,9 +1,10 @@
+
 package com.example.nkdsify
 
 import android.Manifest
 import android.app.Activity
+import android.app.WallpaperManager
 import android.content.ContentValues
-import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.media.MediaPlayer
@@ -25,55 +26,35 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.material.ExperimentalMaterialApi
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.Sort
-import androidx.compose.material.icons.filled.ArrowDownward
-import androidx.compose.material.icons.filled.ArrowUpward
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.DateRange
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.FavoriteBorder
-import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.Label
-import androidx.compose.material.icons.filled.PhotoLibrary
-import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.pullrefresh.PullRefreshIndicator
 import androidx.compose.material.pullrefresh.pullRefresh
 import androidx.compose.material.pullrefresh.rememberPullRefreshState
 import androidx.compose.material3.Button
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.core.net.toUri
@@ -81,29 +62,19 @@ import coil.ImageLoader
 import coil.decode.GifDecoder
 import coil.decode.ImageDecoderDecoder
 import coil.decode.VideoFrameDecoder
-import com.example.nkdsify.data.MediaFolder
-import com.example.nkdsify.data.MediaItem
-import com.example.nkdsify.data.MediaViewerState
-import com.example.nkdsify.data.Screen
-import com.example.nkdsify.data.SortType
-import com.example.nkdsify.data.Theme
-import com.example.nkdsify.data.loadFavoriteMediaItems
-import com.example.nkdsify.data.loadMediaFolders
-import com.example.nkdsify.ui.components.EasterEggDialog
-import com.example.nkdsify.ui.components.HiddenFoldersDialog
-import com.example.nkdsify.ui.components.MediaGrid
-import com.example.nkdsify.ui.components.MediaViewer
-import com.example.nkdsify.ui.components.TagEditDialog
-import com.example.nkdsify.ui.components.TagManagementDialog
-import com.example.nkdsify.ui.screens.FavoritesScreen
-import com.example.nkdsify.ui.screens.FoldersGrid
-import com.example.nkdsify.ui.screens.SettingsScreen
+import com.canhub.cropper.CropImageContract
+import com.canhub.cropper.CropImageContractOptions
+import com.canhub.cropper.CropImageOptions
+import com.canhub.cropper.CropImageView
+import com.example.nkdsify.data.*
+import com.example.nkdsify.ui.AppNavigation
+import com.example.nkdsify.ui.BottomBar
+import com.example.nkdsify.ui.TopBar
+import com.example.nkdsify.ui.components.*
 import com.example.nkdsify.ui.theme.NkdsifyAppTheme
-import com.example.nkdsify.ui.utils.ConfirmDeleteDialog
-import com.example.nkdsify.ui.utils.FavoritesRepository
-import com.example.nkdsify.ui.utils.SettingsRepository
-import com.example.nkdsify.ui.utils.TagsRepository
+import com.example.nkdsify.ui.utils.*
 import com.example.nkdsify.ui.utils.deleteMediaPermanently
+import com.example.nkdsify.ui.utils.getMediaDetails
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.Dispatchers
@@ -125,11 +96,13 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterialApi::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterialApi::class, ExperimentalComposeUiApi::class)
 @Composable
 fun MyApp(initialUri: Uri? = null) {
     val context = LocalContext.current
     var selectedTheme by remember { mutableStateOf(SettingsRepository.getTheme(context)) }
+    var selectedZoomType by remember { mutableStateOf(SettingsRepository.getZoomType(context)) }
+    val keyboardController = LocalSoftwareKeyboardController.current
 
     NkdsifyAppTheme(theme = selectedTheme) {
         val haptics = LocalHapticFeedback.current
@@ -138,40 +111,118 @@ fun MyApp(initialUri: Uri? = null) {
         val permissionsToRequest = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             arrayOf(Manifest.permission.READ_MEDIA_IMAGES, Manifest.permission.READ_MEDIA_VIDEO)
         } else {
-            arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE)
+            arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.WRITE_EXTERNAL_STORAGE)
         }
 
         var hasPermissions by remember { mutableStateOf(permissionsToRequest.all { ContextCompat.checkSelfPermission(context, it) == PackageManager.PERMISSION_GRANTED }) }
 
         var allFolders by remember { mutableStateOf<List<MediaFolder>>(emptyList()) }
+        var allMedia by remember { mutableStateOf<List<MediaItem>>(emptyList()) }
         var viewerState by remember { mutableStateOf<MediaViewerState?>(null) }
 
         var currentScreen by remember { mutableStateOf<Screen>(Screen.Folders) }
+        val foldersGridState = rememberLazyGridState()
+        val favoritesGridState = rememberLazyGridState()
 
         var sortType by remember { mutableStateOf(SortType.DATE_MODIFIED) }
         var sortAscending by remember { mutableStateOf(false) }
         var selectedDate by remember { mutableStateOf<Long?>(null) }
-        var refreshTrigger by remember { mutableStateOf(0) }
-        var tapCount by remember { mutableStateOf(0) }
-        var lastTap by remember { mutableStateOf(0L) }
+        var refreshTrigger by remember { mutableIntStateOf(0) }
         var isBlurEnabled by remember { mutableStateOf(SettingsRepository.isBlurEnabled(context)) }
+        var isTrashBlurEnabled by remember { mutableStateOf(SettingsRepository.isTrashBlurEnabled(context)) }
         var isMuteVideoByDefault by remember { mutableStateOf(SettingsRepository.isMuteVideoByDefault(context)) }
         var hiddenFolders by remember { mutableStateOf(SettingsRepository.getHiddenFolders(context)) }
+
+        var showTagDialog by remember { mutableStateOf<Uri?>(null) }
+        var showBulkTagDialog by remember { mutableStateOf(false) }
+        var showDetailsDialog by remember { mutableStateOf<Uri?>(null) }
+        var showConfirmDeleteDialog by remember { mutableStateOf(false) }
+        var showConfirmTrashDialog by remember { mutableStateOf(false) }
+        var showConfirmRestoreDialog by remember { mutableStateOf(false) }
         var showEasterEggDialog by remember { mutableStateOf(false) }
-        var easterEggTapCount by remember { mutableStateOf(0) }
         var showHiddenFoldersDialog by remember { mutableStateOf(false) }
+        var showBackupAndRestoreDialog by remember { mutableStateOf(false) }
+
+        var searchQuery by remember { mutableStateOf("") }
+        var isSearchActive by remember { mutableStateOf(false) }
+
+        var easterEggTapCount by remember { mutableIntStateOf(0) }
+        var itemsToDelete by remember { mutableStateOf<List<Uri>>(emptyList()) }
+        var isClearingTrash by remember { mutableStateOf(false) }
+        var itemsToTrash by remember { mutableStateOf<List<Uri>>(emptyList()) }
+        var itemsToRestore by remember { mutableStateOf<List<Uri>>(emptyList()) }
+
+        var isSettingWallpaper by remember { mutableStateOf(false) }
+
+        val cropImageLauncher = rememberLauncherForActivityResult(contract = CropImageContract()) { result ->
+            if (result.isSuccessful) {
+                val croppedImageUri = result.uriContent
+
+                if (croppedImageUri != null) {
+                    if (isSettingWallpaper) {
+                        try {
+                            val wallpaperManager = WallpaperManager.getInstance(context)
+                            context.contentResolver.openInputStream(croppedImageUri)?.use { inputStream ->
+                                wallpaperManager.setStream(inputStream)
+                                Toast.makeText(context, "Wallpaper set successfully!", Toast.LENGTH_SHORT).show()
+                            }
+                        } catch (e: Exception) {
+                            Toast.makeText(context, "Failed to set wallpaper: ${e.message}", Toast.LENGTH_SHORT).show()
+                        }
+                        isSettingWallpaper = false // Reset flag
+                        viewerState = null
+                    } else {
+                        try {
+                            val values = ContentValues().apply {
+                                put(MediaStore.Images.Media.DISPLAY_NAME, "edited_${System.currentTimeMillis()}.jpg")
+                                put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg")
+                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                                    put(MediaStore.Images.Media.RELATIVE_PATH, Environment.DIRECTORY_PICTURES + "/NkdsifyEdits")
+                                    put(MediaStore.Images.Media.IS_PENDING, 1)
+                                }
+                            }
+
+                            val newImageFileUri = context.contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values)
+
+                            if (newImageFileUri != null) {
+                                context.contentResolver.openInputStream(croppedImageUri)?.use { inputStream ->
+                                    context.contentResolver.openOutputStream(newImageFileUri)?.use { outputStream ->
+                                        inputStream.copyTo(outputStream)
+                                    }
+                                }
+
+                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                                    values.clear()
+                                    values.put(MediaStore.Images.Media.IS_PENDING, 0)
+                                    context.contentResolver.update(newImageFileUri, values, null, null)
+                                }
+
+                                Toast.makeText(context, "Edited image saved as new file.", Toast.LENGTH_SHORT).show()
+                                refreshTrigger++
+                            } else {
+                                Toast.makeText(context, "Could not create new image file.", Toast.LENGTH_SHORT).show()
+                            }
+
+                        } catch (e: Exception) {
+                            Toast.makeText(context, "Failed to save image: ${e.message}", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                }
+            } else {
+                if (result.error != null) {
+                    Toast.makeText(context, "Image editing failed: ${result.error?.message}", Toast.LENGTH_SHORT).show()
+                }
+            }
+            showDetailsDialog = null
+        }
 
         val favorites = remember {
             val initialFavorites = FavoritesRepository.getFavorites(context).map { it.toUri() }
             mutableStateListOf(*initialFavorites.toTypedArray())
         }
         var favoriteItems by remember { mutableStateOf<List<MediaItem>>(emptyList()) }
+        var trashedItems by remember { mutableStateOf<List<MediaItem>>(emptyList()) }
         var tags by remember { mutableStateOf(TagsRepository.getTags(context)) }
-        var showTagDialog by remember { mutableStateOf<Uri?>(null) }
-        var showTagManagementDialog by remember { mutableStateOf(false) }
-
-        var showConfirmDeleteDialog by remember { mutableStateOf(false) }
-        var itemsToDelete by remember { mutableStateOf<List<Uri>>(emptyList()) }
 
         val selectedItems = remember { mutableStateListOf<Uri>() }
         val isSelectionMode = selectedItems.isNotEmpty()
@@ -195,6 +246,12 @@ fun MyApp(initialUri: Uri? = null) {
 
         val deleteRequestLauncher = rememberLauncherForActivityResult(contract = ActivityResultContracts.StartIntentSenderForResult()) { result ->
             if (result.resultCode == Activity.RESULT_OK) {
+                if (isClearingTrash) {
+                    TrashRepository.clearTrash(context)
+                    isClearingTrash = false
+                } else {
+                    TrashRepository.removeFromTrash(context, itemsToDelete)
+                }
                 refreshTrigger++
                 selectedItems.clear()
                 itemsToDelete = emptyList()
@@ -211,11 +268,11 @@ fun MyApp(initialUri: Uri? = null) {
                         val type = object : TypeToken<Set<String>>() {}.type
                         val importedFavorites: Set<String> = Gson().fromJson(json, type)
                         favorites.clear()
-                        favorites.addAll(importedFavorites.map { it.toUri() })
+                        favorites.addAll(importedFavorites.map { uriString -> uriString.toUri() })
                         refreshTrigger++
                         Toast.makeText(context, "Favorites imported successfully!", Toast.LENGTH_SHORT).show()
                     }
-                } catch (e: Exception) {
+                } catch (_: Exception) {
                     Toast.makeText(context, "Failed to import favorites!", Toast.LENGTH_SHORT).show()
                 }
             }
@@ -233,17 +290,17 @@ fun MyApp(initialUri: Uri? = null) {
                         refreshTrigger++
                         Toast.makeText(context, "Tags imported successfully!", Toast.LENGTH_SHORT).show()
                     }
-                } catch (e: Exception) {
+                } catch (_: Exception) {
                     Toast.makeText(context, "Failed to import tags!", Toast.LENGTH_SHORT).show()
                 }
             }
         }
 
         var isRefreshing by remember { mutableStateOf(false) }
-        val pullRefreshState = rememberPullRefreshState(isRefreshing, { coroutineScope.launch { 
+        val pullRefreshState = rememberPullRefreshState(isRefreshing, { coroutineScope.launch {
             isRefreshing = true
             delay(1000) // For presentation purposes
-            refreshTrigger++ 
+            refreshTrigger++
             isRefreshing = false
         } })
 
@@ -281,8 +338,10 @@ fun MyApp(initialUri: Uri? = null) {
                     if (targetFolder != null) {
                         viewerState = MediaViewerState(targetFolder.items, targetItemIndex)
                     } else {
+                        val details = getMediaDetails(context, initialUri)
+                        val name = details?.name ?: ""
                         val isVideo = context.contentResolver.getType(initialUri)?.startsWith("video/") == true
-                        viewerState = MediaViewerState(listOf(MediaItem(initialUri, isVideo)), 0, isExternal = true)
+                        viewerState = MediaViewerState(listOf(MediaItem(initialUri, name, isVideo)), 0, isExternal = true)
                     }
                 }
             }
@@ -293,15 +352,25 @@ fun MyApp(initialUri: Uri? = null) {
             FavoritesRepository.saveFavorites(context, favoriteStrings)
         }
 
+        LaunchedEffect(currentScreen) {
+            if (currentScreen !is Screen.FolderContent) {
+                isSearchActive = false
+                searchQuery = ""
+            }
+            selectedItems.clear()
+        }
+
         LaunchedEffect(Unit) {
             if (!hasPermissions) {
                 permissionLauncher.launch(permissionsToRequest)
             }
         }
 
-        LaunchedEffect(hasPermissions, sortType, sortAscending, selectedDate, refreshTrigger) {
+        LaunchedEffect(hasPermissions, sortType, sortAscending, selectedDate, hiddenFolders, refreshTrigger) {
             if (hasPermissions) {
                 allFolders = withContext(Dispatchers.IO) { loadMediaFolders(context, sortType, sortAscending, selectedDate) }
+                trashedItems = withContext(Dispatchers.IO) { loadTrashedMediaItems(context, sortType, sortAscending) }
+                allMedia = withContext(Dispatchers.IO) { loadAllMedia(context, sortType, sortAscending, hiddenFolders, selectedDate) }
             }
         }
 
@@ -316,6 +385,9 @@ fun MyApp(initialUri: Uri? = null) {
             is Screen.FolderContent -> screen.folder.name
             is Screen.Favorites -> "Favorites"
             is Screen.Settings -> "Settings"
+            is Screen.TagManagement -> "Manage Tags"
+            is Screen.Trash -> "Trash"
+            is Screen.AllMedia -> "All Media"
         }
         val isFavoritesScreen = currentScreen is Screen.Favorites
 
@@ -327,7 +399,7 @@ fun MyApp(initialUri: Uri? = null) {
             TagEditDialog(
                 initialTags = TagsRepository.getTagsForItem(context, uri),
                 allTags = tags.values.flatten().toSet(),
-                onDismiss = { showTagDialog = null }, 
+                onDismiss = { showTagDialog = null },
                 onSave = { tagSet ->
                     TagsRepository.setTagsForItem(context, uri, tagSet)
                     tags = TagsRepository.getTags(context)
@@ -335,15 +407,59 @@ fun MyApp(initialUri: Uri? = null) {
             })
         }
 
-        if (showTagManagementDialog) {
-            TagManagementDialog(
+        if (showBulkTagDialog) {
+            val uris = selectedItems.toList()
+            val commonTags = if (uris.isNotEmpty()) {
+                uris.map { TagsRepository.getTagsForItem(context, it) }.reduce { acc, set -> acc.intersect(set) }
+            } else emptySet()
+
+            TagEditDialog(
+                initialTags = commonTags,
                 allTags = tags.values.flatten().toSet(),
-                onDismiss = { showTagManagementDialog = false },
-                onDeleteTag = { tag ->
-                    TagsRepository.removeTagFromAllItems(context, tag)
+                onDismiss = { showBulkTagDialog = false },
+                onSave = { newTags ->
+                    val tagsToAdd = newTags - commonTags
+                    val tagsToRemove = commonTags - newTags
+                    uris.forEach { uri ->
+                        val currentTags = TagsRepository.getTagsForItem(context, uri).toMutableSet()
+                        currentTags.addAll(tagsToAdd)
+                        currentTags.removeAll(tagsToRemove)
+                        TagsRepository.setTagsForItem(context, uri, currentTags)
+                    }
                     tags = TagsRepository.getTags(context)
+                    showBulkTagDialog = false
+                    selectedItems.clear()
                 }
             )
+        }
+
+        val displayMetrics = context.resources.displayMetrics
+        val screenWidth = displayMetrics.widthPixels
+        val screenHeight = displayMetrics.heightPixels
+
+        if (showDetailsDialog != null) {
+            val uri = showDetailsDialog!!
+            val details = getMediaDetails(context, uri)
+            if (details != null) {
+                MediaDetailsDialog(
+                    details = details,
+                    onDismiss = { showDetailsDialog = null },
+                    onSetAsWallpaper = {
+                        isSettingWallpaper = true
+                        val cropImageOptions = CropImageOptions(
+                            guidelines = CropImageView.Guidelines.ON,
+                            fixAspectRatio = true,
+                            aspectRatioX = screenWidth,
+                            aspectRatioY = screenHeight,
+                            outputRequestWidth = screenWidth,
+                            outputRequestHeight = screenHeight,
+                            outputRequestSizeOptions = CropImageView.RequestSizeOptions.RESIZE_EXACT
+                        )
+                        val cropOptions = CropImageContractOptions(uri, cropImageOptions)
+                        cropImageLauncher.launch(cropOptions)
+                    }
+                )
+            }
         }
 
         if (showEasterEggDialog) {
@@ -367,6 +483,56 @@ fun MyApp(initialUri: Uri? = null) {
             )
         }
 
+        if (showBackupAndRestoreDialog) {
+            BackupAndRestoreDialog(
+                onDismiss = { showBackupAndRestoreDialog = false },
+                onExportFavorites = {
+                    val json = Gson().toJson(favorites.map { it.toString() })
+                    val values = ContentValues().apply {
+                        put(MediaStore.MediaColumns.DISPLAY_NAME, "favorites_backup.json")
+                        put(MediaStore.MediaColumns.MIME_TYPE, "application/json")
+                        put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS)
+                    }
+                    val uri = context.contentResolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values)
+                    if (uri != null) {
+                        try {
+                            context.contentResolver.openOutputStream(uri)?.use {
+                                it.write(json.toByteArray())
+                            }
+                            Toast.makeText(context, "Favorites exported successfully!", Toast.LENGTH_SHORT).show()
+                        } catch (_: Exception) {
+                            Toast.makeText(context, "Failed to export favorites!", Toast.LENGTH_SHORT).show()
+                        }
+                    } else {
+                        Toast.makeText(context, "Failed to create backup file!", Toast.LENGTH_SHORT).show()
+                    }
+                },
+                onImportFavorites = { importFavoritesLauncher.launch("application/json") },
+                onExportTags = {
+                    val json = Gson().toJson(tags)
+                    val values = ContentValues().apply {
+                        put(MediaStore.MediaColumns.DISPLAY_NAME, "tags_backup.json")
+                        put(MediaStore.MediaColumns.MIME_TYPE, "application/json")
+                        put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS)
+                    }
+                    val uri = context.contentResolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values)
+                    if (uri != null) {
+                        try {
+                            context.contentResolver.openOutputStream(uri)?.use {
+                                it.write(json.toByteArray())
+                            }
+                            Toast.makeText(context, "Tags exported successfully!", Toast.LENGTH_SHORT).show()
+                        } catch (_: Exception) {
+                            Toast.makeText(context, "Failed to export tags!", Toast.LENGTH_SHORT).show()
+                        }
+                    } else {
+                        Toast.makeText(context, "Failed to create backup file!", Toast.LENGTH_SHORT).show()
+                    }
+                },
+                onImportTags = { importTagsLauncher.launch("application/json") }
+            )
+        }
+
         if (showDatePicker) {
             DatePickerDialog(onDismissRequest = { showDatePicker = false }, confirmButton = {
                 TextButton(onClick = { selectedDate = datePickerState.selectedDateMillis; showDatePicker = false }) {
@@ -387,28 +553,85 @@ fun MyApp(initialUri: Uri? = null) {
                 if (intentSender != null) {
                     deleteRequestLauncher.launch(IntentSenderRequest.Builder(intentSender).build())
                 } else {
+                    if (isClearingTrash) {
+                        TrashRepository.clearTrash(context)
+                        isClearingTrash = false
+                    } else {
+                        TrashRepository.removeFromTrash(context, itemsToDelete)
+                    }
                     refreshTrigger++
                     selectedItems.clear()
+                    viewerState = null
                     showConfirmDeleteDialog = false
                 }
             }, onDismiss = { showConfirmDeleteDialog = false })
         }
 
+        if (showConfirmTrashDialog) {
+            ConfirmTrashDialog(
+                onConfirm = {
+                    TrashRepository.addToTrash(context, itemsToTrash)
+                    refreshTrigger++
+                    selectedItems.clear()
+                    itemsToTrash = emptyList()
+                    showConfirmTrashDialog = false
+                    viewerState = null // Dismiss viewer if active
+                },
+                onDismiss = { showConfirmTrashDialog = false }
+            )
+        }
+
+        if (showConfirmRestoreDialog) {
+            ConfirmRestoreDialog(
+                onConfirm = {
+                    TrashRepository.removeFromTrash(context, itemsToRestore)
+                    selectedItems.clear()
+                    refreshTrigger++
+                    showConfirmRestoreDialog = false
+                },
+                onDismiss = { showConfirmRestoreDialog = false }
+            )
+        }
+
         Box(Modifier.fillMaxSize()) {
-            BackHandler(enabled = isSelectionMode) {
+            BackHandler(enabled = isSelectionMode && currentScreen !is Screen.Favorites) {
                 selectedItems.clear()
             }
-            BackHandler(enabled = currentScreen is Screen.FolderContent && !isSelectionMode) { currentScreen = Screen.Folders }
+            BackHandler(enabled = currentScreen is Screen.FolderContent && !isSelectionMode) {
+                currentScreen = Screen.Folders
+                searchQuery = ""
+                isSearchActive = false
+            }
             BackHandler(enabled = currentScreen is Screen.Settings && !isSelectionMode) { currentScreen = Screen.Folders }
+            BackHandler(enabled = currentScreen is Screen.TagManagement && !isSelectionMode) { currentScreen = Screen.Settings }
+            BackHandler(enabled = currentScreen is Screen.Trash && !isSelectionMode) { currentScreen = Screen.Folders }
+            BackHandler(enabled = currentScreen is Screen.AllMedia && !isSelectionMode) { currentScreen = Screen.Folders }
 
-            Scaffold(topBar = {
-                if (isSelectionMode) {
-                    TopAppBar(title = { Text("${selectedItems.size} selected") }, navigationIcon = {
-                        IconButton(onClick = { selectedItems.clear() }) {
-                            Icon(Icons.Filled.Close, contentDescription = "Close selection")
-                        }
-                    }, actions = {
-                        IconButton(onClick = {
+            Scaffold(
+                topBar = {
+                    TopBar(
+                        isSelectionMode = isSelectionMode,
+                        selectedItems = selectedItems,
+                        onCloseSelection = { selectedItems.clear() },
+                        currentScreen = currentScreen,
+                        onSelectAll = {
+                            val allUris = trashedItems.map { it.uri }
+                            if (selectedItems.containsAll(allUris)) {
+                                selectedItems.removeAll(allUris)
+                            } else {
+                                selectedItems.addAll(allUris)
+                            }
+                        },
+                        onRestore = {
+                            itemsToRestore = selectedItems.toList()
+                            showConfirmRestoreDialog = true
+                        },
+                        onDeletePermanently = {
+                            itemsToDelete = selectedItems.toList()
+                            showConfirmDeleteDialog = true
+                        },
+                        onEditTags = { showBulkTagDialog = true },
+                        onShare = {
                             val currentSelected = selectedItems.toList()
                             selectedItems.clear()
                             val shareIntent = Intent().apply {
@@ -417,16 +640,12 @@ fun MyApp(initialUri: Uri? = null) {
                                 type = "*/*"
                             }
                             context.startActivity(Intent.createChooser(shareIntent, null))
-                        }) {
-                            Icon(Icons.Filled.Share, contentDescription = "Share")
-                        }
-                        IconButton(onClick = {
-                            itemsToDelete = selectedItems.toList()
-                            showConfirmDeleteDialog = true
-                        }) {
-                            Icon(Icons.Filled.Delete, contentDescription = "Delete")
-                        }
-                        IconButton(onClick = {
+                        },
+                        onTrash = {
+                            itemsToTrash = selectedItems.toList()
+                            showConfirmTrashDialog = true
+                        },
+                        onToggleFavorite = {
                             haptics.performHapticFeedback(HapticFeedbackType.LongPress)
                             if (isFavoritesScreen) {
                                 val urisToUnfavorite = selectedItems.toList()
@@ -439,234 +658,117 @@ fun MyApp(initialUri: Uri? = null) {
                                 }
                             }
                             selectedItems.clear()
-                        }) {
-                            Icon(imageVector = if (isFavoritesScreen) Icons.Filled.FavoriteBorder else Icons.Filled.Favorite,
-                                contentDescription = if (isFavoritesScreen) "Remove from Favorites" else "Add to Favorites")
-                        }
-                    })
-                } else {
-                    TopAppBar(title = { Text(title) }, modifier = Modifier.statusBarsPadding(), navigationIcon = {
-                        if (currentScreen is Screen.FolderContent) {
-                            IconButton(onClick = { currentScreen = Screen.Folders }) {
-                                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        },
+                        isFavoritesScreen = isFavoritesScreen,
+                        isSearchActive = isSearchActive,
+                        searchQuery = searchQuery,
+                        onSearchQueryChange = { searchQuery = it },
+                        title = title,
+                        onBackClick = {
+                            currentScreen = when (currentScreen) {
+                                is Screen.TagManagement -> Screen.Settings
+                                else -> Screen.Folders
                             }
-                        }
-                    }, actions = {
-                        if (currentScreen !is Screen.Settings) {
-                            if (isFavoritesScreen) {
-                                var menuExpanded by remember { mutableStateOf(false) }
-                                Box {
-                                    IconButton(onClick = { menuExpanded = true }) {
-                                        Icon(Icons.Filled.MoreVert, contentDescription = "More options")
-                                    }
-                                    DropdownMenu(expanded = menuExpanded, onDismissRequest = { menuExpanded = false }) {
-                                        DropdownMenuItem(text = { Text("Export Favorites") }, onClick = { 
-                                            val json = Gson().toJson(favorites.map { it.toString() })
-                                            val values = ContentValues().apply {
-                                                put(MediaStore.MediaColumns.DISPLAY_NAME, "favorites_backup.json")
-                                                put(MediaStore.MediaColumns.MIME_TYPE, "application/json")
-                                                put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS)
-                                            }
-                                            val uri = context.contentResolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values)
-                                            if (uri != null) {
-                                                try {
-                                                    context.contentResolver.openOutputStream(uri)?.use { 
-                                                        it.write(json.toByteArray())
-                                                    }
-                                                    Toast.makeText(context, "Favorites exported successfully!", Toast.LENGTH_SHORT).show()
-                                                } catch (e: Exception) {
-                                                    Toast.makeText(context, "Failed to export favorites!", Toast.LENGTH_SHORT).show()
-                                                }
-                                            } else {
-                                                Toast.makeText(context, "Failed to create backup file!", Toast.LENGTH_SHORT).show()
-                                            }
-                                            menuExpanded = false
-                                        })
-                                        DropdownMenuItem(text = { Text("Import Favorites") }, onClick = { 
-                                            importFavoritesLauncher.launch("application/json") 
-                                            menuExpanded = false
-                                        })
-                                        DropdownMenuItem(text = { Text("Export Tags") }, onClick = { 
-                                            val json = Gson().toJson(tags)
-                                            val values = ContentValues().apply {
-                                                put(MediaStore.MediaColumns.DISPLAY_NAME, "tags_backup.json")
-                                                put(MediaStore.MediaColumns.MIME_TYPE, "application/json")
-                                                put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS)
-                                            }
-                                            val uri = context.contentResolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values)
-                                            if (uri != null) {
-                                                try {
-                                                    context.contentResolver.openOutputStream(uri)?.use { 
-                                                        it.write(json.toByteArray())
-                                                    }
-                                                    Toast.makeText(context, "Tags exported successfully!", Toast.LENGTH_SHORT).show()
-                                                } catch (e: Exception) {
-                                                    Toast.makeText(context, "Failed to export tags!", Toast.LENGTH_SHORT).show()
-                                                }
-                                            } else {
-                                                Toast.makeText(context, "Failed to create backup file!", Toast.LENGTH_SHORT).show()
-                                            }
-                                            menuExpanded = false
-                                        })
-                                        DropdownMenuItem(text = { Text("Import Tags") }, onClick = { 
-                                            importTagsLauncher.launch("application/json") 
-                                            menuExpanded = false
-                                        })
-                                        DropdownMenuItem(text = { Text("Manage Tags") }, onClick = { 
-                                            showTagManagementDialog = true
-                                            menuExpanded = false
-                                        })
-                                    }
-                                }
-                            }
-                            var menuExpanded by remember { mutableStateOf(false) }
-
-                            IconButton(onClick = { sortAscending = !sortAscending }) {
-                                Icon(if (sortAscending) Icons.Default.ArrowUpward else Icons.Default.ArrowDownward,
-                                    contentDescription = "Sort Direction")
-                            }
-
-                            IconButton(onClick = { showDatePicker = true }) {
-                                Icon(Icons.Filled.DateRange, contentDescription = "Filter by date")
-                            }
-
-                            Box {
-                                IconButton(onClick = { menuExpanded = true }) {
-                                    Icon(Icons.AutoMirrored.Filled.Sort, contentDescription = "Sort By")
-                                }
-                                DropdownMenu(expanded = menuExpanded, onDismissRequest = { menuExpanded = false }) {
-                                    DropdownMenuItem(text = { Text("By Date Modified") },
-                                        onClick = { sortType = SortType.DATE_MODIFIED; menuExpanded = false })
-                                    DropdownMenuItem(text = { Text("By Date Added") },
-                                        onClick = { sortType = SortType.DATE_ADDED; menuExpanded = false })
-                                    DropdownMenuItem(text = { Text("By Name") },
-                                        onClick = { sortType = SortType.NAME; menuExpanded = false })
-                                    if (selectedDate != null) {
-                                        DropdownMenuItem(text = { Text("Reset Date Filter") },
-                                            onClick = { selectedDate = null; menuExpanded = false })
-                                    }
-                                }
-                            }
-                            IconButton(onClick = { currentScreen = Screen.Settings }) {
-                                Icon(Icons.Filled.Settings, contentDescription = "Settings")
-                            }
-                        }
-                    })
+                        },
+                        onCloseSearch = {
+                            isSearchActive = false
+                            searchQuery = ""
+                        },
+                        onSearchClick = { isSearchActive = true },
+                        onFilterByDateClick = { showDatePicker = true },
+                        onSortTypeChange = { sortType = it },
+                        onReverseSort = { sortAscending = !sortAscending },
+                        selectedDate = selectedDate,
+                        onResetDateFilter = { selectedDate = null },
+                        onSettingsClick = { currentScreen = Screen.Settings }
+                    )
+                },
+                bottomBar = {
+                    BottomBar(
+                        currentScreen = currentScreen,
+                        haptics = haptics,
+                        onScreenChange = { currentScreen = it },
+                        context = context
+                    )
                 }
-            }, bottomBar = {
-                NavigationBar {
-                    NavigationBarItem(icon = { Icon(Icons.Filled.PhotoLibrary, contentDescription = "Folders") },
-                        label = { Text("Folders") },
-                        selected = currentScreen is Screen.Folders || currentScreen is Screen.FolderContent,
-                        onClick = { haptics.performHapticFeedback(HapticFeedbackType.LongPress); currentScreen = Screen.Folders })
-                    NavigationBarItem(icon = { Icon(Icons.Filled.Favorite, contentDescription = "Favorites") },
-                        label = { Text("Favorites") },
-                        selected = currentScreen is Screen.Favorites,
-                        onClick = {
-                            haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-                            currentScreen = Screen.Favorites
-                            val now = System.currentTimeMillis()
-                            if (now - lastTap < 500) {
-                                tapCount++
-                            } else {
-                                tapCount = 1
-                            }
-                            lastTap = now
-
-                            if (tapCount == 10) {
-                                tapCount = 0
-                                Toast.makeText(context, "UwU", Toast.LENGTH_SHORT).show()
-                                val mediaPlayer = MediaPlayer.create(context, R.raw.uwu)
-                                mediaPlayer.setOnCompletionListener { it.release() }
-                                mediaPlayer.start()
-                            }
-                        })
-                }
-            }) { innerPadding ->
+            ) { innerPadding ->
                 Box(modifier = Modifier.padding(innerPadding).pullRefresh(pullRefreshState)) {
                     if (hasPermissions) {
-                        val visibleFolders by remember(allFolders, hiddenFolders) {
-                            derivedStateOf { allFolders.filterNot { hiddenFolders.contains(it.id.toString()) } }
-                        }
-                        when (val screen = currentScreen) {
-                            is Screen.Folders -> FoldersGrid(
-                                folders = visibleFolders, 
-                                imageLoader = imageLoader, 
-                                onFolderClick = {
-                                    currentScreen = Screen.FolderContent(it)
-                                }, 
-                                isBlurEnabled = isBlurEnabled
-                            )
-                            is Screen.FolderContent -> {
-                                val folder = allFolders.find { it.id == screen.folder.id } ?: screen.folder
-                                MediaGrid(
-                                    items = folder.items,
-                                    favorites = favorites,
-                                    selectedItems = selectedItems,
-                                    imageLoader = imageLoader,
-                                    onItemClick = { item ->
-                                        viewerState = MediaViewerState(items = folder.items, startIndex = folder.items.indexOf(item))
-                                    },
-                                    onToggleSelection = { item ->
-                                        if (selectedItems.contains(item.uri)) {
-                                            selectedItems.remove(item.uri)
-                                        } else {
-                                            selectedItems.add(item.uri)
-                                        }
-                                    }
-                                )
+                        AppNavigation(
+                            currentScreen = currentScreen,
+                            allFolders = allFolders,
+                            hiddenFolders = hiddenFolders,
+                            searchQuery = searchQuery,
+                            isSearchActive = isSearchActive,
+                            favoriteItems = favoriteItems,
+                            allMedia = allMedia,
+                            imageLoader = imageLoader,
+                            onFolderClick = { currentScreen = Screen.FolderContent(it) },
+                            isBlurEnabled = isBlurEnabled,
+                            foldersGridState = foldersGridState,
+                            favorites = favorites,
+                            selectedItems = selectedItems,
+                            setViewerState = { viewerState = it },
+                            keyboardController = keyboardController,
+                            tags = tags,
+                            favoritesGridState = favoritesGridState,
+                            onClearSelection = { selectedItems.clear() },
+                            onClearSearch = {
+                                searchQuery = ""
+                                isSearchActive = false
+                            },
+                            isTrashBlurEnabled = isTrashBlurEnabled,
+                            onTrashBlurEnabledChange = {
+                                isTrashBlurEnabled = it
+                                SettingsRepository.setTrashBlurEnabled(context, it)
+                            },
+                            isMuteVideoByDefault = isMuteVideoByDefault,
+                            onMuteVideoByDefaultChange = {
+                                isMuteVideoByDefault = it
+                                SettingsRepository.setMuteVideoByDefault(context, it)
+                            },
+                            onEasterEggClick = {
+                                easterEggTapCount++
+                                if (easterEggTapCount == 10) {
+                                    easterEggTapCount = 0
+                                    showEasterEggDialog = true
+                                    val mediaPlayer = MediaPlayer.create(context, R.raw.uwu)
+                                    mediaPlayer.setOnCompletionListener { it.release() }
+                                    mediaPlayer.start()
+                                }
+                            },
+                            selectedTheme = selectedTheme,
+                            onThemeChange = { theme ->
+                                selectedTheme = theme
+                                SettingsRepository.setTheme(context, theme)
+                            },
+                            onManageHiddenFoldersClick = { showHiddenFoldersDialog = true },
+                            selectedZoomType = selectedZoomType,
+                            onZoomTypeChange = {
+                                selectedZoomType = it
+                                SettingsRepository.setZoomType(context, it)
+                            },
+                            onManageTagsClick = { currentScreen = Screen.TagManagement },
+                            onBackupAndRestoreClick = { showBackupAndRestoreDialog = true },
+                            onDeleteTag = {
+                                TagsRepository.removeTagFromAllItems(context, it)
+                                tags = TagsRepository.getTags(context)
+                            },
+                            onEditTag = { oldTag, newTag ->
+                                TagsRepository.renameTag(context, oldTag, newTag)
+                                tags = TagsRepository.getTags(context)
+                            },
+                            trashedItems = trashedItems,
+                            onClearTrash = {
+                                isClearingTrash = true
+                                itemsToDelete = trashedItems.map { it.uri }
+                                showConfirmDeleteDialog = true
+                            },
+                            onBlurEnabledChange = {
+                                isBlurEnabled = it
+                                SettingsRepository.setBlurEnabled(context, it)
                             }
-                            is Screen.Favorites -> {
-                                FavoritesScreen(
-                                    items = favoriteItems,
-                                    favorites = favorites,
-                                    selectedItems = selectedItems,
-                                    imageLoader = imageLoader,
-                                    tags = tags,
-                                    onItemClick = { item ->
-                                        viewerState = MediaViewerState(items = favoriteItems, startIndex = favoriteItems.indexOf(item))
-                                    },
-                                    onToggleSelection = { item ->
-                                        if (selectedItems.contains(item.uri)) {
-                                            selectedItems.remove(item.uri)
-                                        } else {
-                                            selectedItems.add(item.uri)
-                                        }
-                                    },
-                                    isBlurEnabled = isBlurEnabled
-                                )
-                            }
-                            is Screen.Settings -> {
-                                SettingsScreen(
-                                    isBlurEnabled = isBlurEnabled,
-                                    onBlurEnabledChange = {
-                                        isBlurEnabled = it
-                                        SettingsRepository.setBlurEnabled(context, it)
-                                    },
-                                    isMuteVideoByDefault = isMuteVideoByDefault,
-                                    onMuteVideoByDefaultChange = {
-                                        isMuteVideoByDefault = it
-                                        SettingsRepository.setMuteVideoByDefault(context, it)
-                                    },
-                                    onEasterEggClick = {
-                                        easterEggTapCount++
-                                        if (easterEggTapCount == 10) {
-                                            easterEggTapCount = 0
-                                            showEasterEggDialog = true
-                                            val mediaPlayer = MediaPlayer.create(context, R.raw.uwu)
-                                            mediaPlayer.setOnCompletionListener { it.release() }
-                                            mediaPlayer.start()
-                                        }
-                                    },
-                                    selectedTheme = selectedTheme,
-                                    onThemeChange = { theme ->
-                                        selectedTheme = theme
-                                        SettingsRepository.setTheme(context, theme)
-                                    },
-                                    onManageHiddenFoldersClick = { showHiddenFoldersDialog = true }
-                                )
-                            }
-                        }
+                        )
                     } else {
                         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -695,11 +797,17 @@ fun MyApp(initialUri: Uri? = null) {
                     onDismiss = { viewerState = null },
                     imageLoader = imageLoader,
                     isExternal = viewerState!!.isExternal, // Pass the flag
-                    onDeletePermanently = { uris ->
-                        itemsToDelete = uris
-                        showConfirmDeleteDialog = true
+                    onDelete = { uris ->
+                        if (currentScreen is Screen.Trash) {
+                            itemsToDelete = uris
+                            showConfirmDeleteDialog = true
+                        } else {
+                            itemsToTrash = uris
+                            showConfirmTrashDialog = true
+                        }
                     },
                     onShowTagDialog = { uri -> showTagDialog = uri },
+                    onShowDetails = { uri -> showDetailsDialog = uri },
                     onToggleFavorite = { uri ->
                         if (favorites.contains(uri)) {
                             favorites.remove(uri)
@@ -707,7 +815,8 @@ fun MyApp(initialUri: Uri? = null) {
                             favorites.add(uri)
                         }
                     },
-                    isMuteVideoByDefault = isMuteVideoByDefault
+                    isMuteVideoByDefault = isMuteVideoByDefault,
+                    zoomType = selectedZoomType
                 )
             }
         }

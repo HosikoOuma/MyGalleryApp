@@ -5,7 +5,87 @@ import android.content.Context
 import android.net.Uri
 import android.os.Build
 import android.provider.MediaStore
+import com.example.nkdsify.ui.utils.TrashRepository
 import java.util.Calendar
+
+fun loadAllMedia(
+    context: Context,
+    sortType: SortType,
+    sortAscending: Boolean,
+    hiddenFolderIds: Set<String>,
+    selectedDate: Long? = null
+): List<MediaItem> {
+    val mediaItems = mutableListOf<MediaItem>()
+    val trashedUris = TrashRepository.getTrashedUris(context)
+
+    val collection = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+        MediaStore.Files.getContentUri(MediaStore.VOLUME_EXTERNAL)
+    } else {
+        MediaStore.Files.getContentUri("external")
+    }
+
+    val projection = arrayOf(
+        MediaStore.Files.FileColumns._ID,
+        MediaStore.Files.FileColumns.MEDIA_TYPE,
+        MediaStore.Files.FileColumns.DISPLAY_NAME,
+        MediaStore.Files.FileColumns.BUCKET_ID
+    )
+
+    val selectionParts = mutableListOf<String>()
+    val selectionArgs = mutableListOf<String>()
+
+    selectedDate?.let {
+        val calendar = Calendar.getInstance()
+        calendar.timeInMillis = it
+        calendar.set(Calendar.HOUR_OF_DAY, 0)
+        calendar.set(Calendar.MINUTE, 0)
+        calendar.set(Calendar.SECOND, 0)
+        val startOfDay = calendar.timeInMillis / 1000
+        calendar.set(Calendar.HOUR_OF_DAY, 23)
+        calendar.set(Calendar.MINUTE, 59)
+        calendar.set(Calendar.SECOND, 59)
+        val endOfDay = calendar.timeInMillis / 1000
+
+        selectionParts.add("${MediaStore.Files.FileColumns.DATE_ADDED} BETWEEN ? AND ?")
+        selectionArgs.add(startOfDay.toString())
+        selectionArgs.add(endOfDay.toString())
+    }
+    if (hiddenFolderIds.isNotEmpty()) {
+        selectionParts.add("${MediaStore.Files.FileColumns.BUCKET_ID} NOT IN (${hiddenFolderIds.joinToString { "?" }})")
+        selectionArgs.addAll(hiddenFolderIds)
+    }
+
+    val selection = if (selectionParts.isNotEmpty()) selectionParts.joinToString(separator = " AND ") else null
+
+    val sortColumn = when (sortType) {
+        SortType.DATE_MODIFIED -> MediaStore.Files.FileColumns.DATE_MODIFIED
+        SortType.DATE_ADDED -> MediaStore.Files.FileColumns.DATE_ADDED
+        SortType.NAME -> MediaStore.Files.FileColumns.DISPLAY_NAME
+    }
+    val sortDirection = if (sortAscending) "ASC" else "DESC"
+    val sortOrder = "$sortColumn $sortDirection"
+
+    context.contentResolver.query(collection, projection, selection, selectionArgs.toTypedArray(), sortOrder)?.use { cursor ->
+        val idColumn = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns._ID)
+        val mediaTypeColumn = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.MEDIA_TYPE)
+        val nameColumn = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.DISPLAY_NAME)
+
+        while (cursor.moveToNext()) {
+            val id = cursor.getLong(idColumn)
+            val uri = ContentUris.withAppendedId(collection, id)
+
+            if(uri in trashedUris) continue
+
+            val mediaType = cursor.getInt(mediaTypeColumn)
+            val name = cursor.getString(nameColumn)
+
+            val isVideo = mediaType == MediaStore.Files.FileColumns.MEDIA_TYPE_VIDEO
+            mediaItems.add(MediaItem(uri, name, isVideo))
+        }
+    }
+
+    return mediaItems
+}
 
 fun loadMediaFolders(
     context: Context,
@@ -15,6 +95,8 @@ fun loadMediaFolders(
 ): List<MediaFolder> {
     val foldersMap = mutableMapOf<Long, MutableList<MediaItem>>()
     val folderNames = mutableMapOf<Long, String>()
+    val folderPaths = mutableMapOf<Long, String>()
+    val trashedUris = TrashRepository.getTrashedUris(context)
 
     val collection = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
         MediaStore.Files.getContentUri(MediaStore.VOLUME_EXTERNAL)
@@ -26,7 +108,9 @@ fun loadMediaFolders(
         MediaStore.Files.FileColumns._ID,
         MediaStore.Files.FileColumns.BUCKET_ID,
         MediaStore.Files.FileColumns.BUCKET_DISPLAY_NAME,
-        MediaStore.Files.FileColumns.MEDIA_TYPE
+        MediaStore.Files.FileColumns.MEDIA_TYPE,
+        MediaStore.Files.FileColumns.DISPLAY_NAME,
+        MediaStore.Files.FileColumns.DATA
     )
 
     val selectionParts = mutableListOf<String>()
@@ -64,20 +148,28 @@ fun loadMediaFolders(
         val bucketIdColumn = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.BUCKET_ID)
         val bucketNameColumn = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.BUCKET_DISPLAY_NAME)
         val mediaTypeColumn = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.MEDIA_TYPE)
+        val nameColumn = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.DISPLAY_NAME)
+        val dataColumn = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.DATA)
 
         while (cursor.moveToNext()) {
             val id = cursor.getLong(idColumn)
+            val uri = ContentUris.withAppendedId(collection, id)
+
+            if(uri in trashedUris) continue
+
             val bucketId = cursor.getLong(bucketIdColumn)
             val bucketName = cursor.getString(bucketNameColumn)
             val mediaType = cursor.getInt(mediaTypeColumn)
+            val name = cursor.getString(nameColumn)
+            val path = cursor.getString(dataColumn)
 
-            val uri = ContentUris.withAppendedId(collection, id)
             val isVideo = mediaType == MediaStore.Files.FileColumns.MEDIA_TYPE_VIDEO
-            val item = MediaItem(uri, isVideo)
+            val item = MediaItem(uri, name, isVideo)
 
             if (!foldersMap.containsKey(bucketId)) {
                 foldersMap[bucketId] = mutableListOf()
                 folderNames[bucketId] = bucketName
+                folderPaths[bucketId] = path.substringBeforeLast('/')
             }
             foldersMap[bucketId]?.add(item)
         }
@@ -85,10 +177,11 @@ fun loadMediaFolders(
 
     return foldersMap.mapNotNull { entry ->
         val folderName = folderNames[entry.key]
+        val folderPath = folderPaths[entry.key]
         val itemsInFolder = entry.value
         val coverItem = itemsInFolder.firstOrNull { !it.isVideo } ?: itemsInFolder.firstOrNull()
-        if (folderName != null && coverItem != null) {
-            MediaFolder(id = entry.key, name = folderName, coverUri = coverItem.uri, items = itemsInFolder)
+        if (folderName != null && folderPath != null && coverItem != null) {
+            MediaFolder(id = entry.key, name = folderName, path = folderPath, coverUri = coverItem.uri, items = itemsInFolder)
         } else {
             null
         }
@@ -108,6 +201,7 @@ fun loadFavoriteMediaItems(
     }
 
     val favoriteItems = mutableListOf<MediaItem>()
+    val trashedUris = TrashRepository.getTrashedUris(context)
     val collection = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
         MediaStore.Files.getContentUri(MediaStore.VOLUME_EXTERNAL)
     } else {
@@ -116,7 +210,8 @@ fun loadFavoriteMediaItems(
 
     val projection = arrayOf(
         MediaStore.Files.FileColumns._ID,
-        MediaStore.Files.FileColumns.MEDIA_TYPE
+        MediaStore.Files.FileColumns.MEDIA_TYPE,
+        MediaStore.Files.FileColumns.DISPLAY_NAME
     )
 
     val selectionParts = mutableListOf<String>()
@@ -155,14 +250,70 @@ fun loadFavoriteMediaItems(
     context.contentResolver.query(collection, projection, selection, selectionArgs.toTypedArray(), sortOrder)?.use { cursor ->
         val idColumn = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns._ID)
         val mediaTypeColumn = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.MEDIA_TYPE)
+        val nameColumn = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.DISPLAY_NAME)
 
         while (cursor.moveToNext()) {
             val id = cursor.getLong(idColumn)
-            val mediaType = cursor.getInt(mediaTypeColumn)
             val uri = ContentUris.withAppendedId(collection, id)
+
+            if(uri in trashedUris) continue
+
+            val mediaType = cursor.getInt(mediaTypeColumn)
+            val name = cursor.getString(nameColumn)
             val isVideo = mediaType == MediaStore.Files.FileColumns.MEDIA_TYPE_VIDEO
-            favoriteItems.add(MediaItem(uri, isVideo))
+            favoriteItems.add(MediaItem(uri, name, isVideo))
         }
     }
     return favoriteItems
+}
+
+fun loadTrashedMediaItems(
+    context: Context,
+    sortType: SortType,
+    sortAscending: Boolean
+): List<MediaItem> {
+    val trashedUris = TrashRepository.getTrashedUris(context)
+    if (trashedUris.isEmpty()) {
+        return emptyList()
+    }
+
+    val trashedItems = mutableListOf<MediaItem>()
+    val collection = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+        MediaStore.Files.getContentUri(MediaStore.VOLUME_EXTERNAL)
+    } else {
+        MediaStore.Files.getContentUri("external")
+    }
+
+    val projection = arrayOf(
+        MediaStore.Files.FileColumns._ID,
+        MediaStore.Files.FileColumns.MEDIA_TYPE,
+        MediaStore.Files.FileColumns.DISPLAY_NAME
+    )
+
+    val selection = "${MediaStore.Files.FileColumns._ID} IN (${trashedUris.joinToString { "?" }})"
+    val selectionArgs = trashedUris.map { ContentUris.parseId(it).toString() }.toTypedArray()
+
+    val sortColumn = when (sortType) {
+        SortType.DATE_MODIFIED -> MediaStore.Files.FileColumns.DATE_MODIFIED
+        SortType.DATE_ADDED -> MediaStore.Files.FileColumns.DATE_ADDED
+        SortType.NAME -> MediaStore.Files.FileColumns.DISPLAY_NAME
+    }
+    val sortDirection = if (sortAscending) "ASC" else "DESC"
+    val sortOrder = "$sortColumn $sortDirection"
+
+    context.contentResolver.query(collection, projection, selection, selectionArgs, sortOrder)?.use { cursor ->
+        val idColumn = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns._ID)
+        val mediaTypeColumn = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.MEDIA_TYPE)
+        val nameColumn = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.DISPLAY_NAME)
+
+        while (cursor.moveToNext()) {
+            val id = cursor.getLong(idColumn)
+            val uri = ContentUris.withAppendedId(collection, id)
+            val mediaType = cursor.getInt(mediaTypeColumn)
+            val name = cursor.getString(nameColumn)
+            val isVideo = mediaType == MediaStore.Files.FileColumns.MEDIA_TYPE_VIDEO
+            trashedItems.add(MediaItem(uri, name, isVideo))
+        }
+    }
+    return trashedItems
 }

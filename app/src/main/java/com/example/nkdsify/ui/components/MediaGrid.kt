@@ -42,6 +42,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
@@ -61,7 +62,8 @@ fun MediaGrid(
     selectedItems: List<Uri>,
     imageLoader: ImageLoader,
     onItemClick: (MediaItem) -> Unit,
-    onToggleSelection: (MediaItem) -> Unit
+    onToggleSelection: (MediaItem) -> Unit,
+    isBlurEnabled: Boolean = false
 ) {
     if (items.isEmpty()) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -110,6 +112,7 @@ fun MediaGrid(
                             modifier = Modifier
                                 .fillMaxSize()
                                 .then(if (isSelected) Modifier.alpha(0.5f) else Modifier)
+                                .then(if (isBlurEnabled) Modifier.blur(20.dp) else Modifier)
                         )
                     }
                     if (item.isVideo) {
