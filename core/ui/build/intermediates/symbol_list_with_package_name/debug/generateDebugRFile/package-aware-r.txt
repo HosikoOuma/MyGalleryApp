@@ -1,4 +1,0 @@
-com.example.nkdsify.core.ui
-drawable avatar
-raw pii
-raw uwu
