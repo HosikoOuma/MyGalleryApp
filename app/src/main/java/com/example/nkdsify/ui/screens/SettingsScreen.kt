@@ -27,6 +27,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import com.example.nkdsify.data.Theme
 import com.example.nkdsify.data.ZoomType
+import com.example.nkdsify.ui.utils.VibrationStrength
 
 @Composable
 fun SettingsScreen(
@@ -45,11 +46,16 @@ fun SettingsScreen(
     selectedZoomType: ZoomType,
     onZoomTypeChange: (ZoomType) -> Unit,
     onManageTagsClick: () -> Unit,
-    onBackupAndRestoreClick: () -> Unit
+    onBackupAndRestoreClick: () -> Unit,
+    selectedVibrationStrength: VibrationStrength,
+    onVibrationStrengthChange: (VibrationStrength) -> Unit,
+    isShowFileCountEnabled: Boolean,
+    onShowFileCountChange: (Boolean) -> Unit
 ) {
     val context = LocalContext.current
     var themeMenuExpanded by remember { mutableStateOf(false) }
     var zoomTypeMenuExpanded by remember { mutableStateOf(false) }
+    var vibrationStrengthMenuExpanded by remember { mutableStateOf(false) }
 
     Column(
         modifier = Modifier.padding(16.dp).fillMaxWidth(),
@@ -109,6 +115,18 @@ fun SettingsScreen(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
+            Text("Show file count in folders")
+            Switch(
+                checked = isShowFileCountEnabled,
+                onCheckedChange = onShowFileCountChange
+            )
+        }
+        Row(
+            modifier = Modifier
+                .fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
             Text("Theme")
             Box {
                 TextButton(onClick = { themeMenuExpanded = true }) {
@@ -146,6 +164,30 @@ fun SettingsScreen(
                         DropdownMenuItem(
                             text = { Text(zoomType.name) },
                             onClick = { onZoomTypeChange(zoomType); zoomTypeMenuExpanded = false }
+                        )
+                    }
+                }
+            }
+        }
+        Row(
+            modifier = Modifier
+                .fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text("Vibration Strength")
+            Box {
+                TextButton(onClick = { vibrationStrengthMenuExpanded = true }) {
+                    Text(selectedVibrationStrength.name)
+                }
+                DropdownMenu(
+                    expanded = vibrationStrengthMenuExpanded,
+                    onDismissRequest = { vibrationStrengthMenuExpanded = false }
+                ) {
+                    VibrationStrength.entries.forEach { strength ->
+                        DropdownMenuItem(
+                            text = { Text(strength.name) },
+                            onClick = { onVibrationStrengthChange(strength); vibrationStrengthMenuExpanded = false }
                         )
                     }
                 }

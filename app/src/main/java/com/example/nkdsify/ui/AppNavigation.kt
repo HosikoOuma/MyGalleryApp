@@ -3,6 +3,7 @@ package com.example.nkdsify.ui
 import android.net.Uri
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.ExperimentalAnimationApi
+import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
@@ -26,8 +27,11 @@ import com.example.nkdsify.ui.screens.FoldersGrid
 import com.example.nkdsify.ui.screens.SettingsScreen
 import com.example.nkdsify.ui.screens.TagManagementScreen
 import com.example.nkdsify.ui.screens.TrashScreen
+import com.example.nkdsify.ui.utils.VibrationStrength
 
-@OptIn(ExperimentalAnimationApi::class, ExperimentalComposeUiApi::class)
+@OptIn(ExperimentalAnimationApi::class, ExperimentalComposeUiApi::class,
+    ExperimentalSharedTransitionApi::class
+)
 @Composable
 fun AppNavigation(
     currentScreen: Screen,
@@ -67,7 +71,12 @@ fun AppNavigation(
     onClearTrash: () -> Unit,
     onBlurEnabledChange: (Boolean) -> Unit,
     isBlurAllMediaEnabled: Boolean,
-    onBlurAllMediaEnabledChange: (Boolean) -> Unit
+    onBlurAllMediaEnabledChange: (Boolean) -> Unit,
+    selectedVibrationStrength: VibrationStrength,
+    onVibrationStrengthChange: (VibrationStrength) -> Unit,
+    onOpenAlbum: (String) -> Unit,
+    isShowFileCountEnabled: Boolean,
+    onShowFileCountChange: (Boolean) -> Unit
 ) {
     val visibleFolders = remember(allFolders, hiddenFolders, isSearchActive, searchQuery) {
         val folders = allFolders.filterNot { hiddenFolders.contains(it.id.toString()) }
@@ -102,9 +111,9 @@ fun AppNavigation(
     }
 
     AnimatedContent(targetState = currentScreen, transitionSpec = {
-        if (targetState is Screen.FolderContent && initialState is Screen.Folders) {
+        if ((targetState is Screen.FolderContent && initialState is Screen.Folders) || (targetState is Screen.Favorites && (initialState as? Screen.Favorites)?.openAlbumName == null)) {
             slideInHorizontally { it } togetherWith slideOutHorizontally { -it } + fadeOut()
-        } else if (targetState is Screen.Folders && initialState is Screen.FolderContent) {
+        } else if ((targetState is Screen.Folders && initialState is Screen.FolderContent) || (targetState is Screen.Favorites && (targetState as? Screen.Favorites)?.openAlbumName == null)) {
             slideInHorizontally { -it } togetherWith slideOutHorizontally { it } + fadeOut()
         } else if (targetState is Screen.TagManagement && initialState is Screen.Settings) {
             slideInHorizontally { it } togetherWith slideOutHorizontally { -it } + fadeOut()
@@ -123,7 +132,8 @@ fun AppNavigation(
                     onFolderClick(it)
                 },
                 isBlurEnabled = isBlurEnabled,
-                gridState = foldersGridState
+                gridState = foldersGridState,
+                isShowFileCountEnabled = isShowFileCountEnabled
             )
 
             is Screen.FolderContent -> {
@@ -159,9 +169,9 @@ fun AppNavigation(
                     selectedItems = selectedItems,
                     imageLoader = imageLoader,
                     tags = tags,
-                    onItemClick = { item ->
+                    onItemClick = { items, item ->
                         keyboardController?.hide()
-                        setViewerState(MediaViewerState(items = filteredFavoriteItems, startIndex = filteredFavoriteItems.indexOf(item)))
+                        setViewerState(MediaViewerState(items = items, startIndex = items.indexOf(item)))
                     },
                     onToggleSelection = { item ->
                         if (selectedItems.contains(item.uri)) {
@@ -172,8 +182,9 @@ fun AppNavigation(
                     },
                     isBlurEnabled = isBlurEnabled,
                     gridState = favoritesGridState,
-                    onClearSelection = { onClearSelection() },
-                    onClearSearch = { onClearSearch() }
+                    openAlbumName = screen.openAlbumName,
+                    onOpenAlbum = onOpenAlbum,
+                    isShowFileCountEnabled = isShowFileCountEnabled
                 )
             }
 
@@ -194,7 +205,11 @@ fun AppNavigation(
                     selectedZoomType = selectedZoomType,
                     onZoomTypeChange = onZoomTypeChange,
                     onManageTagsClick = onManageTagsClick,
-                    onBackupAndRestoreClick = onBackupAndRestoreClick
+                    onBackupAndRestoreClick = onBackupAndRestoreClick,
+                    selectedVibrationStrength = selectedVibrationStrength,
+                    onVibrationStrengthChange = onVibrationStrengthChange,
+                    isShowFileCountEnabled = isShowFileCountEnabled,
+                    onShowFileCountChange = onShowFileCountChange
                 )
             }
 

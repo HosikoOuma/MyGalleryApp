@@ -6,6 +6,7 @@ import android.content.Context
 import android.content.IntentSender
 import android.content.SharedPreferences
 import android.graphics.BitmapFactory
+import android.media.MediaMetadataRetriever
 import android.net.Uri
 import android.os.Build
 import android.provider.MediaStore
@@ -67,24 +68,35 @@ fun getMediaDetails(context: Context, uri: Uri): MediaDetails? {
                 val isVideo = mimeType?.startsWith("video/") ?: false
 
                 var resolution = "Unknown"
-                if (!isVideo) { // Get resolution only for images
-                    var inputStream: InputStream? = null
-                    try {
-                        inputStream = context.contentResolver.openInputStream(uri)
-                        if (inputStream != null) {
-                            val options = BitmapFactory.Options().apply { inJustDecodeBounds = true }
-                            BitmapFactory.decodeStream(inputStream, null, options)
-                            if (options.outWidth != -1 && options.outHeight != -1) {
-                                resolution = "${options.outWidth} x ${options.outHeight}"
-                            }
+                try {
+                    if (isVideo) {
+                        val retriever = MediaMetadataRetriever()
+                        retriever.setDataSource(context, uri)
+                        val width = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_WIDTH)
+                        val height = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_HEIGHT)
+                        if (width != null && height != null) {
+                            resolution = "$width x $height"
                         }
-                    } catch (e: Exception) {
-                        Log.e("getMediaDetails", "Failed to get resolution for URI: $uri", e)
-                    } finally {
-                        inputStream?.close()
+                        retriever.release()
+                    } else { // Get resolution only for images
+                        var inputStream: InputStream? = null
+                        try {
+                            inputStream = context.contentResolver.openInputStream(uri)
+                            if (inputStream != null) {
+                                val options = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+                                BitmapFactory.decodeStream(inputStream, null, options)
+                                if (options.outWidth != -1 && options.outHeight != -1) {
+                                    resolution = "${options.outWidth} x ${options.outHeight}"
+                                }
+                            }
+                        } catch (e: Exception) {
+                            Log.e("getMediaDetails", "Failed to get resolution for URI: $uri", e)
+                        } finally {
+                            inputStream?.close()
+                        }
                     }
-                } else {
-                    resolution = "N/A for video"
+                } catch (e: Exception) {
+                    Log.e("getMediaDetails", "Failed to get resolution for URI: $uri", e)
                 }
 
                 MediaDetails(
@@ -118,6 +130,18 @@ fun formatTimestamp(timestamp: Long): String {
     val instant = Instant.ofEpochSecond(timestamp)
     val formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss").withZone(ZoneId.systemDefault())
     return formatter.format(instant)
+}
+
+fun formatDateRange(startMillis: Long, endMillis: Long): String {
+    if (startMillis == 0L || endMillis == 0L) return ""
+    val startDate = Instant.ofEpochSecond(startMillis).atZone(ZoneId.systemDefault()).toLocalDate()
+    val endDate = Instant.ofEpochSecond(endMillis).atZone(ZoneId.systemDefault()).toLocalDate()
+    val formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy")
+    return if (startDate == endDate) {
+        formatter.format(startDate)
+    } else {
+        "${formatter.format(startDate)} - ${formatter.format(endDate)}"
+    }
 }
 
 @Composable

@@ -13,7 +13,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.hapticfeedback.HapticFeedback
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import com.example.nkdsify.data.Screen
 import com.example.nkdsify.data.SortType
 import android.content.Context
@@ -21,6 +20,8 @@ import android.media.MediaPlayer
 import android.widget.Toast
 import androidx.compose.runtime.saveable.rememberSaveable
 import com.example.nkdsify.R
+import com.example.nkdsify.ui.utils.VibrationStrength
+import com.example.nkdsify.ui.utils.performVibration
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -49,7 +50,7 @@ fun TopBar(
     onReverseSort: () -> Unit,
     selectedDate: Long?,
     onResetDateFilter: () -> Unit,
-    onSettingsClick: () -> Unit
+    onDetailsClick: () -> Unit
 ) {
     if (isSelectionMode) {
         TopAppBar(
@@ -105,7 +106,7 @@ fun TopBar(
             },
             modifier = Modifier.statusBarsPadding(),
             navigationIcon = {
-                if (currentScreen is Screen.FolderContent || currentScreen is Screen.TagManagement || currentScreen is Screen.AllMedia) {
+                if (currentScreen is Screen.FolderContent || currentScreen is Screen.TagManagement || currentScreen is Screen.AllMedia || (currentScreen is Screen.Favorites && currentScreen.openAlbumName != null)) {
                     IconButton(onClick = onBackClick) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
@@ -150,6 +151,7 @@ fun TopBar(
                                 )
                                 DropdownMenuItem(
                                     text = { Text("Reverse") },
+                                    trailingIcon = { Icon(Icons.Filled.SwapVert, contentDescription = "Reverse Sort") },
                                     onClick = { onReverseSort(); menuExpanded = false }
                                 )
                                 if (selectedDate != null) {
@@ -160,8 +162,10 @@ fun TopBar(
                                  }
                             }
                         }
-                        IconButton(onClick = onSettingsClick) {
-                            Icon(Icons.Filled.Settings, contentDescription = "Settings")
+                        if (currentScreen is Screen.FolderContent || (currentScreen is Screen.Favorites && currentScreen.openAlbumName != null)) {
+                            IconButton(onClick = onDetailsClick) {
+                                Icon(Icons.Filled.Info, contentDescription = "Details")
+                            }
                         }
                     }
                 }
@@ -175,37 +179,45 @@ fun BottomBar(
     currentScreen: Screen,
     haptics: HapticFeedback,
     onScreenChange: (Screen) -> Unit,
-    context: Context
+    context: Context,
+    onSettingsClick: () -> Unit,
+    vibrationStrength: VibrationStrength
 ) {
     var lastTap by rememberSaveable { mutableLongStateOf(0L) }
     var tapCount by rememberSaveable { mutableIntStateOf(0) }
     
     NavigationBar {
         NavigationBarItem(
+            icon = { Icon(Icons.Filled.Settings, contentDescription = "Settings") },
+            label = { Text("Settings") },
+            selected = currentScreen is Screen.Settings,
+            onClick = { performVibration(haptics, vibrationStrength); onSettingsClick() }
+        )
+        NavigationBarItem(
             icon = { Icon(Icons.Filled.Delete, contentDescription = "Trash") },
             label = { Text("Trash") },
             selected = currentScreen is Screen.Trash,
-            onClick = { haptics.performHapticFeedback(HapticFeedbackType.LongPress); onScreenChange(Screen.Trash) }
+            onClick = { performVibration(haptics, vibrationStrength); onScreenChange(Screen.Trash) }
         )
         NavigationBarItem(
             icon = { Icon(Icons.Filled.PhotoLibrary, contentDescription = "Folders") },
             label = { Text("Folders") },
             selected = currentScreen is Screen.Folders || currentScreen is Screen.FolderContent,
-            onClick = { haptics.performHapticFeedback(HapticFeedbackType.LongPress); onScreenChange(Screen.Folders) }
+            onClick = { performVibration(haptics, vibrationStrength); onScreenChange(Screen.Folders) }
         )
         NavigationBarItem(
             icon = { Icon(Icons.Default.PermMedia, contentDescription = "All Media") },
             label = { Text("All Media") },
             selected = currentScreen is Screen.AllMedia,
-            onClick = { haptics.performHapticFeedback(HapticFeedbackType.LongPress); onScreenChange(Screen.AllMedia) }
+            onClick = { performVibration(haptics, vibrationStrength); onScreenChange(Screen.AllMedia) }
         )
         NavigationBarItem(
             icon = { Icon(Icons.Filled.Favorite, contentDescription = "Favorites") },
             label = { Text("Favorites") },
             selected = currentScreen is Screen.Favorites,
             onClick = {
-                haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-                onScreenChange(Screen.Favorites)
+                performVibration(haptics, vibrationStrength)
+                onScreenChange(Screen.Favorites())
                 val now = System.currentTimeMillis()
                 if (now - lastTap < 500) {
                     tapCount++

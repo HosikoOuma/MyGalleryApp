@@ -5,7 +5,7 @@ import android.net.Uri
 sealed class Screen {
     data object Folders : Screen()
     data class FolderContent(val folder: MediaFolder) : Screen()
-    data object Favorites : Screen()
+    data class Favorites(val openAlbumName: String? = null) : Screen()
     data object Settings : Screen()
     data object TagManagement : Screen()
     data object Trash : Screen()
@@ -17,13 +17,27 @@ data class MediaFolder(
     val id: Long,
     val name: String,
     val items: List<MediaItem>,
-    val coverUri: Uri? = null
+    val coverUri: Uri? = null,
+    val totalSize: Long,
+    val dateRange: Pair<Long, Long>,
+    val itemCount: Int
 )
+
 
 data class MediaItem(
     val uri: Uri,
     val name: String,
-    val isVideo: Boolean = false
+    val isVideo: Boolean = false,
+    val size: Long,
+    val dateAdded: Long,
+    val dateModified: Long
+)
+
+data class AlbumDetails(
+    val path: String? = null,
+    val totalSize: Long,
+    val dateRange: Pair<Long, Long>? = null,
+    val itemCount: Int
 )
 
 data class MediaDetails(

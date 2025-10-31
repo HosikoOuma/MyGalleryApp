@@ -28,11 +28,18 @@ fun loadAllMedia(
         MediaStore.Files.FileColumns._ID,
         MediaStore.Files.FileColumns.MEDIA_TYPE,
         MediaStore.Files.FileColumns.DISPLAY_NAME,
-        MediaStore.Files.FileColumns.BUCKET_ID
+        MediaStore.Files.FileColumns.BUCKET_ID,
+        MediaStore.Files.FileColumns.SIZE,
+        MediaStore.Files.FileColumns.DATE_ADDED,
+        MediaStore.Files.FileColumns.DATE_MODIFIED
     )
 
     val selectionParts = mutableListOf<String>()
     val selectionArgs = mutableListOf<String>()
+
+    selectionParts.add("${MediaStore.Files.FileColumns.MEDIA_TYPE} IN (?, ?)")
+    selectionArgs.add(MediaStore.Files.FileColumns.MEDIA_TYPE_IMAGE.toString())
+    selectionArgs.add(MediaStore.Files.FileColumns.MEDIA_TYPE_VIDEO.toString())
 
     selectedDate?.let {
         val calendar = Calendar.getInstance()
@@ -70,6 +77,9 @@ fun loadAllMedia(
         val idColumn = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns._ID)
         val mediaTypeColumn = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.MEDIA_TYPE)
         val nameColumn = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.DISPLAY_NAME)
+        val sizeColumn = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.SIZE)
+        val dateAddedColumn = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.DATE_ADDED)
+        val dateModifiedColumn = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.DATE_MODIFIED)
 
         while (cursor.moveToNext()) {
             val id = cursor.getLong(idColumn)
@@ -79,9 +89,12 @@ fun loadAllMedia(
 
             val mediaType = cursor.getInt(mediaTypeColumn)
             val name = cursor.getString(nameColumn)
+            val size = cursor.getLong(sizeColumn)
+            val dateAdded = cursor.getLong(dateAddedColumn)
+            val dateModified = cursor.getLong(dateModifiedColumn)
 
             val isVideo = mediaType == MediaStore.Files.FileColumns.MEDIA_TYPE_VIDEO
-            mediaItems.add(MediaItem(uri, name, isVideo))
+            mediaItems.add(MediaItem(uri, name, isVideo, size, dateAdded, dateModified))
         }
     }
 
@@ -110,11 +123,18 @@ fun loadMediaFolders(
         MediaStore.Files.FileColumns.BUCKET_DISPLAY_NAME,
         MediaStore.Files.FileColumns.MEDIA_TYPE,
         MediaStore.Files.FileColumns.DISPLAY_NAME,
-        MediaStore.Files.FileColumns.DATA
+        MediaStore.Files.FileColumns.DATA,
+        MediaStore.Files.FileColumns.SIZE,
+        MediaStore.Files.FileColumns.DATE_ADDED,
+        MediaStore.Files.FileColumns.DATE_MODIFIED
     )
 
     val selectionParts = mutableListOf<String>()
     val selectionArgs = mutableListOf<String>()
+
+    selectionParts.add("${MediaStore.Files.FileColumns.MEDIA_TYPE} IN (?, ?)")
+    selectionArgs.add(MediaStore.Files.FileColumns.MEDIA_TYPE_IMAGE.toString())
+    selectionArgs.add(MediaStore.Files.FileColumns.MEDIA_TYPE_VIDEO.toString())
 
     selectedDate?.let {
         val calendar = Calendar.getInstance()
@@ -150,6 +170,9 @@ fun loadMediaFolders(
         val bucketNameColumn = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.BUCKET_DISPLAY_NAME)
         val mediaTypeColumn = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.MEDIA_TYPE)
         val nameColumn = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.DISPLAY_NAME)
+        val sizeColumn = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.SIZE)
+        val dateAddedColumn = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.DATE_ADDED)
+        val dateModifiedColumn = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.DATE_MODIFIED)
 
         while (cursor.moveToNext()) {
             val id = cursor.getLong(idColumn)
@@ -161,9 +184,12 @@ fun loadMediaFolders(
             val bucketName = cursor.getString(bucketNameColumn)
             val mediaType = cursor.getInt(mediaTypeColumn)
             val name = cursor.getString(nameColumn)
+            val size = cursor.getLong(sizeColumn)
+            val dateAdded = cursor.getLong(dateAddedColumn)
+            val dateModified = cursor.getLong(dateModifiedColumn)
 
             val isVideo = mediaType == MediaStore.Files.FileColumns.MEDIA_TYPE_VIDEO
-            val item = MediaItem(uri, name, isVideo)
+            val item = MediaItem(uri, name, isVideo, size, dateAdded, dateModified)
 
             if (!foldersMap.containsKey(bucketId)) {
                 foldersMap[bucketId] = mutableListOf()
@@ -176,9 +202,16 @@ fun loadMediaFolders(
     return foldersMap.mapNotNull { entry ->
         val folderName = folderNames[entry.key]
         val itemsInFolder = entry.value
+        val totalSize = itemsInFolder.sumOf { it.size }
+        val dateRange = if (itemsInFolder.isNotEmpty()) {
+            val dates = itemsInFolder.map { it.dateModified }
+            Pair(dates.minOrNull() ?: 0L, dates.maxOrNull() ?: 0L)
+        } else {
+            Pair(0L, 0L)
+        }
         val coverItem = itemsInFolder.firstOrNull { !it.isVideo } ?: itemsInFolder.firstOrNull()
         if (folderName != null && coverItem != null) {
-            MediaFolder(id = entry.key, name = folderName, items = itemsInFolder, coverUri = coverItem.uri)
+            MediaFolder(id = entry.key, name = folderName, items = itemsInFolder, coverUri = coverItem.uri, totalSize = totalSize, dateRange = dateRange, itemCount = itemsInFolder.size)
         } else {
             null
         }
@@ -208,7 +241,10 @@ fun loadFavoriteMediaItems(
     val projection = arrayOf(
         MediaStore.Files.FileColumns._ID,
         MediaStore.Files.FileColumns.MEDIA_TYPE,
-        MediaStore.Files.FileColumns.DISPLAY_NAME
+        MediaStore.Files.FileColumns.DISPLAY_NAME,
+        MediaStore.Files.FileColumns.SIZE,
+        MediaStore.Files.FileColumns.DATE_ADDED,
+        MediaStore.Files.FileColumns.DATE_MODIFIED
     )
 
     val selectionParts = mutableListOf<String>()
@@ -249,6 +285,9 @@ fun loadFavoriteMediaItems(
         val idColumn = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns._ID)
         val mediaTypeColumn = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.MEDIA_TYPE)
         val nameColumn = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.DISPLAY_NAME)
+        val sizeColumn = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.SIZE)
+        val dateAddedColumn = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.DATE_ADDED)
+        val dateModifiedColumn = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.DATE_MODIFIED)
 
         while (cursor.moveToNext()) {
             val id = cursor.getLong(idColumn)
@@ -258,8 +297,11 @@ fun loadFavoriteMediaItems(
 
             val mediaType = cursor.getInt(mediaTypeColumn)
             val name = cursor.getString(nameColumn)
+            val size = cursor.getLong(sizeColumn)
+            val dateAdded = cursor.getLong(dateAddedColumn)
+            val dateModified = cursor.getLong(dateModifiedColumn)
             val isVideo = mediaType == MediaStore.Files.FileColumns.MEDIA_TYPE_VIDEO
-            favoriteItems.add(MediaItem(uri, name, isVideo))
+            favoriteItems.add(MediaItem(uri, name, isVideo, size, dateAdded, dateModified))
         }
     }
     return favoriteItems
@@ -285,7 +327,10 @@ fun loadTrashedMediaItems(
     val projection = arrayOf(
         MediaStore.Files.FileColumns._ID,
         MediaStore.Files.FileColumns.MEDIA_TYPE,
-        MediaStore.Files.FileColumns.DISPLAY_NAME
+        MediaStore.Files.FileColumns.DISPLAY_NAME,
+        MediaStore.Files.FileColumns.SIZE,
+        MediaStore.Files.FileColumns.DATE_ADDED,
+        MediaStore.Files.FileColumns.DATE_MODIFIED
     )
 
     val selection = "${MediaStore.Files.FileColumns._ID} IN (${trashedUris.joinToString { "?" }})"
@@ -304,6 +349,9 @@ fun loadTrashedMediaItems(
         val idColumn = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns._ID)
         val mediaTypeColumn = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.MEDIA_TYPE)
         val nameColumn = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.DISPLAY_NAME)
+        val sizeColumn = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.SIZE)
+        val dateAddedColumn = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.DATE_ADDED)
+        val dateModifiedColumn = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.DATE_MODIFIED)
 
         while (cursor.moveToNext()) {
             val id = cursor.getLong(idColumn)
@@ -311,8 +359,12 @@ fun loadTrashedMediaItems(
 
             val mediaType = cursor.getInt(mediaTypeColumn)
             val name = cursor.getString(nameColumn)
+            val size = cursor.getLong(sizeColumn)
+            val dateAdded = cursor.getLong(dateAddedColumn)
+            val dateModified = cursor.getLong(dateModifiedColumn)
+
             val isVideo = mediaType == MediaStore.Files.FileColumns.MEDIA_TYPE_VIDEO
-            trashedItems.add(MediaItem(uri, name, isVideo))
+            trashedItems.add(MediaItem(uri, name, isVideo, size, dateAdded, dateModified))
         }
     }
     return trashedItems

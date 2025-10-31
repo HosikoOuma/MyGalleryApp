@@ -1,12 +1,6 @@
 package com.example.nkdsify.ui.screens
 
 import android.net.Uri
-import androidx.activity.compose.BackHandler
-import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInHorizontally
-import androidx.compose.animation.slideOutHorizontally
-import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -26,10 +20,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
@@ -47,12 +38,13 @@ fun FavoritesScreen(
     selectedItems: List<Uri>,
     imageLoader: ImageLoader,
     tags: Map<String, Set<String>>,
-    onItemClick: (MediaItem) -> Unit,
+    onItemClick: (List<MediaItem>, MediaItem) -> Unit,
     onToggleSelection: (MediaItem) -> Unit,
     isBlurEnabled: Boolean,
     gridState: LazyGridState,
-    onClearSelection: () -> Unit,
-    onClearSearch: () -> Unit
+    openAlbumName: String?,
+    onOpenAlbum: (String) -> Unit,
+    isShowFileCountEnabled: Boolean
 ) {
     val taggedAlbums = items
         .flatMap { item -> (tags[item.uri.toString()] ?: emptySet()).map { tag -> tag to item } }
@@ -64,74 +56,54 @@ fun FavoritesScreen(
     }
     displayAlbums.addAll(taggedAlbums.entries.map { it.key to it.value }.sortedBy { it.first })
 
-    var openAlbumName by remember { mutableStateOf<String?>(null) }
-
-    if (openAlbumName != null && displayAlbums.find { it.first == openAlbumName } == null) {
-        openAlbumName = null
-    }
-
-    BackHandler(enabled = openAlbumName != null || selectedItems.isNotEmpty()) {
-        when {
-            selectedItems.isNotEmpty() -> onClearSelection()
-            openAlbumName != null -> {
-                openAlbumName = null
-                onClearSearch()
-            }
-        }
-    }
-
     val albumToShow = if (openAlbumName != null) displayAlbums.find { it.first == openAlbumName } else null
 
-    AnimatedContent(targetState = albumToShow, transitionSpec = {
-        if (targetState != null) {
-            slideInHorizontally { it } togetherWith slideOutHorizontally { -it } + fadeOut()
+    if (albumToShow != null) {
+        MediaGrid(
+            items = albumToShow.second,
+            favorites = favorites,
+            selectedItems = selectedItems,
+            imageLoader = imageLoader,
+            onItemClick = { item -> onItemClick(albumToShow.second, item) },
+            onToggleSelection = onToggleSelection
+        )
+    } else {
+        if (displayAlbums.isEmpty()) {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Text(text = "No favorites yet")
+            }
         } else {
-            slideInHorizontally { -it } togetherWith slideOutHorizontally { it } + fadeOut()
-        }
-    }, label = "Album Animation") { currentAlbum ->
-        if (currentAlbum != null) {
-            MediaGrid(
-                items = currentAlbum.second,
-                favorites = favorites,
-                selectedItems = selectedItems,
-                imageLoader = imageLoader,
-                onItemClick = onItemClick,
-                onToggleSelection = onToggleSelection
-            )
-        } else {
-            if (displayAlbums.isEmpty()) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text(text = "No favorites yet")
-                }
-            } else {
-                LazyVerticalGrid(
-                    columns = GridCells.Fixed(2),
-                    state = gridState,
-                    contentPadding = PaddingValues(8.dp)
-                ) {
-                    items(displayAlbums, key = { it.first }) { (albumName, albumItems) ->
-                        if (albumItems.isNotEmpty()) {
-                            Card(
-                                modifier = Modifier
-                                    .padding(8.dp)
-                                    .aspectRatio(1f)
-                                    .clickable(
-                                        interactionSource = remember { MutableInteractionSource() },
-                                        indication = rememberRipple(),
-                                        onClick = { openAlbumName = albumName }
-                                    ),
-                                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
-                            ) {
-                                Column {
-                                    Image(
-                                        painter = rememberAsyncImagePainter(model = albumItems.first().uri, imageLoader = imageLoader),
-                                        contentDescription = "Album cover for $albumName",
-                                        contentScale = ContentScale.Crop,
-                                        modifier = Modifier
-                                            .weight(1f)
-                                            .fillMaxWidth()
-                                            .then(if (isBlurEnabled) Modifier.blur(16.dp) else Modifier)
-                                    )
+            LazyVerticalGrid(
+                columns = GridCells.Fixed(2),
+                state = gridState,
+                contentPadding = PaddingValues(8.dp)
+            ) {
+                items(displayAlbums, key = { it.first }) { (albumName, albumItems) ->
+                    if (albumItems.isNotEmpty()) {
+                        Card(
+                            modifier = Modifier
+                                .padding(8.dp)
+                                .aspectRatio(1f)
+                                .clickable(
+                                    interactionSource = remember { MutableInteractionSource() },
+                                    indication = rememberRipple(),
+                                    onClick = { onOpenAlbum(albumName) }
+                                ),
+                            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+                        ) {
+                            Column {
+                                Image(
+                                    painter = rememberAsyncImagePainter(model = albumItems.first().uri, imageLoader = imageLoader),
+                                    contentDescription = "Album cover for $albumName",
+                                    contentScale = ContentScale.Crop,
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .fillMaxWidth()
+                                        .then(if (isBlurEnabled) Modifier.blur(16.dp) else Modifier)
+                                )
+                                if (isShowFileCountEnabled) {
+                                    Text(text = "$albumName (${albumItems.size})", modifier = Modifier.padding(8.dp))
+                                } else {
                                     Text(text = albumName, modifier = Modifier.padding(8.dp))
                                 }
                             }

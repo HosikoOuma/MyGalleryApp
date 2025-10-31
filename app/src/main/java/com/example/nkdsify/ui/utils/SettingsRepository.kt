@@ -14,6 +14,8 @@ object SettingsRepository {
     private const val TRASH_BLUR_ENABLED_KEY = "trash_blur_enabled"
     private const val ZOOM_TYPE_KEY = "zoom_type"
     private const val BLUR_ALL_MEDIA_ENABLED_KEY = "blur_all_media_enabled"
+    private const val VIBRATION_STRENGTH_KEY = "vibration_strength"
+    private const val SHOW_FILE_COUNT_KEY = "show_file_count"
 
     fun setBlurEnabled(context: Context, enabled: Boolean) {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
@@ -99,5 +101,30 @@ object SettingsRepository {
     fun isBlurAllMediaEnabled(context: Context): Boolean {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         return prefs.getBoolean(BLUR_ALL_MEDIA_ENABLED_KEY, false)
+    }
+
+    fun setVibrationStrength(context: Context, strength: VibrationStrength) {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit {
+            putString(VIBRATION_STRENGTH_KEY, strength.name)
+        }
+    }
+
+    fun getVibrationStrength(context: Context): VibrationStrength {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val strengthName = prefs.getString(VIBRATION_STRENGTH_KEY, VibrationStrength.MEDIUM.name) ?: VibrationStrength.MEDIUM.name
+        return VibrationStrength.valueOf(strengthName)
+    }
+
+    fun setShowFileCount(context: Context, enabled: Boolean) {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit {
+            putBoolean(SHOW_FILE_COUNT_KEY, enabled)
+        }
+    }
+
+    fun isShowFileCountEnabled(context: Context): Boolean {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        return prefs.getBoolean(SHOW_FILE_COUNT_KEY, true)
     }
 }

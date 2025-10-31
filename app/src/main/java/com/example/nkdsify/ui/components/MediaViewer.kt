@@ -166,7 +166,7 @@ fun MediaViewer(
                     if (isExternal) {
                         showExternalMediaError = true
                     } else {
-                        haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                        haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                         onToggleFavorite(currentItem.uri)
                     }
                 }) {
@@ -245,7 +245,7 @@ fun ZoomableImage(uri: Uri, imageLoader: ImageLoader, zoomType: ZoomType) {
 
                 if (tapCount == 5) {
                     tapCount = 0
-                    haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                    haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                     val mediaPlayer = MediaPlayer.create(context, R.raw.pii)
                     mediaPlayer.setOnCompletionListener { it.release() }
                     mediaPlayer.start()

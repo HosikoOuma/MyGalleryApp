@@ -36,7 +36,8 @@ fun FoldersGrid(
     imageLoader: ImageLoader,
     onFolderClick: (MediaFolder) -> Unit,
     isBlurEnabled: Boolean,
-    gridState: LazyGridState
+    gridState: LazyGridState,
+    isShowFileCountEnabled: Boolean
 ) {
     if (folders.isEmpty()) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -62,7 +63,11 @@ fun FoldersGrid(
                         .weight(1f)
                         .fillMaxWidth()
                         .then(if (isBlurEnabled) Modifier.blur(16.dp) else Modifier))
-                    Text(text = folder.name, modifier = Modifier.padding(8.dp), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    if (isShowFileCountEnabled) {
+                        Text(text = "${folder.name} (${folder.itemCount})", modifier = Modifier.padding(8.dp), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    } else {
+                        Text(text = folder.name, modifier = Modifier.padding(8.dp), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    }
                 }
             }
         }

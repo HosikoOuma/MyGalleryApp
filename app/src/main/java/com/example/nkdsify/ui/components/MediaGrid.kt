@@ -57,6 +57,7 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun MediaGrid(
+    modifier: Modifier = Modifier,
     items: List<MediaItem>,
     favorites: List<Uri>,
     selectedItems: List<Uri>,
@@ -66,7 +67,7 @@ fun MediaGrid(
     isBlurEnabled: Boolean = false
 ) {
     if (items.isEmpty()) {
-        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             Text("No media files found")
         }
         return
@@ -75,7 +76,7 @@ fun MediaGrid(
     val gridState = rememberLazyGridState()
     val isSelectionMode = selectedItems.isNotEmpty()
 
-    Box(modifier = Modifier.fillMaxSize()) {
+    Box(modifier = modifier.fillMaxSize()) {
         LazyVerticalGrid(
             state = gridState,
             columns = GridCells.Fixed(3),
@@ -97,7 +98,7 @@ fun MediaGrid(
                                 }
                             }, onLongPress = { _ ->
                                 if (!isSelectionMode) {
-                                    haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                                    haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                     onToggleSelection(item)
                                 }
                             })

@@ -44,12 +44,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -106,6 +106,8 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int) {
     val context = LocalContext.current
     var selectedTheme by remember { mutableStateOf(SettingsRepository.getTheme(context)) }
     var selectedZoomType by remember { mutableStateOf(SettingsRepository.getZoomType(context)) }
+    var selectedVibrationStrength by remember { mutableStateOf(SettingsRepository.getVibrationStrength(context)) }
+    var isShowFileCountEnabled by remember { mutableStateOf(SettingsRepository.isShowFileCountEnabled(context)) }
     val keyboardController = LocalSoftwareKeyboardController.current
 
     NkdsifyAppTheme(theme = selectedTheme) {
@@ -140,6 +142,7 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int) {
         var showTagDialog by remember { mutableStateOf<Uri?>(null) }
         var showBulkTagDialog by remember { mutableStateOf(false) }
         var showDetailsDialog by remember { mutableStateOf<Uri?>(null) }
+        var showAlbumDetailsDialog by remember { mutableStateOf(false) }
         var showConfirmDeleteDialog by remember { mutableStateOf(false) }
         var showConfirmTrashDialog by remember { mutableStateOf(false) }
         var showConfirmRestoreDialog by remember { mutableStateOf(false) }
@@ -176,10 +179,6 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int) {
                         isSettingWallpaper = false // Reset flag
                         viewerState = null
                     }
-                }
-            } else {
-                if (result.error != null) {
-                    Toast.makeText(context, "Image editing failed: ${result.error?.message}", Toast.LENGTH_SHORT).show()
                 }
             }
             showDetailsDialog = null
@@ -310,7 +309,7 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int) {
                         val details = getMediaDetails(context, initialUri)
                         val name = details?.name ?: ""
                         val isVideo = context.contentResolver.getType(initialUri)?.startsWith("video/") == true
-                        viewerState = MediaViewerState(listOf(MediaItem(initialUri, name, isVideo)), 0, isExternal = true)
+                        viewerState = MediaViewerState(listOf(MediaItem(initialUri, name, isVideo, 0, 0, 0)), 0, isExternal = true)
                     }
                 }
             }
@@ -322,7 +321,7 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int) {
         }
 
         LaunchedEffect(currentScreen) {
-            if (currentScreen !is Screen.FolderContent) {
+            if (currentScreen !is Screen.FolderContent && currentScreen !is Screen.Favorites) {
                 isSearchActive = false
                 searchQuery = ""
             }
@@ -352,13 +351,12 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int) {
         val title = when (val screen = currentScreen) {
             is Screen.Folders -> "Folders"
             is Screen.FolderContent -> screen.folder.name
-            is Screen.Favorites -> "Favorites"
+            is Screen.Favorites -> if (screen.openAlbumName != null) screen.openAlbumName else "Favorites"
             is Screen.Settings -> "Settings"
             is Screen.TagManagement -> "Manage Tags"
             is Screen.Trash -> "Trash"
             is Screen.AllMedia -> "All Media"
         }
-        val isFavoritesScreen = currentScreen is Screen.Favorites
 
         val datePickerState = rememberDatePickerState()
         var showDatePicker by remember { mutableStateOf(false) }
@@ -423,6 +421,28 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int) {
                         cropImageLauncher.launch(cropOptions)
                     }
                 )
+            }
+        }
+        if (showAlbumDetailsDialog) {
+            val screen = currentScreen
+            if (screen is Screen.FolderContent) {
+                val folder = screen.folder
+                val path = getMediaDetails(context, folder.items.first().uri)?.path?.substringBeforeLast('/') ?: ""
+                AlbumDetailsDialog(
+                    details = AlbumDetails(path, folder.totalSize, folder.dateRange, folder.itemCount),
+                    onDismiss = { showAlbumDetailsDialog = false })
+            } else if (screen is Screen.Favorites && screen.openAlbumName != null) {
+                val taggedAlbums = favoriteItems
+                    .flatMap { item -> (tags[item.uri.toString()] ?: emptySet()).map { tag -> tag to item } }
+                    .groupBy({ it.first }, { it.second })
+                val albumItems = if (screen.openAlbumName == "All Favorites") favoriteItems else taggedAlbums[screen.openAlbumName] ?: emptySet()
+
+                if (albumItems.isNotEmpty()) {
+                    val totalSize = albumItems.sumOf { it.size }
+                    AlbumDetailsDialog(
+                        details = AlbumDetails(totalSize = totalSize, itemCount = albumItems.size),
+                        onDismiss = { showAlbumDetailsDialog = false })
+                }
             }
         }
 
@@ -558,18 +578,19 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int) {
         }
 
         Box(Modifier.fillMaxSize()) {
-            BackHandler(enabled = isSelectionMode && currentScreen !is Screen.Favorites) {
+            BackHandler(enabled = isSelectionMode) {
                 selectedItems.clear()
             }
-            BackHandler(enabled = currentScreen is Screen.FolderContent && !isSelectionMode) {
+            BackHandler(enabled = currentScreen is Screen.FolderContent) {
                 currentScreen = Screen.Folders
-                searchQuery = ""
-                isSearchActive = false
             }
-            BackHandler(enabled = currentScreen is Screen.Settings && !isSelectionMode) { currentScreen = Screen.Folders }
-            BackHandler(enabled = currentScreen is Screen.TagManagement && !isSelectionMode) { currentScreen = Screen.Settings }
-            BackHandler(enabled = currentScreen is Screen.Trash && !isSelectionMode) { currentScreen = Screen.Folders }
-            BackHandler(enabled = currentScreen is Screen.AllMedia && !isSelectionMode) { currentScreen = Screen.Folders }
+            BackHandler(enabled = currentScreen is Screen.Favorites && (currentScreen as Screen.Favorites).openAlbumName != null) {
+                currentScreen = Screen.Favorites()
+            }
+            BackHandler(enabled = currentScreen is Screen.Settings) { currentScreen = Screen.Folders }
+            BackHandler(enabled = currentScreen is Screen.TagManagement) { currentScreen = Screen.Settings }
+            BackHandler(enabled = currentScreen is Screen.Trash) { currentScreen = Screen.Folders }
+            BackHandler(enabled = currentScreen is Screen.AllMedia) { currentScreen = Screen.Folders }
 
             Scaffold(
                 topBar = {
@@ -610,8 +631,8 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int) {
                             showConfirmTrashDialog = true
                         },
                         onToggleFavorite = {
-                            haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-                            if (isFavoritesScreen) {
+                            performVibration(haptics, selectedVibrationStrength)
+                            if (currentScreen is Screen.Favorites) {
                                 val urisToUnfavorite = selectedItems.toList()
                                 favorites.removeAll(urisToUnfavorite.toSet())
                                 favoriteItems = favoriteItems.filterNot { it.uri in urisToUnfavorite.toSet() }
@@ -623,14 +644,15 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int) {
                             }
                             selectedItems.clear()
                         },
-                        isFavoritesScreen = isFavoritesScreen,
+                        isFavoritesScreen = currentScreen is Screen.Favorites,
                         isSearchActive = isSearchActive,
                         searchQuery = searchQuery,
                         onSearchQueryChange = { searchQuery = it },
                         title = title,
                         onBackClick = {
-                            when (currentScreen) {
+                            when (val screen = currentScreen) {
                                 is Screen.TagManagement -> currentScreen = Screen.Settings
+                                is Screen.Favorites -> currentScreen = Screen.Favorites()
                                 else -> currentScreen = Screen.Folders
                             }
                         },
@@ -644,7 +666,7 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int) {
                         onReverseSort = { sortAscending = !sortAscending },
                         selectedDate = selectedDate,
                         onResetDateFilter = { selectedDate = null },
-                        onSettingsClick = { currentScreen = Screen.Settings }
+                        onDetailsClick = { showAlbumDetailsDialog = true }
                     )
                 },
                 bottomBar = {
@@ -652,7 +674,9 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int) {
                         currentScreen = currentScreen,
                         haptics = haptics,
                         onScreenChange = { currentScreen = it },
-                        context = context
+                        context = context,
+                        onSettingsClick = { currentScreen = Screen.Settings },
+                        vibrationStrength = selectedVibrationStrength
                     )
                 }
             ) { innerPadding ->
@@ -736,6 +760,17 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int) {
                             onBlurAllMediaEnabledChange = {
                                 isBlurAllMediaEnabled = it
                                 SettingsRepository.setBlurAllMediaEnabled(context, it)
+                            },
+                            selectedVibrationStrength = selectedVibrationStrength,
+                            onVibrationStrengthChange = {
+                                selectedVibrationStrength = it
+                                SettingsRepository.setVibrationStrength(context, it)
+                            },
+                            onOpenAlbum = { albumName -> currentScreen = Screen.Favorites(openAlbumName = albumName) },
+                            isShowFileCountEnabled = isShowFileCountEnabled,
+                            onShowFileCountChange = {
+                                isShowFileCountEnabled = it
+                                SettingsRepository.setShowFileCount(context, it)
                             }
                         )
                     } else {
