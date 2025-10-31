@@ -10,7 +10,6 @@ sealed class Screen {
     data object TagManagement : Screen()
     data object Trash : Screen()
     data object AllMedia : Screen()
-    data class Edit(val uri: Uri) : Screen()
 }
 
 
@@ -33,7 +32,8 @@ data class MediaDetails(
     val dateAdded: Long,
     val dateModified: Long,
     val path: String,
-    val resolution: String
+    val resolution: String,
+    val isVideo: Boolean
 )
 
 data class MediaViewerState(
@@ -59,5 +59,3 @@ enum class ZoomType {
     PINCH,
     DOUBLE_TAP
 }
-
-

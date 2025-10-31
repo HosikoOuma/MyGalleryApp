@@ -14,7 +14,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Wallpaper
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -43,13 +42,15 @@ fun getMediaDetails(context: Context, uri: Uri): MediaDetails? {
             MediaStore.Files.FileColumns.SIZE,
             MediaStore.Files.FileColumns.DATE_ADDED,
             MediaStore.Files.FileColumns.DATE_MODIFIED,
-            MediaStore.Files.FileColumns.DATA
+            MediaStore.Files.FileColumns.DATA,
+            MediaStore.Files.FileColumns.MIME_TYPE
         )
     } else {
         arrayOf(
             MediaStore.Files.FileColumns.DISPLAY_NAME,
             MediaStore.Files.FileColumns.SIZE,
-            MediaStore.Files.FileColumns.DATA
+            MediaStore.Files.FileColumns.DATA,
+            MediaStore.Files.FileColumns.MIME_TYPE
         )
     }
     try {
@@ -60,22 +61,30 @@ fun getMediaDetails(context: Context, uri: Uri): MediaDetails? {
                 val dateAddedColumn = if (uri.scheme == "content") cursor.getColumnIndex(MediaStore.Files.FileColumns.DATE_ADDED) else -1
                 val dateModifiedColumn = if (uri.scheme == "content") cursor.getColumnIndex(MediaStore.Files.FileColumns.DATE_MODIFIED) else -1
                 val dataColumn = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.DATA)
+                val mimeTypeColumn = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.MIME_TYPE)
+
+                val mimeType = cursor.getString(mimeTypeColumn)
+                val isVideo = mimeType?.startsWith("video/") ?: false
 
                 var resolution = "Unknown"
-                var inputStream: InputStream? = null
-                try {
-                    inputStream = context.contentResolver.openInputStream(uri)
-                    if (inputStream != null) {
-                        val options = BitmapFactory.Options().apply { inJustDecodeBounds = true }
-                        BitmapFactory.decodeStream(inputStream, null, options)
-                        if (options.outWidth != -1 && options.outHeight != -1) {
-                            resolution = "${options.outWidth} x ${options.outHeight}"
+                if (!isVideo) { // Get resolution only for images
+                    var inputStream: InputStream? = null
+                    try {
+                        inputStream = context.contentResolver.openInputStream(uri)
+                        if (inputStream != null) {
+                            val options = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+                            BitmapFactory.decodeStream(inputStream, null, options)
+                            if (options.outWidth != -1 && options.outHeight != -1) {
+                                resolution = "${options.outWidth} x ${options.outHeight}"
+                            }
                         }
+                    } catch (e: Exception) {
+                        Log.e("getMediaDetails", "Failed to get resolution for URI: $uri", e)
+                    } finally {
+                        inputStream?.close()
                     }
-                } catch (e: Exception) {
-                    Log.e("getMediaDetails", "Failed to get resolution for URI: $uri", e)
-                } finally {
-                    inputStream?.close()
+                } else {
+                    resolution = "N/A for video"
                 }
 
                 MediaDetails(
@@ -84,7 +93,8 @@ fun getMediaDetails(context: Context, uri: Uri): MediaDetails? {
                     dateAdded = if (dateAddedColumn != -1) cursor.getLong(dateAddedColumn) else 0,
                     dateModified = if (dateModifiedColumn != -1) cursor.getLong(dateModifiedColumn) else 0,
                     path = cursor.getString(dataColumn),
-                    resolution = resolution
+                    resolution = resolution,
+                    isVideo = isVideo
                 )
             } else {
                 null
@@ -244,8 +254,7 @@ fun deleteMediaPermanently(context: Context, uris: List<Uri>): IntentSender? {
 fun MediaDetailsDialog(
     details: MediaDetails,
     onDismiss: () -> Unit,
-    onSetAsWallpaper: () -> Unit,
-    onEdit: () -> Unit
+    onSetAsWallpaper: () -> Unit
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -264,9 +273,6 @@ fun MediaDetailsDialog(
             Row {
                 IconButton(onClick = onSetAsWallpaper) {
                     Icon(Icons.Default.Wallpaper, contentDescription = "Set as wallpaper")
-                }
-                IconButton(onClick = onEdit) {
-                    Icon(Icons.Default.Edit, contentDescription = "Edit")
                 }
             }
         },

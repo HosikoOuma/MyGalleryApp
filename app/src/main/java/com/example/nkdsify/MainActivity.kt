@@ -1,3 +1,4 @@
+@file:kotlin.OptIn(ExperimentalMaterial3Api::class)
 
 package com.example.nkdsify
 
@@ -27,10 +28,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
-import androidx.compose.material.ExperimentalMaterialApi
-import androidx.compose.material.pullrefresh.PullRefreshIndicator
-import androidx.compose.material.pullrefresh.pullRefresh
-import androidx.compose.material.pullrefresh.rememberPullRefreshState
 import androidx.compose.material3.Button
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
@@ -38,6 +35,8 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.pulltorefresh.PullToRefreshContainer
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -46,18 +45,19 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.core.net.toUri
+import androidx.media3.common.util.UnstableApi
 import coil.ImageLoader
 import coil.decode.GifDecoder
 import coil.decode.ImageDecoderDecoder
@@ -79,26 +79,30 @@ import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.BufferedReader
 import java.io.InputStreamReader
 import android.content.ContentUris
+import androidx.annotation.OptIn
 
+@OptIn(UnstableApi::class, ExperimentalMaterial3Api::class)
 class MainActivity : ComponentActivity() {
-    @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterialApi::class)
+    @OptIn(ExperimentalMaterial3Api::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
             val initialUri = if (intent?.action == Intent.ACTION_VIEW) intent.data else null
-            MyApp(initialUri = initialUri)
+            val displayMetrics = resources.displayMetrics
+            val screenWidth = displayMetrics.widthPixels
+            val screenHeight = displayMetrics.heightPixels
+            MyApp(initialUri = initialUri, screenWidth = screenWidth, screenHeight = screenHeight)
         }
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterialApi::class, ExperimentalComposeUiApi::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalComposeUiApi::class)
 @Composable
-fun MyApp(initialUri: Uri? = null) {
+fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int) {
     val context = LocalContext.current
     var selectedTheme by remember { mutableStateOf(SettingsRepository.getTheme(context)) }
     var selectedZoomType by remember { mutableStateOf(SettingsRepository.getZoomType(context)) }
@@ -106,7 +110,6 @@ fun MyApp(initialUri: Uri? = null) {
 
     NkdsifyAppTheme(theme = selectedTheme) {
         val haptics = LocalHapticFeedback.current
-        val coroutineScope = rememberCoroutineScope()
 
         val permissionsToRequest = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             arrayOf(Manifest.permission.READ_MEDIA_IMAGES, Manifest.permission.READ_MEDIA_VIDEO)
@@ -121,8 +124,6 @@ fun MyApp(initialUri: Uri? = null) {
         var viewerState by remember { mutableStateOf<MediaViewerState?>(null) }
 
         var currentScreen by remember { mutableStateOf<Screen>(Screen.Folders) }
-        var previousScreen by remember { mutableStateOf<Screen?>(null) }
-        var previousViewerState by remember { mutableStateOf<MediaViewerState?>(null) }
         val foldersGridState = rememberLazyGridState()
         val favoritesGridState = rememberLazyGridState()
 
@@ -174,53 +175,6 @@ fun MyApp(initialUri: Uri? = null) {
                         }
                         isSettingWallpaper = false // Reset flag
                         viewerState = null
-                    } else {
-                        try {
-                            val values = ContentValues().apply {
-                                put(MediaStore.Images.Media.DISPLAY_NAME, "edited_${System.currentTimeMillis()}.jpg")
-                                put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg")
-                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                                    put(MediaStore.Images.Media.RELATIVE_PATH, Environment.DIRECTORY_PICTURES + "/NkdsifyEdits")
-                                    put(MediaStore.Images.Media.IS_PENDING, 1)
-                                }
-                            }
-
-                            val newImageFileUri = context.contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values)
-
-                            if (newImageFileUri != null) {
-                                context.contentResolver.openInputStream(croppedImageUri)?.use { inputStream ->
-                                    context.contentResolver.openOutputStream(newImageFileUri)?.use { outputStream ->
-                                        inputStream.copyTo(outputStream)
-                                    }
-                                }
-
-                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                                    values.clear()
-                                    values.put(MediaStore.Images.Media.IS_PENDING, 0)
-                                    context.contentResolver.update(newImageFileUri, values, null, null)
-                                }
-
-                                Toast.makeText(context, "Edited image saved as new file.", Toast.LENGTH_SHORT).show()
-                                refreshTrigger++
-                                if (currentScreen is Screen.Edit) {
-                                    if (previousViewerState != null) {
-                                        viewerState = previousViewerState
-                                        previousViewerState = null
-                                    }
-                                    if (previousScreen != null) {
-                                        currentScreen = previousScreen!!
-                                        previousScreen = null
-                                    } else {
-                                        currentScreen = Screen.Folders
-                                    }
-                                }
-                            } else {
-                                Toast.makeText(context, "Could not create new image file.", Toast.LENGTH_SHORT).show()
-                            }
-
-                        } catch (e: Exception) {
-                            Toast.makeText(context, "Failed to save image: ${e.message}", Toast.LENGTH_SHORT).show()
-                        }
                     }
                 }
             } else {
@@ -311,14 +265,14 @@ fun MyApp(initialUri: Uri? = null) {
             }
         }
 
-        var isRefreshing by remember { mutableStateOf(false) }
-        val pullRefreshState = rememberPullRefreshState(isRefreshing, { coroutineScope.launch {
-            isRefreshing = true
-            delay(1000) // For presentation purposes
-            refreshTrigger++
-            isRefreshing = false
-        } })
-
+        val pullRefreshState = rememberPullToRefreshState()
+        if (pullRefreshState.isRefreshing) {
+            LaunchedEffect(true) {
+                delay(1000) // For presentation purposes
+                refreshTrigger++
+                pullRefreshState.endRefresh()
+            }
+        }
 
         LaunchedEffect(initialUri, hasPermissions) {
             if (initialUri != null && hasPermissions) {
@@ -403,7 +357,6 @@ fun MyApp(initialUri: Uri? = null) {
             is Screen.TagManagement -> "Manage Tags"
             is Screen.Trash -> "Trash"
             is Screen.AllMedia -> "All Media"
-            is Screen.Edit -> "Edit"
         }
         val isFavoritesScreen = currentScreen is Screen.Favorites
 
@@ -449,10 +402,6 @@ fun MyApp(initialUri: Uri? = null) {
             )
         }
 
-        val displayMetrics = context.resources.displayMetrics
-        val screenWidth = displayMetrics.widthPixels
-        val screenHeight = displayMetrics.heightPixels
-
         if (showDetailsDialog != null) {
             val uri = showDetailsDialog!!
             val details = getMediaDetails(context, uri)
@@ -462,7 +411,7 @@ fun MyApp(initialUri: Uri? = null) {
                     onDismiss = { showDetailsDialog = null },
                     onSetAsWallpaper = {
                         isSettingWallpaper = true
-                        val cropImageOptions = CropImageOptions(
+                        val cropOptions = CropImageContractOptions(uri, CropImageOptions(
                             guidelines = CropImageView.Guidelines.ON,
                             fixAspectRatio = true,
                             aspectRatioX = screenWidth,
@@ -470,16 +419,8 @@ fun MyApp(initialUri: Uri? = null) {
                             outputRequestWidth = screenWidth,
                             outputRequestHeight = screenHeight,
                             outputRequestSizeOptions = CropImageView.RequestSizeOptions.RESIZE_EXACT
-                        )
-                        val cropOptions = CropImageContractOptions(uri, cropImageOptions)
+                        ))
                         cropImageLauncher.launch(cropOptions)
-                    },
-                    onEdit = {
-                        previousScreen = currentScreen
-                        previousViewerState = viewerState
-                        currentScreen = Screen.Edit(uri)
-                        showDetailsDialog = null
-                        viewerState = null
                     }
                 )
             }
@@ -629,18 +570,6 @@ fun MyApp(initialUri: Uri? = null) {
             BackHandler(enabled = currentScreen is Screen.TagManagement && !isSelectionMode) { currentScreen = Screen.Settings }
             BackHandler(enabled = currentScreen is Screen.Trash && !isSelectionMode) { currentScreen = Screen.Folders }
             BackHandler(enabled = currentScreen is Screen.AllMedia && !isSelectionMode) { currentScreen = Screen.Folders }
-            BackHandler(enabled = currentScreen is Screen.Edit && !isSelectionMode) {
-                if (previousViewerState != null) {
-                    viewerState = previousViewerState
-                    previousViewerState = null
-                }
-                if (previousScreen != null) {
-                    currentScreen = previousScreen!!
-                    previousScreen = null
-                } else {
-                    currentScreen = Screen.Folders
-                }
-            }
 
             Scaffold(
                 topBar = {
@@ -702,18 +631,6 @@ fun MyApp(initialUri: Uri? = null) {
                         onBackClick = {
                             when (currentScreen) {
                                 is Screen.TagManagement -> currentScreen = Screen.Settings
-                                is Screen.Edit -> {
-                                    if (previousViewerState != null) {
-                                        viewerState = previousViewerState
-                                        previousViewerState = null
-                                    }
-                                    if (previousScreen != null) {
-                                        currentScreen = previousScreen!!
-                                        previousScreen = null
-                                    } else {
-                                        currentScreen = Screen.Folders
-                                    }
-                                }
                                 else -> currentScreen = Screen.Folders
                             }
                         },
@@ -731,17 +648,15 @@ fun MyApp(initialUri: Uri? = null) {
                     )
                 },
                 bottomBar = {
-                    if (currentScreen !is Screen.Edit) {
-                        BottomBar(
-                            currentScreen = currentScreen,
-                            haptics = haptics,
-                            onScreenChange = { currentScreen = it },
-                            context = context
-                        )
-                    }
+                    BottomBar(
+                        currentScreen = currentScreen,
+                        haptics = haptics,
+                        onScreenChange = { currentScreen = it },
+                        context = context
+                    )
                 }
             ) { innerPadding ->
-                Box(modifier = Modifier.padding(innerPadding).pullRefresh(pullRefreshState)) {
+                Box(modifier = Modifier.padding(innerPadding).nestedScroll(pullRefreshState.nestedScrollConnection)) {
                     if (hasPermissions) {
                         AppNavigation(
                             currentScreen = currentScreen,
@@ -821,8 +736,7 @@ fun MyApp(initialUri: Uri? = null) {
                             onBlurAllMediaEnabledChange = {
                                 isBlurAllMediaEnabled = it
                                 SettingsRepository.setBlurAllMediaEnabled(context, it)
-                            },
-                            onCropImage = cropImageLauncher::launch
+                            }
                         )
                     } else {
                         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -835,10 +749,9 @@ fun MyApp(initialUri: Uri? = null) {
                             }
                         }
                     }
-                    PullRefreshIndicator(
-                        refreshing = isRefreshing,
+                    PullToRefreshContainer(
+                        modifier = Modifier.align(Alignment.TopCenter),
                         state = pullRefreshState,
-                        modifier = Modifier.align(Alignment.TopCenter)
                     )
                 }
             }

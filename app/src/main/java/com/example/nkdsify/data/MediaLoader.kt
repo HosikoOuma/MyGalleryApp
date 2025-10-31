@@ -150,7 +150,6 @@ fun loadMediaFolders(
         val bucketNameColumn = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.BUCKET_DISPLAY_NAME)
         val mediaTypeColumn = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.MEDIA_TYPE)
         val nameColumn = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.DISPLAY_NAME)
-        val dataColumn = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.DATA)
 
         while (cursor.moveToNext()) {
             val id = cursor.getLong(idColumn)
@@ -309,6 +308,7 @@ fun loadTrashedMediaItems(
         while (cursor.moveToNext()) {
             val id = cursor.getLong(idColumn)
             val uri = ContentUris.withAppendedId(collection, id)
+
             val mediaType = cursor.getInt(mediaTypeColumn)
             val name = cursor.getString(nameColumn)
             val isVideo = mediaType == MediaStore.Files.FileColumns.MEDIA_TYPE_VIDEO

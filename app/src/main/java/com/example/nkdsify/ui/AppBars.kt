@@ -105,14 +105,14 @@ fun TopBar(
             },
             modifier = Modifier.statusBarsPadding(),
             navigationIcon = {
-                if (currentScreen is Screen.FolderContent || currentScreen is Screen.TagManagement || currentScreen is Screen.AllMedia || currentScreen is Screen.Edit) {
+                if (currentScreen is Screen.FolderContent || currentScreen is Screen.TagManagement || currentScreen is Screen.AllMedia) {
                     IconButton(onClick = onBackClick) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 }
             },
             actions = {
-                if (currentScreen !is Screen.Settings && currentScreen !is Screen.TagManagement && currentScreen !is Screen.Edit) {
+                if (currentScreen !is Screen.Settings && currentScreen !is Screen.TagManagement) {
                     if (isSearchActive) {
                         IconButton(onClick = onCloseSearch) {
                             Icon(Icons.Filled.Close, contentDescription = "Close Search")
