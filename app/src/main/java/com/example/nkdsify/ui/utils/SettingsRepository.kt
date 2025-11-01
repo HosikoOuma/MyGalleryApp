@@ -16,6 +16,21 @@ object SettingsRepository {
     private const val BLUR_ALL_MEDIA_ENABLED_KEY = "blur_all_media_enabled"
     private const val VIBRATION_STRENGTH_KEY = "vibration_strength"
     private const val SHOW_FILE_COUNT_KEY = "show_file_count"
+    private const val ALL_MEDIA_CLICK_COUNT_KEY = "all_media_click_count"
+    private const val EASTER_EGG_UNLOCKED_KEY = "easter_egg_unlocked"
+    private const val SHUFFLE_BUTTON_VISIBLE_KEY = "shuffle_button_visible"
+
+    fun setShuffleButtonVisible(context: Context, visible: Boolean) {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit {
+            putBoolean(SHUFFLE_BUTTON_VISIBLE_KEY, visible)
+        }
+    }
+
+    fun isShuffleButtonVisible(context: Context): Boolean {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        return prefs.getBoolean(SHUFFLE_BUTTON_VISIBLE_KEY, true)
+    }
 
     fun setBlurEnabled(context: Context, enabled: Boolean) {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
@@ -126,5 +141,37 @@ object SettingsRepository {
     fun isShowFileCountEnabled(context: Context): Boolean {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         return prefs.getBoolean(SHOW_FILE_COUNT_KEY, true)
+    }
+
+    fun incrementAllMediaClickCount(context: Context) {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val currentCount = getAllMediaClickCount(context)
+        prefs.edit {
+            putInt(ALL_MEDIA_CLICK_COUNT_KEY, currentCount + 1)
+        }
+    }
+
+    fun getAllMediaClickCount(context: Context): Int {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        return prefs.getInt(ALL_MEDIA_CLICK_COUNT_KEY, 0)
+    }
+
+    fun resetAllMediaClickCount(context: Context) {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit {
+            putInt(ALL_MEDIA_CLICK_COUNT_KEY, 0)
+        }
+    }
+
+    fun setEasterEggUnlocked(context: Context, unlocked: Boolean) {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit {
+            putBoolean(EASTER_EGG_UNLOCKED_KEY, unlocked)
+        }
+    }
+
+    fun isEasterEggUnlocked(context: Context): Boolean {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        return prefs.getBoolean(EASTER_EGG_UNLOCKED_KEY, false)
     }
 }

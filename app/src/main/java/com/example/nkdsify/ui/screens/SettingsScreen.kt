@@ -9,6 +9,8 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -50,15 +52,22 @@ fun SettingsScreen(
     selectedVibrationStrength: VibrationStrength,
     onVibrationStrengthChange: (VibrationStrength) -> Unit,
     isShowFileCountEnabled: Boolean,
-    onShowFileCountChange: (Boolean) -> Unit
+    onShowFileCountChange: (Boolean) -> Unit,
+    isEasterEggUnlocked: Boolean,
+    isShuffleButtonVisible: Boolean,
+    onShuffleButtonVisibleChange: (Boolean) -> Unit
 ) {
     val context = LocalContext.current
     var themeMenuExpanded by remember { mutableStateOf(false) }
     var zoomTypeMenuExpanded by remember { mutableStateOf(false) }
     var vibrationStrengthMenuExpanded by remember { mutableStateOf(false) }
+    val scrollState = rememberScrollState()
 
     Column(
-        modifier = Modifier.padding(16.dp).fillMaxWidth(),
+        modifier = Modifier
+            .padding(16.dp)
+            .fillMaxWidth()
+            .verticalScroll(scrollState),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Row(
@@ -120,6 +129,20 @@ fun SettingsScreen(
                 checked = isShowFileCountEnabled,
                 onCheckedChange = onShowFileCountChange
             )
+        }
+        if (isEasterEggUnlocked) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("Show Shuffle Button")
+                Switch(
+                    checked = isShuffleButtonVisible,
+                    onCheckedChange = onShuffleButtonVisibleChange
+                )
+            }
         }
         Row(
             modifier = Modifier

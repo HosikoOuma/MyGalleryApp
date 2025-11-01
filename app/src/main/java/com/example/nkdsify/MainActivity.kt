@@ -28,10 +28,14 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Photo
 import androidx.compose.material3.Button
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -84,6 +88,7 @@ import java.io.BufferedReader
 import java.io.InputStreamReader
 import android.content.ContentUris
 import androidx.annotation.OptIn
+import java.lang.Runtime
 
 @OptIn(UnstableApi::class, ExperimentalMaterial3Api::class)
 class MainActivity : ComponentActivity() {
@@ -108,6 +113,8 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int) {
     var selectedZoomType by remember { mutableStateOf(SettingsRepository.getZoomType(context)) }
     var selectedVibrationStrength by remember { mutableStateOf(SettingsRepository.getVibrationStrength(context)) }
     var isShowFileCountEnabled by remember { mutableStateOf(SettingsRepository.isShowFileCountEnabled(context)) }
+    var isEasterEggUnlocked by remember { mutableStateOf(SettingsRepository.isEasterEggUnlocked(context)) }
+    var isShuffleButtonVisible by remember { mutableStateOf(SettingsRepository.isShuffleButtonVisible(context)) }
     val keyboardController = LocalSoftwareKeyboardController.current
 
     NkdsifyAppTheme(theme = selectedTheme) {
@@ -673,11 +680,59 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int) {
                     BottomBar(
                         currentScreen = currentScreen,
                         haptics = haptics,
-                        onScreenChange = { currentScreen = it },
+                        onScreenChange = { screen ->
+                            if (screen is Screen.AllMedia && !isEasterEggUnlocked) {
+                                SettingsRepository.incrementAllMediaClickCount(context)
+                                val clickCount = SettingsRepository.getAllMediaClickCount(context)
+                                if (clickCount >= 10) {
+                                    SettingsRepository.setEasterEggUnlocked(context, true)
+                                    isEasterEggUnlocked = true
+                                    SettingsRepository.resetAllMediaClickCount(context)
+                                    val packageManager = context.packageManager
+                                    val intent = packageManager.getLaunchIntentForPackage(context.packageName)
+                                    val componentName = intent!!.component
+                                    val mainIntent = Intent.makeRestartActivityTask(componentName)
+                                    context.startActivity(mainIntent)
+                                    Runtime.getRuntime().exit(0)
+                                }
+                            }
+                            currentScreen = screen
+                        },
                         context = context,
                         onSettingsClick = { currentScreen = Screen.Settings },
                         vibrationStrength = selectedVibrationStrength
                     )
+                },
+                floatingActionButton = {
+                    if (isEasterEggUnlocked && isShuffleButtonVisible && currentScreen !is Screen.Trash && currentScreen !is Screen.Settings && currentScreen !is Screen.TagManagement) {
+                        FloatingActionButton(
+                            onClick = {
+                                val itemsToShuffle = when (val screen = currentScreen) {
+                                    is Screen.FolderContent -> screen.folder.items
+                                    is Screen.AllMedia -> allMedia
+                                    is Screen.Favorites -> {
+                                        if (screen.openAlbumName != null) {
+                                            val taggedAlbums = favoriteItems
+                                                .flatMap { item -> (tags[item.uri.toString()] ?: emptySet()).map { tag -> tag to item } }
+                                                .groupBy({ it.first }, { it.second })
+                                            if (screen.openAlbumName == "All Favorites") favoriteItems else taggedAlbums[screen.openAlbumName] ?: emptyList()
+                                        } else {
+                                            favoriteItems
+                                        }
+                                    }
+                                    is Screen.Folders -> allMedia
+                                    else -> emptyList()
+                                }
+
+                                if (itemsToShuffle.isNotEmpty()) {
+                                    val shuffledItems = itemsToShuffle.shuffled()
+                                    viewerState = MediaViewerState(items = shuffledItems, startIndex = 0)
+                                }
+                            }
+                        ) {
+                            Icon(Icons.Filled.Photo, contentDescription = "Shuffle Play")
+                        }
+                    }
                 }
             ) { innerPadding ->
                 Box(modifier = Modifier.padding(innerPadding).nestedScroll(pullRefreshState.nestedScrollConnection)) {
@@ -771,6 +826,12 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int) {
                             onShowFileCountChange = {
                                 isShowFileCountEnabled = it
                                 SettingsRepository.setShowFileCount(context, it)
+                            },
+                            isEasterEggUnlocked = isEasterEggUnlocked,
+                            isShuffleButtonVisible = isShuffleButtonVisible,
+                            onShuffleButtonVisibleChange = {
+                                isShuffleButtonVisible = it
+                                SettingsRepository.setShuffleButtonVisible(context, it)
                             }
                         )
                     } else {

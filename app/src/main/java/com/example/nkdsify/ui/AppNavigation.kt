@@ -76,7 +76,10 @@ fun AppNavigation(
     onVibrationStrengthChange: (VibrationStrength) -> Unit,
     onOpenAlbum: (String) -> Unit,
     isShowFileCountEnabled: Boolean,
-    onShowFileCountChange: (Boolean) -> Unit
+    onShowFileCountChange: (Boolean) -> Unit,
+    isEasterEggUnlocked: Boolean,
+    isShuffleButtonVisible: Boolean,
+    onShuffleButtonVisibleChange: (Boolean) -> Unit
 ) {
     val visibleFolders = remember(allFolders, hiddenFolders, isSearchActive, searchQuery) {
         val folders = allFolders.filterNot { hiddenFolders.contains(it.id.toString()) }
@@ -209,7 +212,10 @@ fun AppNavigation(
                     selectedVibrationStrength = selectedVibrationStrength,
                     onVibrationStrengthChange = onVibrationStrengthChange,
                     isShowFileCountEnabled = isShowFileCountEnabled,
-                    onShowFileCountChange = onShowFileCountChange
+                    onShowFileCountChange = onShowFileCountChange,
+                    isEasterEggUnlocked = isEasterEggUnlocked,
+                    isShuffleButtonVisible = isShuffleButtonVisible,
+                    onShuffleButtonVisibleChange = onShuffleButtonVisibleChange
                 )
             }
 
