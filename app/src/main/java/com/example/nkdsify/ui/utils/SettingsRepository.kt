@@ -158,16 +158,12 @@ object SettingsRepository {
 
     fun resetAllMediaClickCount(context: Context) {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        prefs.edit {
-            putInt(ALL_MEDIA_CLICK_COUNT_KEY, 0)
-        }
+        prefs.edit().putInt(ALL_MEDIA_CLICK_COUNT_KEY, 0).commit()
     }
 
     fun setEasterEggUnlocked(context: Context, unlocked: Boolean) {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        prefs.edit {
-            putBoolean(EASTER_EGG_UNLOCKED_KEY, unlocked)
-        }
+        prefs.edit().putBoolean(EASTER_EGG_UNLOCKED_KEY, unlocked).commit()
     }
 
     fun isEasterEggUnlocked(context: Context): Boolean {
