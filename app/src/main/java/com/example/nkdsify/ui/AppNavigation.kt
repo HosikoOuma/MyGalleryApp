@@ -27,9 +27,9 @@ import com.example.nkdsify.ui.screens.FoldersGrid
 import com.example.nkdsify.ui.screens.SettingsScreen
 import com.example.nkdsify.ui.screens.TagManagementScreen
 import com.example.nkdsify.ui.screens.TrashScreen
-import com.example.nkdsify.ui.utils.VibrationStrength
 
-@OptIn(ExperimentalAnimationApi::class, ExperimentalComposeUiApi::class,
+@OptIn(
+    ExperimentalAnimationApi::class, ExperimentalComposeUiApi::class,
     ExperimentalSharedTransitionApi::class
 )
 @Composable
@@ -72,8 +72,8 @@ fun AppNavigation(
     onBlurEnabledChange: (Boolean) -> Unit,
     isBlurAllMediaEnabled: Boolean,
     onBlurAllMediaEnabledChange: (Boolean) -> Unit,
-    selectedVibrationStrength: VibrationStrength,
-    onVibrationStrengthChange: (VibrationStrength) -> Unit,
+    isVibrationEnabled: Boolean,
+    onVibrationEnabledChange: (Boolean) -> Unit,
     onOpenAlbum: (String) -> Unit,
     isShowFileCountEnabled: Boolean,
     onShowFileCountChange: (Boolean) -> Unit,
@@ -114,9 +114,9 @@ fun AppNavigation(
     }
 
     AnimatedContent(targetState = currentScreen, transitionSpec = {
-        if ((targetState is Screen.FolderContent && initialState is Screen.Folders) || (targetState is Screen.Favorites && (initialState as? Screen.Favorites)?.openAlbumName == null)) {
+        if ((targetState is Screen.FolderContent && initialState is Screen.Folders) || (targetState is Screen.Favorites && (initialState as? Screen.Favorites)?.openAlbumName == null) || (targetState is Screen.AllMedia && initialState is Screen.Folders)) {
             slideInHorizontally { it } togetherWith slideOutHorizontally { -it } + fadeOut()
-        } else if ((targetState is Screen.Folders && initialState is Screen.FolderContent) || (targetState is Screen.Favorites && (targetState as? Screen.Favorites)?.openAlbumName == null)) {
+        } else if ((targetState is Screen.Folders && initialState is Screen.FolderContent) || (targetState is Screen.Folders && initialState is Screen.AllMedia) || (targetState is Screen.Favorites && (targetState as? Screen.Favorites)?.openAlbumName == null)) {
             slideInHorizontally { -it } togetherWith slideOutHorizontally { it } + fadeOut()
         } else if (targetState is Screen.TagManagement && initialState is Screen.Settings) {
             slideInHorizontally { it } togetherWith slideOutHorizontally { -it } + fadeOut()
@@ -209,8 +209,8 @@ fun AppNavigation(
                     onZoomTypeChange = onZoomTypeChange,
                     onManageTagsClick = onManageTagsClick,
                     onBackupAndRestoreClick = onBackupAndRestoreClick,
-                    selectedVibrationStrength = selectedVibrationStrength,
-                    onVibrationStrengthChange = onVibrationStrengthChange,
+                    isVibrationEnabled = isVibrationEnabled,
+                    onVibrationEnabledChange = onVibrationEnabledChange,
                     isShowFileCountEnabled = isShowFileCountEnabled,
                     onShowFileCountChange = onShowFileCountChange,
                     isEasterEggUnlocked = isEasterEggUnlocked,

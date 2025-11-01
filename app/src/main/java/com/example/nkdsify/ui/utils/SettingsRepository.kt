@@ -14,7 +14,7 @@ object SettingsRepository {
     private const val TRASH_BLUR_ENABLED_KEY = "trash_blur_enabled"
     private const val ZOOM_TYPE_KEY = "zoom_type"
     private const val BLUR_ALL_MEDIA_ENABLED_KEY = "blur_all_media_enabled"
-    private const val VIBRATION_STRENGTH_KEY = "vibration_strength"
+    private const val VIBRATION_ENABLED_KEY = "vibration_enabled"
     private const val SHOW_FILE_COUNT_KEY = "show_file_count"
     private const val ALL_MEDIA_CLICK_COUNT_KEY = "all_media_click_count"
     private const val EASTER_EGG_UNLOCKED_KEY = "easter_egg_unlocked"
@@ -118,17 +118,16 @@ object SettingsRepository {
         return prefs.getBoolean(BLUR_ALL_MEDIA_ENABLED_KEY, false)
     }
 
-    fun setVibrationStrength(context: Context, strength: VibrationStrength) {
+    fun setVibrationEnabled(context: Context, enabled: Boolean) {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         prefs.edit {
-            putString(VIBRATION_STRENGTH_KEY, strength.name)
+            putBoolean(VIBRATION_ENABLED_KEY, enabled)
         }
     }
 
-    fun getVibrationStrength(context: Context): VibrationStrength {
+    fun isVibrationEnabled(context: Context): Boolean {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        val strengthName = prefs.getString(VIBRATION_STRENGTH_KEY, VibrationStrength.MEDIUM.name) ?: VibrationStrength.MEDIUM.name
-        return VibrationStrength.valueOf(strengthName)
+        return prefs.getBoolean(VIBRATION_ENABLED_KEY, true) // Enabled by default
     }
 
     fun setShowFileCount(context: Context, enabled: Boolean) {
@@ -158,12 +157,12 @@ object SettingsRepository {
 
     fun resetAllMediaClickCount(context: Context) {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        prefs.edit().putInt(ALL_MEDIA_CLICK_COUNT_KEY, 0).commit()
+        prefs.edit().putInt(ALL_MEDIA_CLICK_COUNT_KEY, 0).apply()
     }
 
     fun setEasterEggUnlocked(context: Context, unlocked: Boolean) {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        prefs.edit().putBoolean(EASTER_EGG_UNLOCKED_KEY, unlocked).commit()
+        prefs.edit().putBoolean(EASTER_EGG_UNLOCKED_KEY, unlocked).apply()
     }
 
     fun isEasterEggUnlocked(context: Context): Boolean {

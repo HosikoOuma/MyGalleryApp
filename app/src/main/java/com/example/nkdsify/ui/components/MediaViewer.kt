@@ -46,11 +46,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -65,6 +63,8 @@ import com.example.nkdsify.R
 import com.example.nkdsify.data.MediaItem
 import com.example.nkdsify.data.ZoomType
 import com.example.nkdsify.ui.utils.ExternalMediaErrorDialog
+import com.example.nkdsify.ui.utils.SettingsRepository
+import com.example.nkdsify.ui.utils.performVibration
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -85,7 +85,7 @@ fun MediaViewer(
 ) {
     val pagerState = rememberPagerState(initialPage = startIndex, pageCount = { items.size })
     val context = LocalContext.current
-    val haptics = LocalHapticFeedback.current
+    val isVibrationEnabled = remember { SettingsRepository.isVibrationEnabled(context) }
     var showExternalMediaError by remember { mutableStateOf(false) }
     var isMuted by remember(pagerState.currentPage) { mutableStateOf(isMuteVideoByDefault) }
 
@@ -102,7 +102,7 @@ fun MediaViewer(
             if (item.isVideo) {
                 VideoPlayerPage(uri = item.uri, isVisible = isVisible, isMuted = isMuted)
             } else {
-                ZoomableImage(uri = item.uri, imageLoader = imageLoader, zoomType = zoomType)
+                ZoomableImage(uri = item.uri, imageLoader = imageLoader, zoomType = zoomType, isVibrationEnabled = isVibrationEnabled)
             }
         }
 
@@ -114,7 +114,10 @@ fun MediaViewer(
                 .padding(horizontal = 8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            IconButton(onClick = onDismiss) {
+            IconButton(onClick = {
+                if (isVibrationEnabled) performVibration(context)
+                onDismiss()
+            }) {
                 Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
             }
             Spacer(Modifier.weight(1f))
@@ -124,7 +127,10 @@ fun MediaViewer(
                 val currentItem = items[currentPage]
 
                 if (currentItem.isVideo) {
-                    IconButton(onClick = { isMuted = !isMuted }) {
+                    IconButton(onClick = {
+                        if (isVibrationEnabled) performVibration(context)
+                        isMuted = !isMuted
+                    }) {
                         Icon(
                             imageVector = if (isMuted) Icons.AutoMirrored.Filled.VolumeOff else Icons.AutoMirrored.Filled.VolumeUp,
                             contentDescription = "Mute/Unmute",
@@ -134,6 +140,7 @@ fun MediaViewer(
                 }
 
                 IconButton(onClick = {
+                    if (isVibrationEnabled) performVibration(context)
                     if (isExternal) {
                         showExternalMediaError = true
                     } else {
@@ -144,6 +151,7 @@ fun MediaViewer(
                 }
 
                 IconButton(onClick = {
+                    if (isVibrationEnabled) performVibration(context)
                     val shareIntent = Intent().apply {
                         action = Intent.ACTION_SEND
                         putExtra(Intent.EXTRA_STREAM, currentItem.uri)
@@ -154,6 +162,7 @@ fun MediaViewer(
                     Icon(Icons.Filled.Share, contentDescription = "Share", tint = Color.White)
                 }
                 IconButton(onClick = {
+                    if (isVibrationEnabled) performVibration(context)
                     if (isExternal) {
                         showExternalMediaError = true
                     } else {
@@ -163,10 +172,10 @@ fun MediaViewer(
                     Icon(Icons.Filled.Delete, contentDescription = "Delete", tint = Color.White)
                 }
                 IconButton(onClick = {
+                    if (isVibrationEnabled) performVibration(context)
                     if (isExternal) {
                         showExternalMediaError = true
                     } else {
-                        haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                         onToggleFavorite(currentItem.uri)
                     }
                 }) {
@@ -177,7 +186,10 @@ fun MediaViewer(
                     )
                 }
 
-                IconButton(onClick = { onShowDetails(currentItem.uri) }) {
+                IconButton(onClick = {
+                    if (isVibrationEnabled) performVibration(context)
+                    onShowDetails(currentItem.uri)
+                }) {
                     Icon(Icons.Filled.Info, contentDescription = "Info", tint = Color.White)
                 }
             }
@@ -186,14 +198,13 @@ fun MediaViewer(
 }
 
 @Composable
-fun ZoomableImage(uri: Uri, imageLoader: ImageLoader, zoomType: ZoomType) {
+fun ZoomableImage(uri: Uri, imageLoader: ImageLoader, zoomType: ZoomType, isVibrationEnabled: Boolean) {
     var scale by rememberSaveable { mutableFloatStateOf(1f) }
     var offsetX by rememberSaveable { mutableFloatStateOf(0f) }
     var offsetY by rememberSaveable { mutableFloatStateOf(0f) }
     var size by remember { mutableStateOf(IntSize.Zero) }
     val coroutineScope = rememberCoroutineScope()
     val context = LocalContext.current
-    val haptics = LocalHapticFeedback.current
 
     var tapCount by remember { mutableIntStateOf(0) }
     var lastTap by remember { mutableLongStateOf(0L) }
@@ -208,6 +219,7 @@ fun ZoomableImage(uri: Uri, imageLoader: ImageLoader, zoomType: ZoomType) {
         Modifier.pointerInput(Unit) {
             detectTapGestures(
                 onDoubleTap = { tapOffset ->
+                    if (isVibrationEnabled) performVibration(context)
                     coroutineScope.launch {
                         val startScale = scale
                         val startOffsetX = offsetX
@@ -245,7 +257,7 @@ fun ZoomableImage(uri: Uri, imageLoader: ImageLoader, zoomType: ZoomType) {
 
                 if (tapCount == 5) {
                     tapCount = 0
-                    haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                    if (isVibrationEnabled) performVibration(context)
                     val mediaPlayer = MediaPlayer.create(context, R.raw.pii)
                     mediaPlayer.setOnCompletionListener { it.release() }
                     mediaPlayer.start()

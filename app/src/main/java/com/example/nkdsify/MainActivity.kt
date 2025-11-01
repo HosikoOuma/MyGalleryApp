@@ -48,7 +48,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -56,7 +55,6 @@ import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
@@ -90,6 +88,7 @@ import android.content.ContentUris
 import androidx.annotation.OptIn
 import java.lang.Runtime
 
+
 @OptIn(UnstableApi::class, ExperimentalMaterial3Api::class)
 class MainActivity : ComponentActivity() {
     @OptIn(ExperimentalMaterial3Api::class)
@@ -111,15 +110,13 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int) {
     val context = LocalContext.current
     var selectedTheme by remember { mutableStateOf(SettingsRepository.getTheme(context)) }
     var selectedZoomType by remember { mutableStateOf(SettingsRepository.getZoomType(context)) }
-    var selectedVibrationStrength by remember { mutableStateOf(SettingsRepository.getVibrationStrength(context)) }
+    var isVibrationEnabled by remember { mutableStateOf(SettingsRepository.isVibrationEnabled(context)) }
     var isShowFileCountEnabled by remember { mutableStateOf(SettingsRepository.isShowFileCountEnabled(context)) }
     var isEasterEggUnlocked by remember { mutableStateOf(SettingsRepository.isEasterEggUnlocked(context)) }
     var isShuffleButtonVisible by remember { mutableStateOf(SettingsRepository.isShuffleButtonVisible(context)) }
     val keyboardController = LocalSoftwareKeyboardController.current
 
     NkdsifyAppTheme(theme = selectedTheme) {
-        val haptics = LocalHapticFeedback.current
-
         val permissionsToRequest = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             arrayOf(Manifest.permission.READ_MEDIA_IMAGES, Manifest.permission.READ_MEDIA_VIDEO)
         } else {
@@ -638,7 +635,9 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int) {
                             showConfirmTrashDialog = true
                         },
                         onToggleFavorite = {
-                            performVibration(haptics, selectedVibrationStrength)
+                            if (isVibrationEnabled) {
+                                performVibration(context)
+                            }
                             if (currentScreen is Screen.Favorites) {
                                 val urisToUnfavorite = selectedItems.toList()
                                 favorites.removeAll(urisToUnfavorite.toSet())
@@ -656,13 +655,7 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int) {
                         searchQuery = searchQuery,
                         onSearchQueryChange = { searchQuery = it },
                         title = title,
-                        onBackClick = {
-                            when (val screen = currentScreen) {
-                                is Screen.TagManagement -> currentScreen = Screen.Settings
-                                is Screen.Favorites -> currentScreen = Screen.Favorites()
-                                else -> currentScreen = Screen.Folders
-                            }
-                        },
+                        onBackClick = { currentScreen = Screen.Folders },
                         onCloseSearch = {
                             isSearchActive = false
                             searchQuery = ""
@@ -673,13 +666,14 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int) {
                         onReverseSort = { sortAscending = !sortAscending },
                         selectedDate = selectedDate,
                         onResetDateFilter = { selectedDate = null },
-                        onDetailsClick = { showAlbumDetailsDialog = true }
+                        onDetailsClick = { showAlbumDetailsDialog = true },
+                        context = context,
+                        isVibrationEnabled = isVibrationEnabled
                     )
                 },
                 bottomBar = {
                     BottomBar(
                         currentScreen = currentScreen,
-                        haptics = haptics,
                         onScreenChange = { screen ->
                             if (screen is Screen.AllMedia && !isEasterEggUnlocked) {
                                 SettingsRepository.incrementAllMediaClickCount(context)
@@ -700,13 +694,14 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int) {
                         },
                         context = context,
                         onSettingsClick = { currentScreen = Screen.Settings },
-                        vibrationStrength = selectedVibrationStrength
+                        isVibrationEnabled = isVibrationEnabled
                     )
                 },
                 floatingActionButton = {
                     if (isEasterEggUnlocked && isShuffleButtonVisible && currentScreen !is Screen.Trash && currentScreen !is Screen.Settings && currentScreen !is Screen.TagManagement) {
                         FloatingActionButton(
                             onClick = {
+                                if (isVibrationEnabled) performVibration(context)
                                 val itemsToShuffle = when (val screen = currentScreen) {
                                     is Screen.FolderContent -> screen.folder.items
                                     is Screen.AllMedia -> allMedia
@@ -771,6 +766,7 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int) {
                                 SettingsRepository.setMuteVideoByDefault(context, it)
                             },
                             onEasterEggClick = {
+                                if (isVibrationEnabled) performVibration(context)
                                 easterEggTapCount++
                                 if (easterEggTapCount == 10) {
                                     easterEggTapCount = 0
@@ -785,24 +781,36 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int) {
                                 selectedTheme = theme
                                 SettingsRepository.setTheme(context, theme)
                             },
-                            onManageHiddenFoldersClick = { showHiddenFoldersDialog = true },
+                            onManageHiddenFoldersClick = { 
+                                if (isVibrationEnabled) performVibration(context)
+                                showHiddenFoldersDialog = true 
+                            },
                             selectedZoomType = selectedZoomType,
                             onZoomTypeChange = {
                                 selectedZoomType = it
                                 SettingsRepository.setZoomType(context, it)
                             },
-                            onManageTagsClick = { currentScreen = Screen.TagManagement },
-                            onBackupAndRestoreClick = { showBackupAndRestoreDialog = true },
+                            onManageTagsClick = { 
+                                if (isVibrationEnabled) performVibration(context)
+                                currentScreen = Screen.TagManagement 
+                            },
+                            onBackupAndRestoreClick = { 
+                                if (isVibrationEnabled) performVibration(context)
+                                showBackupAndRestoreDialog = true 
+                            },
                             onDeleteTag = {
+                                if (isVibrationEnabled) performVibration(context)
                                 TagsRepository.removeTagFromAllItems(context, it)
                                 tags = TagsRepository.getTags(context)
                             },
                             onEditTag = { oldTag, newTag ->
+                                if (isVibrationEnabled) performVibration(context)
                                 TagsRepository.renameTag(context, oldTag, newTag)
                                 tags = TagsRepository.getTags(context)
                             },
                             trashedItems = trashedItems,
                             onClearTrash = {
+                                if (isVibrationEnabled) performVibration(context)
                                 isClearingTrash = true
                                 itemsToDelete = trashedItems.map { it.uri }
                                 showConfirmDeleteDialog = true
@@ -816,12 +824,15 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int) {
                                 isBlurAllMediaEnabled = it
                                 SettingsRepository.setBlurAllMediaEnabled(context, it)
                             },
-                            selectedVibrationStrength = selectedVibrationStrength,
-                            onVibrationStrengthChange = {
-                                selectedVibrationStrength = it
-                                SettingsRepository.setVibrationStrength(context, it)
+                            isVibrationEnabled = isVibrationEnabled,
+                            onVibrationEnabledChange = {
+                                isVibrationEnabled = it
+                                SettingsRepository.setVibrationEnabled(context, it)
                             },
-                            onOpenAlbum = { albumName -> currentScreen = Screen.Favorites(openAlbumName = albumName) },
+                            onOpenAlbum = { albumName -> 
+                                if (isVibrationEnabled) performVibration(context)
+                                currentScreen = Screen.Favorites(openAlbumName = albumName) 
+                            },
                             isShowFileCountEnabled = isShowFileCountEnabled,
                             onShowFileCountChange = {
                                 isShowFileCountEnabled = it
@@ -839,7 +850,10 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int) {
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                 Text("Permission required to access media.")
                                 Spacer(Modifier.height(8.dp))
-                                Button(onClick = { permissionLauncher.launch(permissionsToRequest) }) {
+                                Button(onClick = { 
+                                    if (isVibrationEnabled) performVibration(context)
+                                    permissionLauncher.launch(permissionsToRequest) 
+                                }) {
                                     Text("Grant Permission")
                                 }
                             }

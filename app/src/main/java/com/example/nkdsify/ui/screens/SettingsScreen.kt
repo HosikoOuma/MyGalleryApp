@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenu
@@ -29,7 +30,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import com.example.nkdsify.data.Theme
 import com.example.nkdsify.data.ZoomType
-import com.example.nkdsify.ui.utils.VibrationStrength
+import com.example.nkdsify.ui.utils.performVibration
 
 @Composable
 fun SettingsScreen(
@@ -49,8 +50,8 @@ fun SettingsScreen(
     onZoomTypeChange: (ZoomType) -> Unit,
     onManageTagsClick: () -> Unit,
     onBackupAndRestoreClick: () -> Unit,
-    selectedVibrationStrength: VibrationStrength,
-    onVibrationStrengthChange: (VibrationStrength) -> Unit,
+    isVibrationEnabled: Boolean,
+    onVibrationEnabledChange: (Boolean) -> Unit,
     isShowFileCountEnabled: Boolean,
     onShowFileCountChange: (Boolean) -> Unit,
     isEasterEggUnlocked: Boolean,
@@ -60,7 +61,6 @@ fun SettingsScreen(
     val context = LocalContext.current
     var themeMenuExpanded by remember { mutableStateOf(false) }
     var zoomTypeMenuExpanded by remember { mutableStateOf(false) }
-    var vibrationStrengthMenuExpanded by remember { mutableStateOf(false) }
     val scrollState = rememberScrollState()
 
     Column(
@@ -79,7 +79,10 @@ fun SettingsScreen(
             Text("Blur folder previews")
             Switch(
                 checked = isBlurEnabled,
-                onCheckedChange = onBlurEnabledChange
+                onCheckedChange = {
+                    if (isVibrationEnabled) performVibration(context)
+                    onBlurEnabledChange(it)
+                }
             )
         }
         Row(
@@ -91,7 +94,10 @@ fun SettingsScreen(
             Text("Blur media in trash")
             Switch(
                 checked = isTrashBlurEnabled,
-                onCheckedChange = onTrashBlurEnabledChange
+                onCheckedChange = {
+                    if (isVibrationEnabled) performVibration(context)
+                    onTrashBlurEnabledChange(it)
+                }
             )
         }
         Row(
@@ -103,7 +109,10 @@ fun SettingsScreen(
             Text("Mute video by default")
             Switch(
                 checked = isMuteVideoByDefault,
-                onCheckedChange = onMuteVideoByDefaultChange
+                onCheckedChange = {
+                    if (isVibrationEnabled) performVibration(context)
+                    onMuteVideoByDefaultChange(it)
+                }
             )
         }
         Row(
@@ -115,7 +124,10 @@ fun SettingsScreen(
             Text("Blur all media")
             Switch(
                 checked = isBlurAllMediaEnabled,
-                onCheckedChange = onBlurAllMediaEnabledChange
+                onCheckedChange = {
+                    if (isVibrationEnabled) performVibration(context)
+                    onBlurAllMediaEnabledChange(it)
+                }
             )
         }
         Row(
@@ -127,7 +139,10 @@ fun SettingsScreen(
             Text("Show file count in folders")
             Switch(
                 checked = isShowFileCountEnabled,
-                onCheckedChange = onShowFileCountChange
+                onCheckedChange = {
+                    if (isVibrationEnabled) performVibration(context)
+                    onShowFileCountChange(it)
+                }
             )
         }
         if (isEasterEggUnlocked) {
@@ -140,7 +155,10 @@ fun SettingsScreen(
                 Text("Show Shuffle Button")
                 Switch(
                     checked = isShuffleButtonVisible,
-                    onCheckedChange = onShuffleButtonVisibleChange
+                    onCheckedChange = {
+                        if (isVibrationEnabled) performVibration(context)
+                        onShuffleButtonVisibleChange(it)
+                    }
                 )
             }
         }
@@ -150,9 +168,27 @@ fun SettingsScreen(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
+            Text("Vibration")
+            Switch(
+                checked = isVibrationEnabled,
+                onCheckedChange = {
+                    if (isVibrationEnabled) performVibration(context)
+                    onVibrationEnabledChange(it)
+                }
+            )
+        }
+        Row(
+            modifier = Modifier
+                .fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
             Text("Theme")
             Box {
-                TextButton(onClick = { themeMenuExpanded = true }) {
+                TextButton(onClick = { 
+                    if (isVibrationEnabled) performVibration(context)
+                    themeMenuExpanded = true 
+                }) {
                     Text(selectedTheme.name)
                 }
                 DropdownMenu(
@@ -162,7 +198,11 @@ fun SettingsScreen(
                     Theme.entries.forEach { theme ->
                         DropdownMenuItem(
                             text = { Text(theme.name) },
-                            onClick = { onThemeChange(theme); themeMenuExpanded = false }
+                            onClick = { 
+                                if (isVibrationEnabled) performVibration(context)
+                                onThemeChange(theme)
+                                themeMenuExpanded = false 
+                            }
                         )
                     }
                 }
@@ -176,7 +216,10 @@ fun SettingsScreen(
         ) {
             Text("Zoom Gesture")
             Box {
-                TextButton(onClick = { zoomTypeMenuExpanded = true }) {
+                TextButton(onClick = { 
+                    if (isVibrationEnabled) performVibration(context)
+                    zoomTypeMenuExpanded = true 
+                }) {
                     Text(selectedZoomType.name)
                 }
                 DropdownMenu(
@@ -186,54 +229,59 @@ fun SettingsScreen(
                     ZoomType.entries.forEach { zoomType ->
                         DropdownMenuItem(
                             text = { Text(zoomType.name) },
-                            onClick = { onZoomTypeChange(zoomType); zoomTypeMenuExpanded = false }
-                        )
-                    }
-                }
-            }
-        }
-        Row(
-            modifier = Modifier
-                .fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text("Vibration Strength")
-            Box {
-                TextButton(onClick = { vibrationStrengthMenuExpanded = true }) {
-                    Text(selectedVibrationStrength.name)
-                }
-                DropdownMenu(
-                    expanded = vibrationStrengthMenuExpanded,
-                    onDismissRequest = { vibrationStrengthMenuExpanded = false }
-                ) {
-                    VibrationStrength.entries.forEach { strength ->
-                        DropdownMenuItem(
-                            text = { Text(strength.name) },
-                            onClick = { onVibrationStrengthChange(strength); vibrationStrengthMenuExpanded = false }
+                            onClick = { 
+                                if (isVibrationEnabled) performVibration(context)
+                                onZoomTypeChange(zoomType)
+                                zoomTypeMenuExpanded = false 
+                            }
                         )
                     }
                 }
             }
         }
         Spacer(modifier = Modifier.height(16.dp))
-        Button(onClick = onManageHiddenFoldersClick) {
+        Button(
+            onClick = {
+                if (isVibrationEnabled) performVibration(context)
+                onManageHiddenFoldersClick()
+            },
+            shape = RoundedCornerShape(12.dp)
+        ) {
             Text("Manage Hidden Folders")
         }
-        Button(onClick = onManageTagsClick) {
+        Button(
+            onClick = {
+                if (isVibrationEnabled) performVibration(context)
+                onManageTagsClick()
+            },
+            shape = RoundedCornerShape(12.dp)
+        ) {
             Text("Manage Tags")
         }
-        Button(onClick = onBackupAndRestoreClick) {
+        Button(
+            onClick = {
+                if (isVibrationEnabled) performVibration(context)
+                onBackupAndRestoreClick()
+            },
+            shape = RoundedCornerShape(12.dp)
+        ) {
             Text("Backup and Restore")
         }
         Spacer(modifier = Modifier.height(16.dp))
-        Button(onClick = { 
-            val intent = Intent(Intent.ACTION_VIEW, "https://github.com/HosikoOuma/MyGalleryApp".toUri())
-            context.startActivity(intent)
-        }) {
+        Button(
+            onClick = { 
+                if (isVibrationEnabled) performVibration(context)
+                val intent = Intent(Intent.ACTION_VIEW, "https://github.com/HosikoOuma/MyGalleryApp".toUri())
+                context.startActivity(intent)
+            },
+            shape = RoundedCornerShape(12.dp)
+        ) {
             Text("GitHub")
         }
-        Button(onClick = onEasterEggClick) {
+        Button(
+            onClick = onEasterEggClick,
+            shape = RoundedCornerShape(12.dp)
+        ) {
             Text("🐱")
         }
     }

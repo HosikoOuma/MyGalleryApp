@@ -33,6 +33,7 @@ data class MediaItem(
     val dateModified: Long
 )
 
+
 data class AlbumDetails(
     val path: String? = null,
     val totalSize: Long,
