@@ -86,7 +86,6 @@ import java.io.BufferedReader
 import java.io.InputStreamReader
 import android.content.ContentUris
 import androidx.annotation.OptIn
-import java.lang.Runtime
 
 
 @OptIn(UnstableApi::class, ExperimentalMaterial3Api::class)
@@ -675,22 +674,19 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int) {
                     BottomBar(
                         currentScreen = currentScreen,
                         onScreenChange = { screen ->
+                            currentScreen = screen
                             if (screen is Screen.AllMedia && !isEasterEggUnlocked) {
                                 SettingsRepository.incrementAllMediaClickCount(context)
                                 val clickCount = SettingsRepository.getAllMediaClickCount(context)
                                 if (clickCount >= 10) {
                                     SettingsRepository.setEasterEggUnlocked(context, true)
+                                    val mediaPlayer = MediaPlayer.create(context, R.raw.bonk)
+                                    mediaPlayer.setOnCompletionListener { it.release() }
+                                    mediaPlayer.start()
                                     isEasterEggUnlocked = true
                                     SettingsRepository.resetAllMediaClickCount(context)
-                                    val packageManager = context.packageManager
-                                    val intent = packageManager.getLaunchIntentForPackage(context.packageName)
-                                    val componentName = intent!!.component
-                                    val mainIntent = Intent.makeRestartActivityTask(componentName)
-                                    context.startActivity(mainIntent)
-                                    Runtime.getRuntime().exit(0)
                                 }
                             }
-                            currentScreen = screen
                         },
                         context = context,
                         onSettingsClick = { currentScreen = Screen.Settings },
