@@ -221,7 +221,8 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int) {
                     TrashRepository.clearTrash(context)
                     isClearingTrash = false
                 } else {
-                    TrashRepository.removeFromTrash(context, itemsToDelete)
+                    // This is now the general case after copying to trash
+                    // or for permanent deletion
                 }
                 refreshTrigger++
                 selectedItems.clear()
@@ -342,6 +343,20 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int) {
                 allFolders = withContext(Dispatchers.IO) { loadMediaFolders(context, sortType, sortAscending, selectedDate) }
                 trashedItems = withContext(Dispatchers.IO) { loadTrashedMediaItems(context, sortType, sortAscending) }
                 allMedia = withContext(Dispatchers.IO) { loadAllMedia(context, sortType, sortAscending, hiddenFolders, selectedDate) }
+            }
+        }
+
+        LaunchedEffect(allFolders) {
+            val screen = currentScreen
+            if (screen is Screen.FolderContent) {
+                val updatedFolder = allFolders.find { it.id == screen.folder.id }
+                if (updatedFolder == null || updatedFolder.items.isEmpty()) {
+                    currentScreen = Screen.Folders
+                } else {
+                    if (screen.folder != updatedFolder) {
+                        currentScreen = Screen.FolderContent(updatedFolder)
+                    }
+                }
             }
         }
 
@@ -544,6 +559,7 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int) {
                         TrashRepository.clearTrash(context)
                         isClearingTrash = false
                     } else {
+                        // Fallback for older APIs
                         TrashRepository.removeFromTrash(context, itemsToDelete)
                     }
                     refreshTrigger++
@@ -557,8 +573,18 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int) {
         if (showConfirmTrashDialog) {
             ConfirmTrashDialog(
                 onConfirm = {
-                    TrashRepository.addToTrash(context, itemsToTrash)
-                    refreshTrigger++
+                     val urisToTrash = itemsToTrash
+                     val copiedUris = TrashRepository.copyToTrash(context, urisToTrash)
+                     if(copiedUris.isNotEmpty()) {
+                         itemsToDelete = copiedUris
+                         val intentSender = deleteMediaPermanently(context, copiedUris)
+                         if (intentSender != null) {
+                             deleteRequestLauncher.launch(IntentSenderRequest.Builder(intentSender).build())
+                         } else {
+                             // Fallback for older APIs, though less likely to be needed now
+                             refreshTrigger++ 
+                         }
+                     }
                     selectedItems.clear()
                     itemsToTrash = emptyList()
                     showConfirmTrashDialog = false
@@ -864,6 +890,7 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int) {
 
             if (viewerState != null) {
                 BackHandler { viewerState = null }
+                val isTrashViewing = viewerState?.items?.map { it.uri }?.intersect(trashedItems.map { it.uri }.toSet())?.isNotEmpty() ?: false
                 MediaViewer(
                     items = viewerState!!.items,
                     startIndex = viewerState!!.startIndex,
@@ -871,14 +898,19 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int) {
                     onDismiss = { viewerState = null },
                     imageLoader = imageLoader,
                     isExternal = viewerState!!.isExternal, // Pass the flag
+                    isTrashMode = isTrashViewing,
                     onDelete = { uris ->
-                        if (currentScreen is Screen.Trash) {
+                        if (isTrashViewing) {
                             itemsToDelete = uris
                             showConfirmDeleteDialog = true
                         } else {
                             itemsToTrash = uris
                             showConfirmTrashDialog = true
                         }
+                    },
+                    onRestore = { uris ->
+                        itemsToRestore = uris
+                        showConfirmRestoreDialog = true
                     },
                     onShowTagDialog = { uri -> showTagDialog = uri },
                     onShowDetails = { uri -> showDetailsDialog = uri },

@@ -1,51 +1,124 @@
 package com.example.nkdsify.ui.utils
 
+import android.content.ContentValues
 import android.content.Context
 import android.net.Uri
-import androidx.core.content.edit
+import android.provider.MediaStore
 import androidx.core.net.toUri
-import com.google.gson.Gson
-import com.google.gson.reflect.TypeToken
+import java.io.File
+import java.io.FileOutputStream
+import java.io.IOException
+import java.util.Locale
 
 object TrashRepository {
-    private const val PREFS_NAME = "trash_prefs"
-    private const val TRASH_KEY = "trashed_uris"
-    private val gson = Gson()
+
+    private fun getTrashDir(context: Context): File {
+        val trashDir = File(context.filesDir, ".trash")
+        if (!trashDir.exists()) {
+            trashDir.mkdirs()
+        }
+        return trashDir
+    }
 
     fun getTrashedUris(context: Context): Set<Uri> {
-        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        val json = prefs.getString(TRASH_KEY, null)
-        return if (json != null) {
-            val type = object : TypeToken<Set<String>>() {}.type
-            val uriStrings: Set<String> = gson.fromJson(json, type)
-            uriStrings.map { it.toUri() }.toSet()
-        } else {
-            emptySet()
+        val trashDir = getTrashDir(context)
+        return trashDir.listFiles()?.map { it.toUri() }?.toSet() ?: emptySet()
+    }
+
+    fun copyToTrash(context: Context, uris: List<Uri>): List<Uri> {
+        val trashDir = getTrashDir(context)
+        val successfullyCopiedOriginalUris = mutableListOf<Uri>()
+
+        uris.forEach { uri ->
+            try {
+                val fileName = getFileName(context, uri) ?: "file_${System.currentTimeMillis()}"
+                
+                var destinationFile = File(trashDir, fileName)
+                var counter = 1
+                while (destinationFile.exists()) {
+                    val nameWithoutExtension = fileName.substringBeforeLast('.')
+                    val extension = fileName.substringAfterLast('.', "")
+                    val newName = if (extension.isNotEmpty()) {
+                        "$nameWithoutExtension ($counter).$extension"
+                    } else {
+                        "$nameWithoutExtension ($counter)"
+                    }
+                    destinationFile = File(trashDir, newName)
+                    counter++
+                }
+
+                context.contentResolver.openInputStream(uri)?.use { inputStream ->
+                    FileOutputStream(destinationFile).use { outputStream ->
+                        inputStream.copyTo(outputStream)
+                    }
+                    successfullyCopiedOriginalUris.add(uri)
+                }
+            } catch (e: Exception) { // Catch broader exceptions
+                e.printStackTrace()
+            }
+        }
+        return successfullyCopiedOriginalUris
+    }
+
+    fun restoreFromTrash(context: Context, uri: Uri) {
+        try {
+            val sourceFile = uri.path?.let { File(it) } ?: return
+            if (!sourceFile.exists()) return
+
+            val fileName = sourceFile.name
+            val extension = fileName.substringAfterLast('.', "").lowercase(Locale.getDefault())
+            val isVideo = extension in listOf("mp4", "mkv", "webm", "3gp")
+
+            val collection = if (isVideo) {
+                 MediaStore.Video.Media.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY)
+            } else {
+                 MediaStore.Images.Media.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY)
+            }
+
+            val contentValues = ContentValues().apply {
+                put(MediaStore.MediaColumns.DISPLAY_NAME, fileName)
+                put(MediaStore.MediaColumns.IS_PENDING, 1)
+            }
+            
+            val mediaUri = context.contentResolver.insert(collection, contentValues)
+
+            mediaUri?.let { newUri ->
+                context.contentResolver.openOutputStream(newUri)?.use { outputStream ->
+                    sourceFile.inputStream().use { inputStream ->
+                        inputStream.copyTo(outputStream)
+                    }
+                }
+
+                contentValues.clear()
+                contentValues.put(MediaStore.MediaColumns.IS_PENDING, 0)
+                context.contentResolver.update(newUri, contentValues, null, null)
+                sourceFile.delete()
+            }
+        } catch (e: IOException) {
+            e.printStackTrace()
         }
     }
 
-    fun saveTrashedUris(context: Context, uris: Set<Uri>) {
-        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        val uriStrings = uris.map { it.toString() }.toSet()
-        val json = gson.toJson(uriStrings)
-        prefs.edit {
-            putString(TRASH_KEY, json)
+    private fun getFileName(context: Context, uri: Uri): String? {
+        if (uri.scheme == "content") {
+            context.contentResolver.query(uri, arrayOf(MediaStore.MediaColumns.DISPLAY_NAME), null, null, null)?.use { cursor ->
+                if (cursor.moveToFirst()) {
+                    val nameIndex = cursor.getColumnIndex(MediaStore.MediaColumns.DISPLAY_NAME)
+                    if (nameIndex != -1) {
+                        return cursor.getString(nameIndex)
+                    }
+                }
+            }
         }
+        return uri.path?.substringAfterLast('/')
     }
-
-    fun addToTrash(context: Context, uris: List<Uri>) {
-        val currentTrashed = getTrashedUris(context)
-        val newTrashed = currentTrashed + uris
-        saveTrashedUris(context, newTrashed)
-    }
-
+    
     fun removeFromTrash(context: Context, uris: List<Uri>) {
-        val currentTrashed = getTrashedUris(context)
-        val newTrashed = currentTrashed - uris.toSet()
-        saveTrashedUris(context, newTrashed)
+        uris.forEach { restoreFromTrash(context, it) }
     }
 
     fun clearTrash(context: Context) {
-        saveTrashedUris(context, emptySet())
+        val trashDir = getTrashDir(context)
+        trashDir.listFiles()?.forEach { it.delete() }
     }
 }

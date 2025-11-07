@@ -76,10 +76,12 @@ fun MediaViewer(
     onDismiss: () -> Unit,
     imageLoader: ImageLoader,
     onDelete: (List<Uri>) -> Unit,
+    onRestore: (List<Uri>) -> Unit,
     onShowTagDialog: (Uri) -> Unit,
     onToggleFavorite: (Uri) -> Unit,
     onShowDetails: (Uri) -> Unit,
     isExternal: Boolean = false,
+    isTrashMode: Boolean,
     isMuteVideoByDefault: Boolean,
     zoomType: ZoomType
 ) {
@@ -138,28 +140,39 @@ fun MediaViewer(
                         )
                     }
                 }
-
-                IconButton(onClick = {
-                    if (isVibrationEnabled) performVibration(context)
-                    if (isExternal) {
-                        showExternalMediaError = true
-                    } else {
-                        onShowTagDialog(currentItem.uri)
+                if(isTrashMode){
+                    IconButton(onClick = {
+                        if (isVibrationEnabled) performVibration(context)
+                        onRestore(listOf(currentItem.uri))
+                        onDismiss()
+                    }) {
+                        Icon(Icons.Filled.RestoreFromTrash, contentDescription = "Restore", tint = Color.White)
                     }
-                }) {
-                    Icon(Icons.AutoMirrored.Filled.Label, contentDescription = "Tags", tint = Color.White)
                 }
 
-                IconButton(onClick = {
-                    if (isVibrationEnabled) performVibration(context)
-                    val shareIntent = Intent().apply {
-                        action = Intent.ACTION_SEND
-                        putExtra(Intent.EXTRA_STREAM, currentItem.uri)
-                        type = if (currentItem.isVideo) "video/*" else "image/*"
+                if(!isTrashMode) {
+                    IconButton(onClick = {
+                        if (isVibrationEnabled) performVibration(context)
+                        if (isExternal) {
+                            showExternalMediaError = true
+                        } else {
+                            onShowTagDialog(currentItem.uri)
+                        }
+                    }) {
+                        Icon(Icons.AutoMirrored.Filled.Label, contentDescription = "Tags", tint = Color.White)
                     }
-                    context.startActivity(Intent.createChooser(shareIntent, null))
-                }) {
-                    Icon(Icons.Filled.Share, contentDescription = "Share", tint = Color.White)
+
+                    IconButton(onClick = {
+                        if (isVibrationEnabled) performVibration(context)
+                        val shareIntent = Intent().apply {
+                            action = Intent.ACTION_SEND
+                            putExtra(Intent.EXTRA_STREAM, currentItem.uri)
+                            type = if (currentItem.isVideo) "video/*" else "image/*"
+                        }
+                        context.startActivity(Intent.createChooser(shareIntent, null))
+                    }) {
+                        Icon(Icons.Filled.Share, contentDescription = "Share", tint = Color.White)
+                    }
                 }
                 IconButton(onClick = {
                     if (isVibrationEnabled) performVibration(context)
@@ -167,30 +180,33 @@ fun MediaViewer(
                         showExternalMediaError = true
                     } else {
                         onDelete(listOf(currentItem.uri))
+                        onDismiss()
                     }
                 }) {
                     Icon(Icons.Filled.Delete, contentDescription = "Delete", tint = Color.White)
                 }
-                IconButton(onClick = {
-                    if (isVibrationEnabled) performVibration(context)
-                    if (isExternal) {
-                        showExternalMediaError = true
-                    } else {
-                        onToggleFavorite(currentItem.uri)
+                if(!isTrashMode){
+                    IconButton(onClick = {
+                        if (isVibrationEnabled) performVibration(context)
+                        if (isExternal) {
+                            showExternalMediaError = true
+                        } else {
+                            onToggleFavorite(currentItem.uri)
+                        }
+                    }) {
+                        Icon(
+                            imageVector = if (favorites.contains(currentItem.uri)) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
+                            contentDescription = "Favorite",
+                            tint = if (favorites.contains(currentItem.uri)) Color.Red else Color.White
+                        )
                     }
-                }) {
-                    Icon(
-                        imageVector = if (favorites.contains(currentItem.uri)) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
-                        contentDescription = "Favorite",
-                        tint = if (favorites.contains(currentItem.uri)) Color.Red else Color.White
-                    )
-                }
 
-                IconButton(onClick = {
-                    if (isVibrationEnabled) performVibration(context)
-                    onShowDetails(currentItem.uri)
-                }) {
-                    Icon(Icons.Filled.Info, contentDescription = "Info", tint = Color.White)
+                    IconButton(onClick = {
+                        if (isVibrationEnabled) performVibration(context)
+                        onShowDetails(currentItem.uri)
+                    }) {
+                        Icon(Icons.Filled.Info, contentDescription = "Info", tint = Color.White)
+                    }
                 }
             }
         }

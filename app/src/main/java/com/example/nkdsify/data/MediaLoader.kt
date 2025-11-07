@@ -6,6 +6,7 @@ import android.net.Uri
 import android.os.Build
 import android.provider.MediaStore
 import com.example.nkdsify.ui.utils.TrashRepository
+import java.io.File
 import java.util.Calendar
 
 fun loadAllMedia(
@@ -16,7 +17,6 @@ fun loadAllMedia(
     selectedDate: Long? = null
 ): List<MediaItem> {
     val mediaItems = mutableListOf<MediaItem>()
-    val trashedUris = TrashRepository.getTrashedUris(context)
 
     val collection = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
         MediaStore.Files.getContentUri(MediaStore.VOLUME_EXTERNAL)
@@ -84,9 +84,6 @@ fun loadAllMedia(
         while (cursor.moveToNext()) {
             val id = cursor.getLong(idColumn)
             val uri = ContentUris.withAppendedId(collection, id)
-
-            if(uri in trashedUris) continue
-
             val mediaType = cursor.getInt(mediaTypeColumn)
             val name = cursor.getString(nameColumn)
             val size = cursor.getLong(sizeColumn)
@@ -109,7 +106,6 @@ fun loadMediaFolders(
 ): List<MediaFolder> {
     val foldersMap = mutableMapOf<Long, MutableList<MediaItem>>()
     val folderNames = mutableMapOf<Long, String>()
-    val trashedUris = TrashRepository.getTrashedUris(context)
 
     val collection = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
         MediaStore.Files.getContentUri(MediaStore.VOLUME_EXTERNAL)
@@ -177,9 +173,6 @@ fun loadMediaFolders(
         while (cursor.moveToNext()) {
             val id = cursor.getLong(idColumn)
             val uri = ContentUris.withAppendedId(collection, id)
-
-            if(uri in trashedUris) continue
-
             val bucketId = cursor.getLong(bucketIdColumn)
             val bucketName = cursor.getString(bucketNameColumn)
             val mediaType = cursor.getInt(mediaTypeColumn)
@@ -231,7 +224,6 @@ fun loadFavoriteMediaItems(
     }
 
     val favoriteItems = mutableListOf<MediaItem>()
-    val trashedUris = TrashRepository.getTrashedUris(context)
     val collection = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
         MediaStore.Files.getContentUri(MediaStore.VOLUME_EXTERNAL)
     } else {
@@ -292,9 +284,6 @@ fun loadFavoriteMediaItems(
         while (cursor.moveToNext()) {
             val id = cursor.getLong(idColumn)
             val uri = ContentUris.withAppendedId(collection, id)
-
-            if(uri in trashedUris) continue
-
             val mediaType = cursor.getInt(mediaTypeColumn)
             val name = cursor.getString(nameColumn)
             val size = cursor.getLong(sizeColumn)
@@ -313,59 +302,37 @@ fun loadTrashedMediaItems(
     sortAscending: Boolean
 ): List<MediaItem> {
     val trashedUris = TrashRepository.getTrashedUris(context)
-    if (trashedUris.isEmpty()) {
-        return emptyList()
-    }
+    val trashedItems = trashedUris.mapNotNull { uri ->
+        uri.path?.let { path ->
+            val file = File(path)
+            if (file.exists()) {
+                val name = file.name
+                val size = file.length()
+                val lastModified = file.lastModified()
+                val isVideo = name.endsWith(".mp4", true) ||
+                        name.endsWith(".3gp", true) ||
+                        name.endsWith(".mkv", true) ||
+                        name.endsWith(".webm", true)
 
-    val trashedItems = mutableListOf<MediaItem>()
-    val collection = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-        MediaStore.Files.getContentUri(MediaStore.VOLUME_EXTERNAL)
-    } else {
-        MediaStore.Files.getContentUri("external")
-    }
-
-    val projection = arrayOf(
-        MediaStore.Files.FileColumns._ID,
-        MediaStore.Files.FileColumns.MEDIA_TYPE,
-        MediaStore.Files.FileColumns.DISPLAY_NAME,
-        MediaStore.Files.FileColumns.SIZE,
-        MediaStore.Files.FileColumns.DATE_ADDED,
-        MediaStore.Files.FileColumns.DATE_MODIFIED
-    )
-
-    val selection = "${MediaStore.Files.FileColumns._ID} IN (${trashedUris.joinToString { "?" }})"
-    val selectionArgs = trashedUris.map { ContentUris.parseId(it).toString() }.toTypedArray()
-
-    val sortColumn = when (sortType) {
-        SortType.DATE_MODIFIED -> MediaStore.Files.FileColumns.DATE_MODIFIED
-        SortType.DATE_ADDED -> MediaStore.Files.FileColumns.DATE_ADDED
-        SortType.NAME -> MediaStore.Files.FileColumns.DISPLAY_NAME
-        SortType.SIZE -> MediaStore.Files.FileColumns.SIZE
-    }
-    val sortDirection = if (sortAscending) "ASC" else "DESC"
-    val sortOrder = "$sortColumn $sortDirection"
-
-    context.contentResolver.query(collection, projection, selection, selectionArgs, sortOrder)?.use { cursor ->
-        val idColumn = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns._ID)
-        val mediaTypeColumn = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.MEDIA_TYPE)
-        val nameColumn = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.DISPLAY_NAME)
-        val sizeColumn = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.SIZE)
-        val dateAddedColumn = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.DATE_ADDED)
-        val dateModifiedColumn = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.DATE_MODIFIED)
-
-        while (cursor.moveToNext()) {
-            val id = cursor.getLong(idColumn)
-            val uri = ContentUris.withAppendedId(collection, id)
-
-            val mediaType = cursor.getInt(mediaTypeColumn)
-            val name = cursor.getString(nameColumn)
-            val size = cursor.getLong(sizeColumn)
-            val dateAdded = cursor.getLong(dateAddedColumn)
-            val dateModified = cursor.getLong(dateModifiedColumn)
-
-            val isVideo = mediaType == MediaStore.Files.FileColumns.MEDIA_TYPE_VIDEO
-            trashedItems.add(MediaItem(uri, name, isVideo, size, dateAdded, dateModified))
+                MediaItem(uri, name, isVideo, size, lastModified / 1000, lastModified / 1000)
+            } else {
+                null
+            }
         }
+    }.toMutableList()
+
+    val comparator = when (sortType) {
+        SortType.DATE_MODIFIED -> compareBy<MediaItem> { it.dateModified }
+        SortType.DATE_ADDED -> compareBy<MediaItem> { it.dateAdded }
+        SortType.NAME -> compareBy(String.CASE_INSENSITIVE_ORDER) { it.name }
+        SortType.SIZE -> compareBy<MediaItem> { it.size }
     }
+
+    if (sortAscending) {
+        trashedItems.sortWith(comparator)
+    } else {
+        trashedItems.sortWith(comparator.reversed())
+    }
+
     return trashedItems
 }
