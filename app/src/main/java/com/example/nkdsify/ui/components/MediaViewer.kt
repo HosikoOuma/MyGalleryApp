@@ -26,6 +26,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Label
@@ -54,6 +55,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
@@ -105,121 +107,156 @@ fun MediaViewer(
     var showExternalMediaError by remember { mutableStateOf(false) }
     var isMuted by remember(pagerState.currentPage) { mutableStateOf(isMuteVideoByDefault) }
 
+    // --- Unified Controls Visibility State ---
+    var controlsVisible by remember { mutableStateOf(true) }
+    val toggleControls = { controlsVisible = !controlsVisible }
+
+    // Auto-hide controls
+    LaunchedEffect(controlsVisible) {
+        if (controlsVisible) {
+            delay(4000)
+            controlsVisible = false
+        }
+    }
+
     if (showExternalMediaError) {
         ExternalMediaErrorDialog(onDismiss = { showExternalMediaError = false })
     }
 
-    Box(modifier = Modifier
-        .fillMaxSize()
-        .background(Color.Black)) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black)
+    ) {
         HorizontalPager(state = pagerState, modifier = Modifier.fillMaxSize(), key = { items[it].uri }) { page ->
             val item = items[page]
             val isVisible by remember { derivedStateOf { pagerState.currentPage == page } }
             if (item.isVideo) {
-                VideoPlayerPage(uri = item.uri, isVisible = isVisible, isMuted = isMuted)
+                VideoPlayerPage(
+                    uri = item.uri,
+                    isVisible = isVisible,
+                    isMuted = isMuted,
+                    controlsVisible = controlsVisible,
+                    onToggleControls = toggleControls
+                )
             } else {
-                ZoomableImage(uri = item.uri, imageLoader = imageLoader, zoomType = zoomType, isVibrationEnabled = isVibrationEnabled)
+                ZoomableImage(
+                    uri = item.uri,
+                    imageLoader = imageLoader,
+                    zoomType = zoomType,
+                    isVibrationEnabled = isVibrationEnabled,
+                    onToggleControls = toggleControls
+                )
             }
         }
 
-        Row(
-            modifier = Modifier
-                .align(Alignment.TopCenter)
-                .fillMaxWidth()
-                .statusBarsPadding()
-                .padding(horizontal = 8.dp),
-            verticalAlignment = Alignment.CenterVertically
+        // --- Unified Top Control Bar ---
+        AnimatedVisibility(
+            visible = controlsVisible,
+            enter = fadeIn(),
+            exit = fadeOut(),
+            modifier = Modifier.align(Alignment.TopCenter)
         ) {
-            IconButton(onClick = {
-                if (isVibrationEnabled) performVibration(context)
-                onDismiss()
-            }) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
-            }
-            Spacer(Modifier.weight(1f))
+            Row(
+                modifier = Modifier
+                    .statusBarsPadding()
+                    .padding(vertical = 8.dp, horizontal = 16.dp)
+                    .background(Color.Black.copy(alpha = 0.5f), shape = CircleShape)
+                    .padding(horizontal = 8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                val currentPage = pagerState.currentPage
+                val currentItem = items.getOrNull(currentPage)
 
-            val currentPage = pagerState.currentPage
-            if (currentPage >= 0 && currentPage < items.size) {
-                val currentItem = items[currentPage]
-
-                if (currentItem.isVideo) {
-                    IconButton(onClick = {
-                        if (isVibrationEnabled) performVibration(context)
-                        isMuted = !isMuted
-                    }) {
-                        Icon(
-                            imageVector = if (isMuted) Icons.AutoMirrored.Filled.VolumeOff else Icons.AutoMirrored.Filled.VolumeUp,
-                            contentDescription = "Mute/Unmute",
-                            tint = Color.White
-                        )
-                    }
-                }
-                if(isTrashMode){
-                    IconButton(onClick = {
-                        if (isVibrationEnabled) performVibration(context)
-                        onRestore(listOf(currentItem.uri))
-                        onDismiss()
-                    }) {
-                        Icon(Icons.Filled.RestoreFromTrash, contentDescription = "Restore", tint = Color.White)
-                    }
-                }
-
-                if(!isTrashMode) {
-                    IconButton(onClick = {
-                        if (isVibrationEnabled) performVibration(context)
-                        if (isExternal) {
-                            showExternalMediaError = true
-                        } else {
-                            onShowTagDialog(currentItem.uri)
-                        }
-                    }) {
-                        Icon(Icons.AutoMirrored.Filled.Label, contentDescription = "Tags", tint = Color.White)
-                    }
-
-                    IconButton(onClick = {
-                        if (isVibrationEnabled) performVibration(context)
-                        val shareIntent = Intent().apply {
-                            action = Intent.ACTION_SEND
-                            putExtra(Intent.EXTRA_STREAM, currentItem.uri)
-                            type = if (currentItem.isVideo) "video/*" else "image/*"
-                        }
-                        context.startActivity(Intent.createChooser(shareIntent, null))
-                    }) {
-                        Icon(Icons.Filled.Share, contentDescription = "Share", tint = Color.White)
-                    }
-                }
                 IconButton(onClick = {
                     if (isVibrationEnabled) performVibration(context)
-                    if (isExternal) {
-                        showExternalMediaError = true
-                    } else {
-                        onDelete(listOf(currentItem.uri))
-                        onDismiss()
-                    }
+                    onDismiss()
                 }) {
-                    Icon(Icons.Filled.Delete, contentDescription = "Delete", tint = Color.White)
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
                 }
-                if(!isTrashMode){
+
+                Spacer(Modifier.weight(1f))
+
+                if (currentItem != null) {
+                    if (currentItem.isVideo) {
+                        IconButton(onClick = {
+                            if (isVibrationEnabled) performVibration(context)
+                            isMuted = !isMuted
+                        }) {
+                            Icon(
+                                imageVector = if (isMuted) Icons.AutoMirrored.Filled.VolumeOff else Icons.AutoMirrored.Filled.VolumeUp,
+                                contentDescription = "Mute/Unmute",
+                                tint = Color.White
+                            )
+                        }
+                    }
+                    if (isTrashMode) {
+                        IconButton(onClick = {
+                            if (isVibrationEnabled) performVibration(context)
+                            onRestore(listOf(currentItem.uri))
+                            onDismiss()
+                        }) {
+                            Icon(Icons.Filled.RestoreFromTrash, contentDescription = "Restore", tint = Color.White)
+                        }
+                    }
+
+                    if (!isTrashMode) {
+                        IconButton(onClick = {
+                            if (isVibrationEnabled) performVibration(context)
+                            if (isExternal) {
+                                showExternalMediaError = true
+                            } else {
+                                onShowTagDialog(currentItem.uri)
+                            }
+                        }) {
+                            Icon(Icons.AutoMirrored.Filled.Label, contentDescription = "Tags", tint = Color.White)
+                        }
+
+                        IconButton(onClick = {
+                            if (isVibrationEnabled) performVibration(context)
+                            val shareIntent = Intent().apply {
+                                action = Intent.ACTION_SEND
+                                putExtra(Intent.EXTRA_STREAM, currentItem.uri)
+                                type = if (currentItem.isVideo) "video/*" else "image/*"
+                            }
+                            context.startActivity(Intent.createChooser(shareIntent, null))
+                        }) {
+                            Icon(Icons.Filled.Share, contentDescription = "Share", tint = Color.White)
+                        }
+                    }
                     IconButton(onClick = {
                         if (isVibrationEnabled) performVibration(context)
                         if (isExternal) {
                             showExternalMediaError = true
                         } else {
-                            onToggleFavorite(currentItem.uri)
+                            onDelete(listOf(currentItem.uri))
+                            onDismiss()
                         }
                     }) {
-                        Icon(
-                            imageVector = if (favorites.contains(currentItem.uri)) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
-                            contentDescription = "Favorite",
-                            tint = if (favorites.contains(currentItem.uri)) Color.Red else Color.White
-                        )
+                        Icon(Icons.Filled.Delete, contentDescription = "Delete", tint = Color.White)
                     }
+                    if (!isTrashMode) {
+                        IconButton(onClick = {
+                            if (isVibrationEnabled) performVibration(context)
+                            if (isExternal) {
+                                showExternalMediaError = true
+                            } else {
+                                onToggleFavorite(currentItem.uri)
+                            }
+                        }) {
+                            Icon(
+                                imageVector = if (favorites.contains(currentItem.uri)) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
+                                contentDescription = "Favorite",
+                                tint = if (favorites.contains(currentItem.uri)) Color.Red else Color.White
+                            )
+                        }
 
-                    IconButton(onClick = {
-                        if (isVibrationEnabled) performVibration(context)
-                        onShowDetails(currentItem.uri)
-                    }) {
-                        Icon(Icons.Filled.Info, contentDescription = "Info", tint = Color.White)
+                        IconButton(onClick = {
+                            if (isVibrationEnabled) performVibration(context)
+                            onShowDetails(currentItem.uri)
+                        }) {
+                            Icon(Icons.Filled.Info, contentDescription = "Info", tint = Color.White)
+                        }
                     }
                 }
             }
@@ -228,7 +265,13 @@ fun MediaViewer(
 }
 
 @Composable
-fun ZoomableImage(uri: Uri, imageLoader: ImageLoader, zoomType: ZoomType, isVibrationEnabled: Boolean) {
+fun ZoomableImage(
+    uri: Uri,
+    imageLoader: ImageLoader,
+    zoomType: ZoomType,
+    isVibrationEnabled: Boolean,
+    onToggleControls: () -> Unit
+) {
     var scale by rememberSaveable { mutableFloatStateOf(1f) }
     var offsetX by rememberSaveable { mutableFloatStateOf(0f) }
     var offsetY by rememberSaveable { mutableFloatStateOf(0f) }
@@ -245,9 +288,10 @@ fun ZoomableImage(uri: Uri, imageLoader: ImageLoader, zoomType: ZoomType, isVibr
         offsetY = 0f
     }
 
-    val doubleTapModifier = if (zoomType == ZoomType.DOUBLE_TAP) {
+    val gestureModifier = if (zoomType == ZoomType.DOUBLE_TAP) {
         Modifier.pointerInput(Unit) {
             detectTapGestures(
+                onTap = { onToggleControls() },
                 onDoubleTap = { tapOffset ->
                     if (isVibrationEnabled) performVibration(context)
                     coroutineScope.launch {
@@ -278,10 +322,11 @@ fun ZoomableImage(uri: Uri, imageLoader: ImageLoader, zoomType: ZoomType, isVibr
         Modifier.pointerInput(Unit) {
             detectTapGestures(onTap = {
                 val now = System.currentTimeMillis()
-                if (now - lastTap < 500) { // 500ms between taps
-                    tapCount++
-                } else {
+                if (now - lastTap > 500) { // More than 500ms passed, it's a single tap
+                    onToggleControls()
                     tapCount = 1
+                } else { // Less than 500ms, it's a multi-tap sequence
+                    tapCount++
                 }
                 lastTap = now
 
@@ -299,7 +344,7 @@ fun ZoomableImage(uri: Uri, imageLoader: ImageLoader, zoomType: ZoomType, isVibr
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .then(doubleTapModifier)
+            .then(gestureModifier)
             .pointerInput(Unit) {
                 awaitEachGesture {
                     do {
@@ -357,7 +402,13 @@ enum class SeekDirection {
 }
 
 @Composable
-fun VideoPlayerPage(uri: Uri, isVisible: Boolean, isMuted: Boolean) {
+fun VideoPlayerPage(
+    uri: Uri,
+    isVisible: Boolean,
+    isMuted: Boolean,
+    controlsVisible: Boolean,
+    onToggleControls: () -> Unit
+) {
     val context = LocalContext.current
     val exoPlayer = remember { ExoPlayer.Builder(context).build() }
 
@@ -366,7 +417,6 @@ fun VideoPlayerPage(uri: Uri, isVisible: Boolean, isMuted: Boolean) {
     var playbackState by remember { mutableIntStateOf(exoPlayer.playbackState) }
     var playbackPosition by remember { mutableLongStateOf(0L) }
     var totalDuration by remember { mutableLongStateOf(0L) }
-    var controlsVisible by remember { mutableStateOf(true) }
 
     // --- New Feature States ---
     var speed by rememberSaveable { mutableFloatStateOf(1f) }
@@ -391,16 +441,8 @@ fun VideoPlayerPage(uri: Uri, isVisible: Boolean, isMuted: Boolean) {
     // Seek feedback visibility
     LaunchedEffect(seekDirection) {
         if (seekDirection != null) {
-            delay(300L)
+            delay(800L)
             seekDirection = null
-        }
-    }
-
-    // Auto-hide controls
-    LaunchedEffect(controlsVisible) {
-        if (controlsVisible) {
-            delay(4000)
-            controlsVisible = false
         }
     }
 
@@ -458,7 +500,7 @@ fun VideoPlayerPage(uri: Uri, isVisible: Boolean, isMuted: Boolean) {
             .onSizeChanged { size = it }
             .pointerInput(Unit) {
                 detectTapGestures(
-                    onTap = { controlsVisible = !controlsVisible },
+                    onTap = { onToggleControls() },
                     onDoubleTap = { offset ->
                         seekDirection = if (offset.x > size.width / 2) {
                             exoPlayer.seekTo((exoPlayer.currentPosition + 10000).coerceAtMost(totalDuration))
@@ -526,9 +568,7 @@ fun VideoPlayerPage(uri: Uri, isVisible: Boolean, isMuted: Boolean) {
             exit = fadeOut(),
             modifier = Modifier.fillMaxSize()
         ) {
-            Box(modifier = Modifier.background(Color.Black.copy(alpha = 0.6f))) {
-
-            }
+            Box(modifier = Modifier.background(Color.Black.copy(alpha = 0.6f))) {}
         }
 
         val seekAnimSide = if (seekDirection == SeekDirection.FORWARD) Alignment.CenterEnd else Alignment.CenterStart
@@ -542,7 +582,9 @@ fun VideoPlayerPage(uri: Uri, isVisible: Boolean, isMuted: Boolean) {
                 imageVector = if (seekDirection == SeekDirection.FORWARD) Icons.Default.FastForward else Icons.Default.FastRewind,
                 contentDescription = "Seek",
                 tint = Color.White.copy(alpha = 0.7f),
-                modifier = Modifier.size(64.dp).padding(horizontal = 16.dp)
+                modifier = Modifier
+                    .size(64.dp)
+                    .padding(horizontal = 16.dp)
             )
         }
 
