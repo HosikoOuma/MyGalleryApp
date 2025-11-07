@@ -113,7 +113,6 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int) {
     var selectedZoomType by remember { mutableStateOf(SettingsRepository.getZoomType(context)) }
     var isVibrationEnabled by remember { mutableStateOf(SettingsRepository.isVibrationEnabled(context)) }
     var isShowFileCountEnabled by remember { mutableStateOf(SettingsRepository.isShowFileCountEnabled(context)) }
-    var isEasterEggUnlocked by remember { mutableStateOf(SettingsRepository.isEasterEggUnlocked(context)) }
     var isShuffleButtonVisible by remember { mutableStateOf(SettingsRepository.isShuffleButtonVisible(context)) }
     val keyboardController = LocalSoftwareKeyboardController.current
 
@@ -703,18 +702,6 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int) {
                         currentScreen = currentScreen,
                         onScreenChange = { screen ->
                             currentScreen = screen
-                            if (screen is Screen.AllMedia && !isEasterEggUnlocked) {
-                                SettingsRepository.incrementAllMediaClickCount(context)
-                                val clickCount = SettingsRepository.getAllMediaClickCount(context)
-                                if (clickCount >= 10) {
-                                    SettingsRepository.setEasterEggUnlocked(context, true)
-                                    val mediaPlayer = MediaPlayer.create(context, R.raw.bonk)
-                                    mediaPlayer.setOnCompletionListener { it.release() }
-                                    mediaPlayer.start()
-                                    isEasterEggUnlocked = true
-                                    SettingsRepository.resetAllMediaClickCount(context)
-                                }
-                            }
                         },
                         context = context,
                         onSettingsClick = { currentScreen = Screen.Settings },
@@ -722,7 +709,7 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int) {
                     )
                 },
                 floatingActionButton = {
-                    if (isEasterEggUnlocked && isShuffleButtonVisible && currentScreen !is Screen.Trash && currentScreen !is Screen.Settings && currentScreen !is Screen.TagManagement) {
+                    if (isShuffleButtonVisible && currentScreen !is Screen.Trash && currentScreen !is Screen.Settings && currentScreen !is Screen.TagManagement) {
                         LargeFloatingActionButton(
                             onClick = {
                                 if (isVibrationEnabled) performVibration(context)
@@ -862,7 +849,6 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int) {
                                 isShowFileCountEnabled = it
                                 SettingsRepository.setShowFileCount(context, it)
                             },
-                            isEasterEggUnlocked = isEasterEggUnlocked,
                             isShuffleButtonVisible = isShuffleButtonVisible,
                             onShuffleButtonVisibleChange = {
                                 isShuffleButtonVisible = it

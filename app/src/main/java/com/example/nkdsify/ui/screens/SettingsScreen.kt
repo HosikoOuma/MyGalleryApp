@@ -54,7 +54,6 @@ fun SettingsScreen(
     onVibrationEnabledChange: (Boolean) -> Unit,
     isShowFileCountEnabled: Boolean,
     onShowFileCountChange: (Boolean) -> Unit,
-    isEasterEggUnlocked: Boolean,
     isShuffleButtonVisible: Boolean,
     onShuffleButtonVisibleChange: (Boolean) -> Unit
 ) {
@@ -145,22 +144,20 @@ fun SettingsScreen(
                 }
             )
         }
-        if (isEasterEggUnlocked) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text("Show Shuffle Button")
-                Switch(
-                    checked = isShuffleButtonVisible,
-                    onCheckedChange = {
-                        if (isVibrationEnabled) performVibration(context)
-                        onShuffleButtonVisibleChange(it)
-                    }
-                )
-            }
+        Row(
+            modifier = Modifier
+                .fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text("Show Shuffle Button")
+            Switch(
+                checked = isShuffleButtonVisible,
+                onCheckedChange = {
+                    if (isVibrationEnabled) performVibration(context)
+                    onShuffleButtonVisibleChange(it)
+                }
+            )
         }
         Row(
             modifier = Modifier

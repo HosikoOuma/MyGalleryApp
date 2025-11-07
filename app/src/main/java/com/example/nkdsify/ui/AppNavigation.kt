@@ -77,7 +77,6 @@ fun AppNavigation(
     onOpenAlbum: (String) -> Unit,
     isShowFileCountEnabled: Boolean,
     onShowFileCountChange: (Boolean) -> Unit,
-    isEasterEggUnlocked: Boolean,
     isShuffleButtonVisible: Boolean,
     onShuffleButtonVisibleChange: (Boolean) -> Unit
 ) {
@@ -213,7 +212,6 @@ fun AppNavigation(
                     onVibrationEnabledChange = onVibrationEnabledChange,
                     isShowFileCountEnabled = isShowFileCountEnabled,
                     onShowFileCountChange = onShowFileCountChange,
-                    isEasterEggUnlocked = isEasterEggUnlocked,
                     isShuffleButtonVisible = isShuffleButtonVisible,
                     onShuffleButtonVisibleChange = onShuffleButtonVisibleChange
                 )
