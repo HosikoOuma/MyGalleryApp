@@ -161,6 +161,7 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int) {
         var showHiddenFoldersDialog by remember { mutableStateOf(false) }
         var showBackupAndRestoreDialog by remember { mutableStateOf(false) }
         var showFolderSelectionDialog by remember { mutableStateOf(false) }
+        var showRenameDialog by remember { mutableStateOf<Uri?>(null) }
         var fileToProcess by remember { mutableStateOf<Uri?>(null) }
         var currentFileOperation by remember { mutableStateOf<FileOperation?>(null) }
 
@@ -461,10 +462,41 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int) {
                             outputRequestSizeOptions = CropImageView.RequestSizeOptions.RESIZE_EXACT
                         ))
                         cropImageLauncher.launch(cropOptions)
+                    },
+                    onCopy = {
+                        fileToProcess = uri
+                        currentFileOperation = FileOperation.COPY
+                        showFolderSelectionDialog = true
+                        showDetailsDialog = null
+                    },
+                    onMove = {
+                        fileToProcess = uri
+                        currentFileOperation = FileOperation.MOVE
+                        showFolderSelectionDialog = true
+                        showDetailsDialog = null
+                    },
+                    onRename = {
+                        showRenameDialog = uri
+                        showDetailsDialog = null
                     }
                 )
             }
         }
+
+        if (showRenameDialog != null) {
+            val uri = showRenameDialog!!
+            val currentName = getMediaDetails(context, uri)?.name ?: ""
+            RenameDialog(
+                currentName = currentName,
+                onDismiss = { showRenameDialog = null },
+                onRename = { newName ->
+                    renameMedia(context, uri, newName)
+                    showRenameDialog = null
+                    refreshTrigger++
+                }
+            )
+        }
+
         if (showAlbumDetailsDialog) {
             val screen = currentScreen
             if (screen is Screen.FolderContent) {

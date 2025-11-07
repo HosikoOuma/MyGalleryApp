@@ -2,6 +2,7 @@ package com.example.nkdsify.ui.utils
 
 import android.app.RecoverableSecurityException
 import android.content.ContentUris
+import android.content.ContentValues
 import android.content.Context
 import android.content.IntentSender
 import android.content.SharedPreferences
@@ -15,6 +16,9 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.DriveFileMove
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Wallpaper
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -23,7 +27,12 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.core.content.edit
@@ -278,7 +287,10 @@ fun deleteMediaPermanently(context: Context, uris: List<Uri>): IntentSender? {
 fun MediaDetailsDialog(
     details: MediaDetails,
     onDismiss: () -> Unit,
-    onSetAsWallpaper: () -> Unit
+    onSetAsWallpaper: () -> Unit,
+    onCopy: () -> Unit,
+    onMove: () -> Unit,
+    onRename: () -> Unit
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -298,6 +310,15 @@ fun MediaDetailsDialog(
                 IconButton(onClick = onSetAsWallpaper) {
                     Icon(Icons.Default.Wallpaper, contentDescription = "Set as wallpaper")
                 }
+                IconButton(onClick = onCopy) {
+                    Icon(Icons.Default.ContentCopy, contentDescription = "Copy")
+                }
+                IconButton(onClick = onMove) {
+                    Icon(Icons.Default.DriveFileMove, contentDescription = "Move")
+                }
+                IconButton(onClick = onRename) {
+                    Icon(Icons.Default.Edit, contentDescription = "Rename")
+                }
             }
         },
         dismissButton = {
@@ -306,6 +327,48 @@ fun MediaDetailsDialog(
             }
         }
     )
+}
+
+@Composable
+fun RenameDialog(
+    currentName: String,
+    onDismiss: () -> Unit,
+    onRename: (String) -> Unit
+) {
+    var newName by remember { mutableStateOf(currentName) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Rename") },
+        text = {
+            TextField(
+                value = newName,
+                onValueChange = { newName = it },
+                singleLine = true
+            )
+        },
+        confirmButton = {
+            Button(onClick = { onRename(newName) }) {
+                Text("Rename")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
+}
+
+fun renameMedia(context: Context, uri: Uri, newName: String) {
+    try {
+        val contentValues = ContentValues().apply {
+            put(MediaStore.Files.FileColumns.DISPLAY_NAME, newName)
+        }
+        context.contentResolver.update(uri, contentValues, null, null)
+    } catch (e: Exception) {
+        Log.e("renameMedia", "Failed to rename media: $uri", e)
+    }
 }
 
 object FavoritesRepository {

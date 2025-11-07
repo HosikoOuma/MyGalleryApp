@@ -96,8 +96,8 @@ fun MediaViewer(
     onShowTagDialog: (Uri) -> Unit,
     onToggleFavorite: (Uri) -> Unit,
     onShowDetails: (Uri) -> Unit,
-    onMove: (Uri) -> Unit, // New
-    onCopy: (Uri) -> Unit, // New
+    onMove: (Uri) -> Unit,
+    onCopy: (Uri) -> Unit,
     isExternal: Boolean = false,
     isTrashMode: Boolean,
     isMuteVideoByDefault: Boolean,
@@ -204,13 +204,6 @@ fun MediaViewer(
                     }
 
                     if (!isTrashMode) {
-                        IconButton(onClick = { onCopy(currentItem.uri) }) {
-                            Icon(Icons.Default.ContentCopy, contentDescription = "Copy", tint = Color.White)
-                        }
-                        IconButton(onClick = { onMove(currentItem.uri) }) {
-                            Icon(Icons.Default.DriveFileMove, contentDescription = "Move", tint = Color.White)
-                        }
-
                         IconButton(onClick = {
                             if (isVibrationEnabled) performVibration(context)
                             if (isExternal) {

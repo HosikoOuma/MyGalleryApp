@@ -4,6 +4,7 @@ import android.content.ContentValues
 import android.content.Context
 import android.net.Uri
 import android.os.Build
+import android.os.Environment
 import android.provider.MediaStore
 import androidx.core.net.toUri
 import java.io.File
@@ -85,21 +86,31 @@ object TrashRepository {
                 val isVideo = extension in listOf("mp4", "mkv", "webm", "3gp")
 
                 val collection = if (isVideo) {
-                    MediaStore.Video.Media.getContentUri(MediaStore.VOLUME_EXTERNAL)
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                        MediaStore.Video.Media.getContentUri(MediaStore.VOLUME_EXTERNAL)
+                    } else {
+                        MediaStore.Video.Media.EXTERNAL_CONTENT_URI
+                    }
                 } else {
-                    MediaStore.Images.Media.getContentUri(MediaStore.VOLUME_EXTERNAL)
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                        MediaStore.Images.Media.getContentUri(MediaStore.VOLUME_EXTERNAL)
+                    } else {
+                        MediaStore.Images.Media.EXTERNAL_CONTENT_URI
+                    }
                 }
 
                 val contentValues = ContentValues().apply {
                     put(MediaStore.MediaColumns.DISPLAY_NAME, fileName)
-                    if (relativePath != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                        val topDir = relativePath.substringBefore('/', missingDelimiterValue = "")
-                        val finalPath = if (isVideo) {
-                            if (topDir.equals("DCIM", true) || topDir.equals("Movies", true) || topDir.equals("Videos", true)) relativePath else "Movies/$relativePath"
+                    if (relativePath != null) {
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                            put(MediaStore.MediaColumns.RELATIVE_PATH, relativePath)
                         } else {
-                            if (topDir.equals("DCIM", true) || topDir.equals("Pictures", true)) relativePath else "Pictures/$relativePath"
+                            val targetDir = File(Environment.getExternalStorageDirectory(), relativePath)
+                            if (!targetDir.exists()) {
+                                targetDir.mkdirs()
+                            }
+                            put(MediaStore.MediaColumns.DATA, File(targetDir, fileName).absolutePath)
                         }
-                        put(MediaStore.MediaColumns.RELATIVE_PATH, finalPath)
                     }
                     put(MediaStore.MediaColumns.IS_PENDING, 1)
                 }
@@ -120,7 +131,7 @@ object TrashRepository {
                     sourceFile.delete()
                     if (pathFile.exists()) pathFile.delete()
                 }
-            } catch (e: Exception) { 
+            } catch (e: Exception) {
                 e.printStackTrace()
             }
         }
@@ -131,7 +142,7 @@ object TrashRepository {
             val projection = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 arrayOf(MediaStore.MediaColumns.DISPLAY_NAME, MediaStore.MediaColumns.RELATIVE_PATH)
             } else {
-                arrayOf(MediaStore.MediaColumns.DISPLAY_NAME)
+                arrayOf(MediaStore.MediaColumns.DISPLAY_NAME, MediaStore.MediaColumns.DATA)
             }
             context.contentResolver.query(uri, projection, null, null, null)?.use { cursor ->
                 if (cursor.moveToFirst()) {
@@ -143,6 +154,18 @@ object TrashRepository {
                         val pathIndex = cursor.getColumnIndex(MediaStore.MediaColumns.RELATIVE_PATH)
                         if (pathIndex != -1) {
                             path = cursor.getString(pathIndex)
+                        }
+                    } else {
+                        val dataIndex = cursor.getColumnIndex(MediaStore.MediaColumns.DATA)
+                        if (dataIndex != -1) {
+                            val data = cursor.getString(dataIndex)
+                            val file = File(data)
+                            val externalStoragePath = Environment.getExternalStorageDirectory().path
+                            file.parent?.let { parentPath ->
+                                if (parentPath.startsWith(externalStoragePath)) {
+                                    path = parentPath.substring(externalStoragePath.length).removePrefix("/")
+                                }
+                            }
                         }
                     }
                     return Pair(name, path)
