@@ -35,7 +35,6 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -598,7 +597,7 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int) {
         if (showConfirmRestoreDialog) {
             ConfirmRestoreDialog(
                 onConfirm = {
-                    TrashRepository.removeFromTrash(context, itemsToRestore)
+                    TrashRepository.restoreFromTrash(context, itemsToRestore)
                     selectedItems.clear()
                     refreshTrigger++
                     showConfirmRestoreDialog = false

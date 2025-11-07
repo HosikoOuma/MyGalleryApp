@@ -3,11 +3,11 @@ package com.example.nkdsify.ui.utils
 import android.content.ContentValues
 import android.content.Context
 import android.net.Uri
+import android.os.Build
 import android.provider.MediaStore
 import androidx.core.net.toUri
 import java.io.File
 import java.io.FileOutputStream
-import java.io.IOException
 import java.util.Locale
 
 object TrashRepository {
@@ -22,7 +22,9 @@ object TrashRepository {
 
     fun getTrashedUris(context: Context): Set<Uri> {
         val trashDir = getTrashDir(context)
-        return trashDir.listFiles()?.map { it.toUri() }?.toSet() ?: emptySet()
+        return trashDir.listFiles { _, name -> !name.endsWith(".path") }
+            ?.map { it.toUri() }
+            ?.toSet() ?: emptySet()
     }
 
     fun copyToTrash(context: Context, uris: List<Uri>): List<Uri> {
@@ -31,8 +33,11 @@ object TrashRepository {
 
         uris.forEach { uri ->
             try {
-                val fileName = getFileName(context, uri) ?: "file_${System.currentTimeMillis()}"
-                
+                val (fileName, relativePath) = getFileInfo(context, uri)
+                if (fileName == null) {
+                    return@forEach
+                }
+
                 var destinationFile = File(trashDir, fileName)
                 var counter = 1
                 while (destinationFile.exists()) {
@@ -51,70 +56,118 @@ object TrashRepository {
                     FileOutputStream(destinationFile).use { outputStream ->
                         inputStream.copyTo(outputStream)
                     }
+
+                    if (relativePath != null) {
+                        val pathFile = File(trashDir, destinationFile.name + ".path")
+                        pathFile.writeText(relativePath)
+                    }
+
                     successfullyCopiedOriginalUris.add(uri)
                 }
-            } catch (e: Exception) { // Catch broader exceptions
+            } catch (e: Exception) {
                 e.printStackTrace()
             }
         }
         return successfullyCopiedOriginalUris
     }
 
-    fun restoreFromTrash(context: Context, uri: Uri) {
-        try {
-            val sourceFile = uri.path?.let { File(it) } ?: return
-            if (!sourceFile.exists()) return
+    fun restoreFromTrash(context: Context, itemsToRestore: List<Uri>) {
+        itemsToRestore.forEach { uri ->
+            try {
+                val sourceFile = uri.path?.let { File(it) } ?: return@forEach
+                if (!sourceFile.exists()) return@forEach
 
-            val fileName = sourceFile.name
-            val extension = fileName.substringAfterLast('.', "").lowercase(Locale.getDefault())
-            val isVideo = extension in listOf("mp4", "mkv", "webm", "3gp")
+                val fileName = sourceFile.name
+                val pathFile = File(sourceFile.parentFile, sourceFile.name + ".path")
+                val relativePath = if (pathFile.exists()) pathFile.readText() else null
 
-            val collection = if (isVideo) {
-                 MediaStore.Video.Media.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY)
-            } else {
-                 MediaStore.Images.Media.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY)
-            }
+                val extension = fileName.substringAfterLast('.', "").lowercase(Locale.getDefault())
+                val isVideo = extension in listOf("mp4", "mkv", "webm", "3gp")
 
-            val contentValues = ContentValues().apply {
-                put(MediaStore.MediaColumns.DISPLAY_NAME, fileName)
-                put(MediaStore.MediaColumns.IS_PENDING, 1)
-            }
-            
-            val mediaUri = context.contentResolver.insert(collection, contentValues)
-
-            mediaUri?.let { newUri ->
-                context.contentResolver.openOutputStream(newUri)?.use { outputStream ->
-                    sourceFile.inputStream().use { inputStream ->
-                        inputStream.copyTo(outputStream)
-                    }
+                val collection = if (isVideo) {
+                    MediaStore.Video.Media.getContentUri(MediaStore.VOLUME_EXTERNAL)
+                } else {
+                    MediaStore.Images.Media.getContentUri(MediaStore.VOLUME_EXTERNAL)
                 }
 
-                contentValues.clear()
-                contentValues.put(MediaStore.MediaColumns.IS_PENDING, 0)
-                context.contentResolver.update(newUri, contentValues, null, null)
-                sourceFile.delete()
+                val contentValues = ContentValues().apply {
+                    put(MediaStore.MediaColumns.DISPLAY_NAME, fileName)
+                    if (relativePath != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                        val topDir = relativePath.substringBefore('/', missingDelimiterValue = "")
+                        val finalPath = if (isVideo) {
+                            if (topDir.equals("DCIM", true) || topDir.equals("Movies", true) || topDir.equals("Videos", true)) relativePath else "Movies/$relativePath"
+                        } else {
+                            if (topDir.equals("DCIM", true) || topDir.equals("Pictures", true)) relativePath else "Pictures/$relativePath"
+                        }
+                        put(MediaStore.MediaColumns.RELATIVE_PATH, finalPath)
+                    }
+                    put(MediaStore.MediaColumns.IS_PENDING, 1)
+                }
+
+                val mediaUri = context.contentResolver.insert(collection, contentValues)
+
+                mediaUri?.let { newUri ->
+                    context.contentResolver.openOutputStream(newUri)?.use { outputStream ->
+                        sourceFile.inputStream().use { inputStream ->
+                            inputStream.copyTo(outputStream)
+                        }
+                    }
+
+                    contentValues.clear()
+                    contentValues.put(MediaStore.MediaColumns.IS_PENDING, 0)
+                    context.contentResolver.update(newUri, contentValues, null, null)
+
+                    sourceFile.delete()
+                    if (pathFile.exists()) pathFile.delete()
+                }
+            } catch (e: Exception) { 
+                e.printStackTrace()
             }
-        } catch (e: IOException) {
-            e.printStackTrace()
         }
     }
 
-    private fun getFileName(context: Context, uri: Uri): String? {
+    private fun getFileInfo(context: Context, uri: Uri): Pair<String?, String?> {
         if (uri.scheme == "content") {
-            context.contentResolver.query(uri, arrayOf(MediaStore.MediaColumns.DISPLAY_NAME), null, null, null)?.use { cursor ->
+            val projection = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                arrayOf(MediaStore.MediaColumns.DISPLAY_NAME, MediaStore.MediaColumns.RELATIVE_PATH)
+            } else {
+                arrayOf(MediaStore.MediaColumns.DISPLAY_NAME)
+            }
+            context.contentResolver.query(uri, projection, null, null, null)?.use { cursor ->
                 if (cursor.moveToFirst()) {
                     val nameIndex = cursor.getColumnIndex(MediaStore.MediaColumns.DISPLAY_NAME)
-                    if (nameIndex != -1) {
-                        return cursor.getString(nameIndex)
+                    val name = if (nameIndex != -1) cursor.getString(nameIndex) else null
+
+                    var path: String? = null
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                        val pathIndex = cursor.getColumnIndex(MediaStore.MediaColumns.RELATIVE_PATH)
+                        if (pathIndex != -1) {
+                            path = cursor.getString(pathIndex)
+                        }
                     }
+                    return Pair(name, path)
                 }
             }
         }
-        return uri.path?.substringAfterLast('/')
+        val path = uri.path
+        return Pair(path?.substringAfterLast('/'), path?.substringBeforeLast('/'))
     }
-    
+
     fun removeFromTrash(context: Context, uris: List<Uri>) {
-        uris.forEach { restoreFromTrash(context, it) }
+        uris.forEach { uri ->
+            try {
+                val sourceFile = uri.path?.let { File(it) } ?: return@forEach
+                if (sourceFile.exists()) {
+                    val pathFile = File(sourceFile.parentFile, sourceFile.name + ".path")
+                    sourceFile.delete()
+                    if (pathFile.exists()) {
+                        pathFile.delete()
+                    }
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
     }
 
     fun clearTrash(context: Context) {
