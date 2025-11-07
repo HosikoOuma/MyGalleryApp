@@ -27,6 +27,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Photo
@@ -86,6 +87,7 @@ import java.io.BufferedReader
 import java.io.InputStreamReader
 import android.content.ContentUris
 import androidx.annotation.OptIn
+import androidx.compose.material3.LargeFloatingActionButton
 
 
 @OptIn(UnstableApi::class, ExperimentalMaterial3Api::class)
@@ -721,7 +723,7 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int) {
                 },
                 floatingActionButton = {
                     if (isEasterEggUnlocked && isShuffleButtonVisible && currentScreen !is Screen.Trash && currentScreen !is Screen.Settings && currentScreen !is Screen.TagManagement) {
-                        FloatingActionButton(
+                        LargeFloatingActionButton(
                             onClick = {
                                 if (isVibrationEnabled) performVibration(context)
                                 val itemsToShuffle = when (val screen = currentScreen) {
@@ -747,7 +749,7 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int) {
                                 }
                             }
                         ) {
-                            Icon(Icons.Filled.Photo, contentDescription = "Shuffle Play")
+                            Icon(Icons.Filled.Photo, contentDescription = "Shuffle Play", modifier = Modifier.size(40.dp))
                         }
                     }
                 }
