@@ -33,10 +33,11 @@ import androidx.compose.material.icons.automirrored.filled.VolumeOff
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Slider
-import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -351,6 +352,10 @@ fun ZoomableImage(uri: Uri, imageLoader: ImageLoader, zoomType: ZoomType, isVibr
     }
 }
 
+enum class SeekDirection {
+    FORWARD, BACKWARD
+}
+
 @Composable
 fun VideoPlayerPage(uri: Uri, isVisible: Boolean, isMuted: Boolean) {
     val context = LocalContext.current
@@ -363,6 +368,11 @@ fun VideoPlayerPage(uri: Uri, isVisible: Boolean, isMuted: Boolean) {
     var totalDuration by remember { mutableLongStateOf(0L) }
     var controlsVisible by remember { mutableStateOf(true) }
 
+    // --- New Feature States ---
+    var speed by rememberSaveable { mutableFloatStateOf(1f) }
+    var showSpeedMenu by remember { mutableStateOf(false) }
+    var seekDirection by remember { mutableStateOf<SeekDirection?>(null) }
+
     // --- Zoom State ---
     var scale by rememberSaveable { mutableFloatStateOf(1f) }
     var offsetX by rememberSaveable { mutableFloatStateOf(0f) }
@@ -370,11 +380,20 @@ fun VideoPlayerPage(uri: Uri, isVisible: Boolean, isMuted: Boolean) {
     var size by remember { mutableStateOf(IntSize.Zero) }
 
     // --- Effects ---
-    // Reset zoom when uri changes
+    // Reset states when uri changes
     LaunchedEffect(key1 = uri) {
         scale = 1f
         offsetX = 0f
         offsetY = 0f
+        speed = 1f
+        exoPlayer.setPlaybackSpeed(1f)
+    }
+    // Seek feedback visibility
+    LaunchedEffect(seekDirection) {
+        if (seekDirection != null) {
+            delay(300L)
+            seekDirection = null
+        }
     }
 
     // Auto-hide controls
@@ -438,11 +457,21 @@ fun VideoPlayerPage(uri: Uri, isVisible: Boolean, isMuted: Boolean) {
             .background(Color.Black)
             .onSizeChanged { size = it }
             .pointerInput(Unit) {
-                detectTapGestures(onTap = { controlsVisible = !controlsVisible })
+                detectTapGestures(
+                    onTap = { controlsVisible = !controlsVisible },
+                    onDoubleTap = { offset ->
+                        seekDirection = if (offset.x > size.width / 2) {
+                            exoPlayer.seekTo((exoPlayer.currentPosition + 10000).coerceAtMost(totalDuration))
+                            SeekDirection.FORWARD
+                        } else {
+                            exoPlayer.seekTo((exoPlayer.currentPosition - 10000).coerceAtLeast(0))
+                            SeekDirection.BACKWARD
+                        }
+                    }
+                )
             }
             .pointerInput(Unit) {
                 awaitEachGesture {
-                    // Simplified gesture handling: no consumption needed for tap to pass through
                     do {
                         val event = awaitPointerEvent()
                         val zoom = event.calculateZoom()
@@ -476,7 +505,7 @@ fun VideoPlayerPage(uri: Uri, isVisible: Boolean, isMuted: Boolean) {
         AndroidView(
             factory = {
                 PlayerView(it).apply {
-                    useController = false // We're using our own controls
+                    useController = false
                     player = exoPlayer
                 }
             },
@@ -490,6 +519,33 @@ fun VideoPlayerPage(uri: Uri, isVisible: Boolean, isMuted: Boolean) {
                 }
         )
 
+        // Scrim for better controls visibility
+        AnimatedVisibility(
+            visible = controlsVisible || seekDirection != null,
+            enter = fadeIn(),
+            exit = fadeOut(),
+            modifier = Modifier.fillMaxSize()
+        ) {
+            Box(modifier = Modifier.background(Color.Black.copy(alpha = 0.6f))) {
+
+            }
+        }
+
+        val seekAnimSide = if (seekDirection == SeekDirection.FORWARD) Alignment.CenterEnd else Alignment.CenterStart
+        AnimatedVisibility(
+            visible = seekDirection != null,
+            enter = fadeIn(),
+            exit = fadeOut(),
+            modifier = Modifier.align(seekAnimSide)
+        ) {
+            Icon(
+                imageVector = if (seekDirection == SeekDirection.FORWARD) Icons.Default.FastForward else Icons.Default.FastRewind,
+                contentDescription = "Seek",
+                tint = Color.White.copy(alpha = 0.7f),
+                modifier = Modifier.size(64.dp).padding(horizontal = 16.dp)
+            )
+        }
+
         // Custom Controls
         AnimatedVisibility(
             visible = controlsVisible,
@@ -498,7 +554,6 @@ fun VideoPlayerPage(uri: Uri, isVisible: Boolean, isMuted: Boolean) {
             modifier = Modifier.fillMaxSize()
         ) {
             Box(modifier = Modifier.fillMaxSize()) {
-                // Center Play/Pause button
                 IconButton(
                     onClick = {
                         if (playbackState == Player.STATE_ENDED) {
@@ -516,26 +571,16 @@ fun VideoPlayerPage(uri: Uri, isVisible: Boolean, isMuted: Boolean) {
                     Icon(imageVector = icon, contentDescription = "Play/Pause", tint = Color.White, modifier = Modifier.fillMaxSize())
                 }
 
-                // Buffering indicator
                 if (playbackState == Player.STATE_BUFFERING) {
                     CircularProgressIndicator(modifier = Modifier.align(Alignment.Center), color = Color.White)
                 }
 
-                // Bottom Controls (Slider and Time)
                 Column(
                     modifier = Modifier
                         .align(Alignment.BottomCenter)
                         .fillMaxWidth()
                         .padding(16.dp)
                 ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(text = formatDuration(playbackPosition), color = Color.White)
-                        Text(text = formatDuration(totalDuration), color = Color.White)
-                    }
                     Slider(
                         value = playbackPosition.toFloat(),
                         onValueChange = { newPosition ->
@@ -544,13 +589,40 @@ fun VideoPlayerPage(uri: Uri, isVisible: Boolean, isMuted: Boolean) {
                         onValueChangeFinished = {
                             playbackPosition = exoPlayer.currentPosition
                         },
-                        valueRange = 0f..totalDuration.toFloat().coerceAtLeast(0f),
-                        colors = SliderDefaults.colors(
-                            thumbColor = Color.White,
-                            activeTrackColor = Color.White,
-                            inactiveTrackColor = Color.Gray
-                        )
+                        valueRange = 0f..totalDuration.toFloat().coerceAtLeast(0f)
                     )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(text = formatDuration(playbackPosition), color = Color.White)
+
+                        Row(horizontalArrangement = Arrangement.Center) {
+                            Box {
+                                IconButton(onClick = { showSpeedMenu = true }) {
+                                    Icon(imageVector = Icons.Default.Speed, contentDescription = "Playback Speed", tint = Color.White)
+                                }
+                                DropdownMenu(
+                                    expanded = showSpeedMenu,
+                                    onDismissRequest = { showSpeedMenu = false }
+                                ) {
+                                    listOf(0.5f, 1.0f, 1.5f, 2.0f).forEach { speedValue ->
+                                        DropdownMenuItem(
+                                            text = { Text(text = "${speedValue}x") },
+                                            onClick = {
+                                                speed = speedValue
+                                                exoPlayer.setPlaybackSpeed(speed)
+                                                showSpeedMenu = false
+                                            }
+                                        )
+                                    }
+                                }
+                            }
+                        }
+
+                        Text(text = formatDuration(totalDuration), color = Color.White)
+                    }
                 }
             }
         }
