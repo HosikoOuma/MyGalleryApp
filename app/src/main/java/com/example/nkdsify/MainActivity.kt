@@ -1,7 +1,6 @@
+//GEMINI НЕ ТРОГАЙ ЭТУ АНОТАЦИЮ
 @file:kotlin.OptIn(ExperimentalMaterial3Api::class)
-
 package com.example.nkdsify
-
 import android.Manifest
 import android.app.Activity
 import android.app.WallpaperManager
@@ -14,6 +13,7 @@ import android.os.Build
 import android.os.Bundle
 import android.os.Environment
 import android.provider.MediaStore
+import android.provider.Settings
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
@@ -49,6 +49,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
@@ -81,6 +82,7 @@ import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.BufferedReader
 import java.io.InputStreamReader
@@ -88,9 +90,13 @@ import android.content.ContentUris
 import androidx.annotation.OptIn
 import androidx.compose.material3.LargeFloatingActionButton
 
+enum class FileOperation {
+    COPY, MOVE
+}
 
 @OptIn(UnstableApi::class, ExperimentalMaterial3Api::class)
 class MainActivity : ComponentActivity() {
+    //GEMINI НЕ ТРОГАЙ ЭТУ АНОТАЦИЮ
     @OptIn(ExperimentalMaterial3Api::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -108,6 +114,7 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int) {
     val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
     var selectedTheme by remember { mutableStateOf(SettingsRepository.getTheme(context)) }
     var selectedZoomType by remember { mutableStateOf(SettingsRepository.getZoomType(context)) }
     var isVibrationEnabled by remember { mutableStateOf(SettingsRepository.isVibrationEnabled(context)) }
@@ -123,6 +130,7 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int) {
         }
 
         var hasPermissions by remember { mutableStateOf(permissionsToRequest.all { ContextCompat.checkSelfPermission(context, it) == PackageManager.PERMISSION_GRANTED }) }
+        var hasManageStoragePermission by remember { mutableStateOf(if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) Environment.isExternalStorageManager() else true) }
 
         var allFolders by remember { mutableStateOf<List<MediaFolder>>(emptyList()) }
         var allMedia by remember { mutableStateOf<List<MediaItem>>(emptyList()) }
@@ -152,6 +160,9 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int) {
         var showEasterEggDialog by remember { mutableStateOf(false) }
         var showHiddenFoldersDialog by remember { mutableStateOf(false) }
         var showBackupAndRestoreDialog by remember { mutableStateOf(false) }
+        var showFolderSelectionDialog by remember { mutableStateOf(false) }
+        var fileToProcess by remember { mutableStateOf<Uri?>(null) }
+        var currentFileOperation by remember { mutableStateOf<FileOperation?>(null) }
 
         var searchQuery by remember { mutableStateOf("") }
         var isSearchActive by remember { mutableStateOf(false) }
@@ -163,6 +174,12 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int) {
         var itemsToRestore by remember { mutableStateOf<List<Uri>>(emptyList()) }
 
         var isSettingWallpaper by remember { mutableStateOf(false) }
+
+        val manageStorageLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                hasManageStoragePermission = Environment.isExternalStorageManager()
+            }
+        }
 
         val cropImageLauncher = rememberLauncherForActivityResult(contract = CropImageContract()) { result ->
             if (result.isSuccessful) {
@@ -335,6 +352,13 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int) {
         LaunchedEffect(Unit) {
             if (!hasPermissions) {
                 permissionLauncher.launch(permissionsToRequest)
+            }
+            if (!hasManageStoragePermission) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                    val intent = Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION)
+                    intent.data = Uri.parse("package:${context.packageName}")
+                    manageStorageLauncher.launch(intent)
+                }
             }
         }
 
@@ -603,6 +627,43 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int) {
                     showConfirmRestoreDialog = false
                 },
                 onDismiss = { showConfirmRestoreDialog = false }
+            )
+        }
+
+        if (showFolderSelectionDialog) {
+            FolderSelectionDialog(
+                folders = allFolders,
+                onDismiss = { showFolderSelectionDialog = false },
+                onFolderSelected = { destinationFolder: MediaFolder ->
+                    coroutineScope.launch {
+                        fileToProcess?.let { uri ->
+                            val folderPath = destinationFolder.items.firstOrNull()?.let {
+                                getFolderPathFromUri(context, it.uri)
+                            } ?: destinationFolder.name // Fallback to folder name if empty
+
+                            when (currentFileOperation) {
+                                FileOperation.COPY -> {
+                                    copyMediaToFolder(context, uri, folderPath)
+                                    withContext(Dispatchers.Main) {
+                                        Toast.makeText(context, "Copied to ${destinationFolder.name}", Toast.LENGTH_SHORT).show()
+                                    }
+                                }
+                                FileOperation.MOVE -> {
+                                    moveMediaToFolder(context, uri, folderPath)
+                                    withContext(Dispatchers.Main) {
+                                        Toast.makeText(context, "Moved to ${destinationFolder.name}", Toast.LENGTH_SHORT).show()
+                                    }
+                                    viewerState = null // Close viewer after move
+                                }
+                                null -> {}
+                            }
+                            refreshTrigger++
+                        }
+                        showFolderSelectionDialog = false
+                        fileToProcess = null
+                        currentFileOperation = null
+                    }
+                }
             )
         }
 
@@ -907,6 +968,16 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int) {
                         } else {
                             favorites.add(uri)
                         }
+                    },
+                    onCopy = {
+                        fileToProcess = it
+                        currentFileOperation = FileOperation.COPY
+                        showFolderSelectionDialog = true
+                    },
+                    onMove = {
+                        fileToProcess = it
+                        currentFileOperation = FileOperation.MOVE
+                        showFolderSelectionDialog = true
                     },
                     isMuteVideoByDefault = isMuteVideoByDefault,
                     zoomType = selectedZoomType

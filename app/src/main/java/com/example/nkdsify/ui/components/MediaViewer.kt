@@ -96,6 +96,8 @@ fun MediaViewer(
     onShowTagDialog: (Uri) -> Unit,
     onToggleFavorite: (Uri) -> Unit,
     onShowDetails: (Uri) -> Unit,
+    onMove: (Uri) -> Unit, // New
+    onCopy: (Uri) -> Unit, // New
     isExternal: Boolean = false,
     isTrashMode: Boolean,
     isMuteVideoByDefault: Boolean,
@@ -163,7 +165,8 @@ fun MediaViewer(
                     .padding(vertical = 8.dp, horizontal = 16.dp)
                     .background(Color.Black.copy(alpha = 0.5f), shape = CircleShape)
                     .padding(horizontal = 8.dp),
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 val currentPage = pagerState.currentPage
                 val currentItem = items.getOrNull(currentPage)
@@ -201,6 +204,13 @@ fun MediaViewer(
                     }
 
                     if (!isTrashMode) {
+                        IconButton(onClick = { onCopy(currentItem.uri) }) {
+                            Icon(Icons.Default.ContentCopy, contentDescription = "Copy", tint = Color.White)
+                        }
+                        IconButton(onClick = { onMove(currentItem.uri) }) {
+                            Icon(Icons.Default.DriveFileMove, contentDescription = "Move", tint = Color.White)
+                        }
+
                         IconButton(onClick = {
                             if (isVibrationEnabled) performVibration(context)
                             if (isExternal) {
