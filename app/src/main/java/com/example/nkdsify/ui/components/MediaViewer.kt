@@ -3,7 +3,10 @@ package com.example.nkdsify.ui.components
 import android.content.Intent
 import android.media.MediaPlayer
 import android.net.Uri
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animate
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -11,12 +14,15 @@ import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.calculatePan
 import androidx.compose.foundation.gestures.calculateZoom
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
@@ -26,8 +32,12 @@ import androidx.compose.material.icons.automirrored.filled.Label
 import androidx.compose.material.icons.automirrored.filled.VolumeOff
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -53,6 +63,7 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.media3.common.MediaItem as Media3Item
+import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.PlayerView
 import coil.ImageLoader
@@ -65,7 +76,9 @@ import com.example.nkdsify.data.ZoomType
 import com.example.nkdsify.ui.utils.ExternalMediaErrorDialog
 import com.example.nkdsify.ui.utils.SettingsRepository
 import com.example.nkdsify.ui.utils.performVibration
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import java.util.concurrent.TimeUnit
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -303,7 +316,7 @@ fun ZoomableImage(uri: Uri, imageLoader: ImageLoader, zoomType: ZoomType, isVibr
                             val maxOffsetX = (size.width * (newScale - 1)) / 2f
                             val maxOffsetY = (size.height * (newScale - 1)) / 2f
 
-                            val newOffsetX = (offsetX + pan.x).coerceIn(-maxOffsetX, maxOffsetX)
+                            val newOffsetX = (offsetX + pan.x).coerceIn(-maxOffsetX, maxOffsetY)
                             val newOffsetY = (offsetY + pan.y).coerceIn(-maxOffsetY, maxOffsetY)
 
                             if (zoom != 1f || pan != Offset.Zero) {
@@ -343,6 +356,36 @@ fun VideoPlayerPage(uri: Uri, isVisible: Boolean, isMuted: Boolean) {
     val context = LocalContext.current
     val exoPlayer = remember { ExoPlayer.Builder(context).build() }
 
+    // --- State Management ---
+    var isPlaying by remember { mutableStateOf(exoPlayer.isPlaying) }
+    var playbackState by remember { mutableIntStateOf(exoPlayer.playbackState) }
+    var playbackPosition by remember { mutableLongStateOf(0L) }
+    var totalDuration by remember { mutableLongStateOf(0L) }
+    var controlsVisible by remember { mutableStateOf(true) }
+
+    // --- Zoom State ---
+    var scale by rememberSaveable { mutableFloatStateOf(1f) }
+    var offsetX by rememberSaveable { mutableFloatStateOf(0f) }
+    var offsetY by rememberSaveable { mutableFloatStateOf(0f) }
+    var size by remember { mutableStateOf(IntSize.Zero) }
+
+    // --- Effects ---
+    // Reset zoom when uri changes
+    LaunchedEffect(key1 = uri) {
+        scale = 1f
+        offsetX = 0f
+        offsetY = 0f
+    }
+
+    // Auto-hide controls
+    LaunchedEffect(controlsVisible) {
+        if (controlsVisible) {
+            delay(4000)
+            controlsVisible = false
+        }
+    }
+
+    // Player Lifecycle
     LaunchedEffect(uri, isVisible) {
         if (isVisible) {
             exoPlayer.setMediaItem(Media3Item.fromUri(uri))
@@ -353,23 +396,170 @@ fun VideoPlayerPage(uri: Uri, isVisible: Boolean, isMuted: Boolean) {
         }
     }
 
+    // Mute state
     LaunchedEffect(isMuted) {
         exoPlayer.volume = if (isMuted) 0f else 1f
     }
 
+    // Player state listener and position updater
     DisposableEffect(exoPlayer) {
+        val listener = object : Player.Listener {
+            override fun onIsPlayingChanged(playing: Boolean) {
+                isPlaying = playing
+            }
+            override fun onPlaybackStateChanged(state: Int) {
+                playbackState = state
+            }
+            override fun onEvents(player: Player, events: Player.Events) {
+                super.onEvents(player, events)
+                totalDuration = player.duration.coerceAtLeast(0)
+            }
+        }
+        exoPlayer.addListener(listener)
+
         onDispose {
+            exoPlayer.removeListener(listener)
             exoPlayer.release()
         }
     }
 
-    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+    // Coroutine to update playback position
+    LaunchedEffect(isPlaying) {
+        while(isPlaying) {
+            playbackPosition = exoPlayer.currentPosition.coerceAtLeast(0)
+            delay(500)
+        }
+    }
+
+    // --- UI ---
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black)
+            .onSizeChanged { size = it }
+            .pointerInput(Unit) {
+                detectTapGestures(onTap = { controlsVisible = !controlsVisible })
+            }
+            .pointerInput(Unit) {
+                awaitEachGesture {
+                    // Simplified gesture handling: no consumption needed for tap to pass through
+                    do {
+                        val event = awaitPointerEvent()
+                        val zoom = event.calculateZoom()
+                        val pan = event.calculatePan()
+
+                        val newScale = (scale * zoom).coerceIn(1f, 5f)
+
+                        if (newScale <= 1f) {
+                            offsetX = 0f
+                            offsetY = 0f
+                            scale = 1f
+                        } else {
+                            val maxOffsetX = (size.width * (newScale - 1)) / 2f
+                            val maxOffsetY = (size.height * (newScale - 1)) / 2f
+
+                            val newOffsetX = (offsetX + pan.x).coerceIn(-maxOffsetX, maxOffsetY)
+                            val newOffsetY = (offsetY + pan.y).coerceIn(-maxOffsetY, maxOffsetY)
+
+                            if (zoom != 1f || pan != Offset.Zero) {
+                                event.changes.forEach { it.consume() }
+                            }
+
+                            scale = newScale
+                            offsetX = newOffsetX
+                            offsetY = newOffsetY
+                        }
+                    } while (event.changes.any { it.pressed })
+                }
+            }
+    ) {
         AndroidView(
-            factory = { ctx -> PlayerView(ctx).apply { useController = true } },
-            update = { playerView -> playerView.player = exoPlayer },
+            factory = {
+                PlayerView(it).apply {
+                    useController = false // We're using our own controls
+                    player = exoPlayer
+                }
+            },
             modifier = Modifier
                 .fillMaxSize()
-                .pointerInput(Unit) {}
+                .graphicsLayer {
+                    scaleX = scale
+                    scaleY = scale
+                    translationX = offsetX
+                    translationY = offsetY
+                }
         )
+
+        // Custom Controls
+        AnimatedVisibility(
+            visible = controlsVisible,
+            enter = fadeIn(),
+            exit = fadeOut(),
+            modifier = Modifier.fillMaxSize()
+        ) {
+            Box(modifier = Modifier.fillMaxSize()) {
+                // Center Play/Pause button
+                IconButton(
+                    onClick = {
+                        if (playbackState == Player.STATE_ENDED) {
+                            exoPlayer.seekTo(0)
+                            exoPlayer.play()
+                        } else {
+                            if (exoPlayer.isPlaying) exoPlayer.pause() else exoPlayer.play()
+                        }
+                    },
+                    modifier = Modifier
+                        .align(Alignment.Center)
+                        .size(64.dp)
+                ) {
+                    val icon = if (isPlaying && playbackState != Player.STATE_ENDED) Icons.Filled.Pause else Icons.Filled.PlayArrow
+                    Icon(imageVector = icon, contentDescription = "Play/Pause", tint = Color.White, modifier = Modifier.fillMaxSize())
+                }
+
+                // Buffering indicator
+                if (playbackState == Player.STATE_BUFFERING) {
+                    CircularProgressIndicator(modifier = Modifier.align(Alignment.Center), color = Color.White)
+                }
+
+                // Bottom Controls (Slider and Time)
+                Column(
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .fillMaxWidth()
+                        .padding(16.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(text = formatDuration(playbackPosition), color = Color.White)
+                        Text(text = formatDuration(totalDuration), color = Color.White)
+                    }
+                    Slider(
+                        value = playbackPosition.toFloat(),
+                        onValueChange = { newPosition ->
+                            exoPlayer.seekTo(newPosition.toLong())
+                        },
+                        onValueChangeFinished = {
+                            playbackPosition = exoPlayer.currentPosition
+                        },
+                        valueRange = 0f..totalDuration.toFloat().coerceAtLeast(0f),
+                        colors = SliderDefaults.colors(
+                            thumbColor = Color.White,
+                            activeTrackColor = Color.White,
+                            inactiveTrackColor = Color.Gray
+                        )
+                    )
+                }
+            }
+        }
     }
 }
+
+private fun formatDuration(millis: Long): String {
+    val minutes = TimeUnit.MILLISECONDS.toMinutes(millis)
+    val seconds = TimeUnit.MILLISECONDS.toSeconds(millis) % 60
+    return String.format("%02d:%02d", minutes, seconds)
+}
+
