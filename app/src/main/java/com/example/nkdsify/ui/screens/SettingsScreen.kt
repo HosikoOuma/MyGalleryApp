@@ -28,6 +28,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
+import com.example.nkdsify.data.BlurType
 import com.example.nkdsify.data.Theme
 import com.example.nkdsify.data.ZoomType
 import com.example.nkdsify.ui.utils.performVibration
@@ -59,11 +60,18 @@ fun SettingsScreen(
     isShuffleButtonVisible: Boolean,
     onShuffleButtonVisibleChange: (Boolean) -> Unit,
     isShakeToBlurEnabled: Boolean,
-    onShakeToBlurEnabledChange: (Boolean) -> Unit
+    onShakeToBlurEnabledChange: (Boolean) -> Unit,
+    isLoopVideoEnabled: Boolean,
+    onLoopVideoEnabledChange: (Boolean) -> Unit,
+    selectedBlurType: BlurType,
+    onBlurTypeChange: (BlurType) -> Unit,
+    isSwipeToDismissEnabled: Boolean,
+    onSwipeToDismissEnabledChange: (Boolean) -> Unit
 ) {
     val context = LocalContext.current
     var themeMenuExpanded by remember { mutableStateOf(false) }
     var zoomTypeMenuExpanded by remember { mutableStateOf(false) }
+    var blurTypeMenuExpanded by remember { mutableStateOf(false) }
     val scrollState = rememberScrollState()
 
     Column(
@@ -214,6 +222,36 @@ fun SettingsScreen(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
+            Text("Loop video")
+            Switch(
+                checked = isLoopVideoEnabled,
+                onCheckedChange = {
+                    if (isVibrationEnabled) performVibration(context)
+                    onLoopVideoEnabledChange(it)
+                }
+            )
+        }
+        Row(
+            modifier = Modifier
+                .fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text("Swipe to dismiss")
+            Switch(
+                checked = isSwipeToDismissEnabled,
+                onCheckedChange = {
+                    if (isVibrationEnabled) performVibration(context)
+                    onSwipeToDismissEnabledChange(it)
+                }
+            )
+        }
+        Row(
+            modifier = Modifier
+                .fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
             Text("Theme")
             Box {
                 TextButton(onClick = { 
@@ -270,6 +308,37 @@ fun SettingsScreen(
                 }
             }
         }
+        Row(
+            modifier = Modifier
+                .fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text("Blur Type")
+            Box {
+                TextButton(onClick = { 
+                    if (isVibrationEnabled) performVibration(context)
+                    blurTypeMenuExpanded = true 
+                }) {
+                    Text(selectedBlurType.name)
+                }
+                DropdownMenu(
+                    expanded = blurTypeMenuExpanded,
+                    onDismissRequest = { blurTypeMenuExpanded = false }
+                ) {
+                    BlurType.entries.forEach { blurType ->
+                        DropdownMenuItem(
+                            text = { Text(blurType.name) },
+                            onClick = { 
+                                if (isVibrationEnabled) performVibration(context)
+                                onBlurTypeChange(blurType)
+                                blurTypeMenuExpanded = false 
+                            }
+                        )
+                    }
+                }
+            }
+        }
         Spacer(modifier = Modifier.height(16.dp))
         Button(
             onClick = {
@@ -310,7 +379,10 @@ fun SettingsScreen(
             Text("GitHub")
         }
         Button(
-            onClick = onEasterEggClick,
+            onClick = {
+                if (isVibrationEnabled) performVibration(context)
+                onEasterEggClick()
+            },
             shape = RoundedCornerShape(12.dp)
         ) {
             Text("🐱")

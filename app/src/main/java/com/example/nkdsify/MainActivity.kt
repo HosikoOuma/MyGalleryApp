@@ -9,8 +9,6 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.hardware.Sensor
-import android.hardware.SensorEvent
-import android.hardware.SensorEventListener
 import android.hardware.SensorManager
 import android.media.MediaPlayer
 import android.net.Uri
@@ -48,7 +46,6 @@ import androidx.compose.material3.pulltorefresh.PullToRefreshContainer
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -95,7 +92,6 @@ import java.io.InputStreamReader
 import android.content.ContentUris
 import androidx.annotation.OptIn
 import androidx.compose.material3.LargeFloatingActionButton
-import kotlin.math.sqrt
 
 enum class FileOperation {
     COPY, MOVE
@@ -125,13 +121,17 @@ class MainActivity : ComponentActivity() {
             var isVibrationEnabled by remember { mutableStateOf(SettingsRepository.isVibrationEnabled(this@MainActivity)) }
             var isBlurInFolderEnabled by remember { mutableStateOf(SettingsRepository.isBlurInFolderEnabled(this@MainActivity)) }
             var isViewerOpen by remember { mutableStateOf(false) }
+            var isLoopVideoEnabled by remember { mutableStateOf(SettingsRepository.isLoopVideoEnabled(this@MainActivity)) }
+            var isSwipeToDismissEnabled by remember { mutableStateOf(SettingsRepository.isSwipeToDismissEnabled(this@MainActivity)) }
 
             MyApp(initialUri = initialUri, screenWidth = screenWidth, screenHeight = screenHeight,
                 isShakeToBlurEnabled = isShakeToBlurEnabled, onShakeToBlurEnabledChange = { isShakeToBlurEnabled = it },
                 isBlurEnabled = isBlurEnabled, onBlurEnabledChange = { isBlurEnabled = it },
                 isVibrationEnabled = isVibrationEnabled, onVibrationEnabledChange = { isVibrationEnabled = it },
                 isBlurInFolderEnabled = isBlurInFolderEnabled, onBlurInFolderEnabledChange = { isBlurInFolderEnabled = it },
-                isViewerOpen = isViewerOpen, onViewerOpenChange = { isViewerOpen = it })
+                isViewerOpen = isViewerOpen, onViewerOpenChange = { isViewerOpen = it },
+                isLoopVideoEnabled = isLoopVideoEnabled, onLoopVideoEnabledChange = {isLoopVideoEnabled = it},
+                isSwipeToDismissEnabled = isSwipeToDismissEnabled, onSwipeToDismissEnabledChange = {isSwipeToDismissEnabled = it})
 
             shakeDetector?.setOnShakeListener {
                 if (isShakeToBlurEnabled && !isViewerOpen) {
@@ -156,52 +156,6 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-class ShakeDetector : SensorEventListener {
-    private var onShakeListener: (() -> Unit)? = null
-    private var lastTime: Long = 0
-    private var lastShakeTime: Long = 0
-    private var lastX = 0f
-    private var lastY = 0f
-    private var lastZ = 0f
-    private val shakeThreshold = 2000
-    private val shakeTimeout = 1000
-
-    fun setOnShakeListener(listener: () -> Unit) {
-        this.onShakeListener = listener
-    }
-
-    override fun onSensorChanged(event: SensorEvent) {
-        val currentTime = System.currentTimeMillis()
-        if (currentTime - lastTime > 100) {
-            val diffTime = currentTime - lastTime
-            lastTime = currentTime
-
-            val x = event.values[0]
-            val y = event.values[1]
-            val z = event.values[2]
-
-            val deltaX = x - lastX
-            val deltaY = y - lastY
-            val deltaZ = z - lastZ
-
-            val speed = sqrt(deltaX * deltaX + deltaY * deltaY + deltaZ * deltaZ) / diffTime * 10000f
-
-            if (speed > shakeThreshold) {
-                if (currentTime - lastShakeTime > shakeTimeout) {
-                    lastShakeTime = currentTime
-                    onShakeListener?.invoke()
-                }
-            }
-
-            lastX = x
-            lastY = y
-            lastZ = z
-        }
-    }
-
-    override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}
-}
-
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalComposeUiApi::class)
 @Composable
 fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
@@ -209,11 +163,14 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
           isBlurEnabled: Boolean, onBlurEnabledChange: (Boolean) -> Unit,
           isVibrationEnabled: Boolean, onVibrationEnabledChange: (Boolean) -> Unit,
           isBlurInFolderEnabled: Boolean, onBlurInFolderEnabledChange: (Boolean) -> Unit,
-          isViewerOpen: Boolean, onViewerOpenChange: (Boolean) -> Unit) {
+          isViewerOpen: Boolean, onViewerOpenChange: (Boolean) -> Unit,
+          isLoopVideoEnabled: Boolean, onLoopVideoEnabledChange: (Boolean) -> Unit,
+          isSwipeToDismissEnabled: Boolean, onSwipeToDismissEnabledChange: (Boolean) -> Unit) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
     var selectedTheme by remember { mutableStateOf(SettingsRepository.getTheme(context)) }
     var selectedZoomType by remember { mutableStateOf(SettingsRepository.getZoomType(context)) }
+    var selectedBlurType by remember { mutableStateOf(SettingsRepository.getBlurType(context)) }
     var isShowFileCountEnabled by remember { mutableStateOf(SettingsRepository.isShowFileCountEnabled(context)) }
     var isShuffleButtonVisible by remember { mutableStateOf(SettingsRepository.isShuffleButtonVisible(context)) }
     val keyboardController = LocalSoftwareKeyboardController.current
@@ -231,7 +188,7 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
         var allFolders by remember { mutableStateOf<List<MediaFolder>>(emptyList()) }
         var allMedia by remember { mutableStateOf<List<MediaItem>>(emptyList()) }
         var viewerState by remember { mutableStateOf<MediaViewerState?>(null) }
-        
+
         LaunchedEffect(viewerState) {
             onViewerOpenChange(viewerState != null)
         }
@@ -261,7 +218,7 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
         var showBackupAndRestoreDialog by remember { mutableStateOf(false) }
         var showFolderSelectionDialog by remember { mutableStateOf(false) }
         var showRenameDialog by remember { mutableStateOf<Uri?>(null) }
-        var fileToProcess by remember { mutableStateOf<Uri?>(null) }
+        var filesToProcess by remember { mutableStateOf<List<Uri>>(emptyList()) }
         var currentFileOperation by remember { mutableStateOf<FileOperation?>(null) }
 
         var searchQuery by remember { mutableStateOf("") }
@@ -513,7 +470,7 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
                     TagsRepository.setTagsForItem(context, uri, tagSet)
                     tags = TagsRepository.getTags(context)
                     showTagDialog = null
-            })
+                })
         }
 
         if (showBulkTagDialog) {
@@ -563,13 +520,13 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
                         cropImageLauncher.launch(cropOptions)
                     },
                     onCopy = {
-                        fileToProcess = uri
+                        filesToProcess = listOf(uri)
                         currentFileOperation = FileOperation.COPY
                         showFolderSelectionDialog = true
                         showDetailsDialog = null
                     },
                     onMove = {
-                        fileToProcess = uri
+                        filesToProcess = listOf(uri)
                         currentFileOperation = FileOperation.MOVE
                         showFolderSelectionDialog = true
                         showDetailsDialog = null
@@ -728,18 +685,18 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
         if (showConfirmTrashDialog) {
             ConfirmTrashDialog(
                 onConfirm = {
-                     val urisToTrash = itemsToTrash
-                     val copiedUris = TrashRepository.copyToTrash(context, urisToTrash)
-                     if(copiedUris.isNotEmpty()) {
-                         itemsToDelete = copiedUris
-                         val intentSender = deleteMediaPermanently(context, copiedUris)
-                         if (intentSender != null) {
-                             deleteRequestLauncher.launch(IntentSenderRequest.Builder(intentSender).build())
-                         } else {
-                             // Fallback for older APIs, though less likely to be needed now
-                             refreshTrigger++ 
-                         }
-                     }
+                    val urisToTrash = itemsToTrash
+                    val copiedUris = TrashRepository.copyToTrash(context, urisToTrash)
+                    if(copiedUris.isNotEmpty()) {
+                        itemsToDelete = copiedUris
+                        val intentSender = deleteMediaPermanently(context, copiedUris)
+                        if (intentSender != null) {
+                            deleteRequestLauncher.launch(IntentSenderRequest.Builder(intentSender).build())
+                        } else {
+                            // Fallback for older APIs, though less likely to be needed now
+                            refreshTrigger++
+                        }
+                    }
                     selectedItems.clear()
                     itemsToTrash = emptyList()
                     showConfirmTrashDialog = false
@@ -767,31 +724,33 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
                 onDismiss = { showFolderSelectionDialog = false },
                 onFolderSelected = { destinationFolder: MediaFolder ->
                     coroutineScope.launch {
-                        fileToProcess?.let { uri ->
-                            val folderPath = destinationFolder.items.firstOrNull()?.let {
-                                getFolderPathFromUri(context, it.uri)
-                            } ?: destinationFolder.name // Fallback to folder name if empty
+                        val folderPath = destinationFolder.items.firstOrNull()?.let {
+                            getFolderPathFromUri(context, it.uri)
+                        } ?: destinationFolder.name // Fallback to folder name if empty
 
-                            when (currentFileOperation) {
-                                FileOperation.COPY -> {
+                        when (currentFileOperation) {
+                            FileOperation.COPY -> {
+                                filesToProcess.forEach { uri ->
                                     copyMediaToFolder(context, uri, folderPath)
-                                    withContext(Dispatchers.Main) {
-                                        Toast.makeText(context, "Copied to ${destinationFolder.name}", Toast.LENGTH_SHORT).show()
-                                    }
                                 }
-                                FileOperation.MOVE -> {
-                                    moveMediaToFolder(context, uri, folderPath)
-                                    withContext(Dispatchers.Main) {
-                                        Toast.makeText(context, "Moved to ${destinationFolder.name}", Toast.LENGTH_SHORT).show()
-                                    }
-                                    viewerState = null // Close viewer after move
+                                withContext(Dispatchers.Main) {
+                                    Toast.makeText(context, "Copied to ${destinationFolder.name}", Toast.LENGTH_SHORT).show()
                                 }
-                                null -> {}
                             }
-                            refreshTrigger++
+                            FileOperation.MOVE -> {
+                                filesToProcess.forEach { uri ->
+                                    moveMediaToFolder(context, uri, folderPath)
+                                }
+                                withContext(Dispatchers.Main) {
+                                    Toast.makeText(context, "Moved to ${destinationFolder.name}", Toast.LENGTH_SHORT).show()
+                                }
+                                viewerState = null // Close viewer after move
+                            }
+                            null -> {}
                         }
+                        refreshTrigger++
                         showFolderSelectionDialog = false
-                        fileToProcess = null
+                        filesToProcess = emptyList()
                         currentFileOperation = null
                     }
                 }
@@ -885,7 +844,19 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
                         onResetDateFilter = { selectedDate = null },
                         onDetailsClick = { showAlbumDetailsDialog = true },
                         context = context,
-                        isVibrationEnabled = isVibrationEnabled
+                        isVibrationEnabled = isVibrationEnabled,
+                        onCopy = {
+                            filesToProcess = selectedItems.toList()
+                            currentFileOperation = FileOperation.COPY
+                            showFolderSelectionDialog = true
+                            selectedItems.clear()
+                        },
+                        onMove = {
+                            filesToProcess = selectedItems.toList()
+                            currentFileOperation = FileOperation.MOVE
+                            showFolderSelectionDialog = true
+                            selectedItems.clear()
+                        }
                     )
                 },
                 bottomBar = {
@@ -946,7 +917,7 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
                             onFolderClick = { currentScreen = Screen.FolderContent(it) },
                             isBlurEnabled = isBlurEnabled,
                             isBlurInFolderEnabled = isBlurInFolderEnabled,
-                            onBlurInFolderEnabledChange = { 
+                            onBlurInFolderEnabledChange = {
                                 onBlurInFolderEnabledChange(it)
                                 SettingsRepository.setBlurInFolderEnabled(context, it)
                             },
@@ -988,22 +959,22 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
                                 selectedTheme = theme
                                 SettingsRepository.setTheme(context, theme)
                             },
-                            onManageHiddenFoldersClick = { 
+                            onManageHiddenFoldersClick = {
                                 if (isVibrationEnabled) performVibration(context)
-                                showHiddenFoldersDialog = true 
+                                showHiddenFoldersDialog = true
                             },
                             selectedZoomType = selectedZoomType,
                             onZoomTypeChange = {
                                 selectedZoomType = it
                                 SettingsRepository.setZoomType(context, it)
                             },
-                            onManageTagsClick = { 
+                            onManageTagsClick = {
                                 if (isVibrationEnabled) performVibration(context)
-                                currentScreen = Screen.TagManagement 
+                                currentScreen = Screen.TagManagement
                             },
-                            onBackupAndRestoreClick = { 
+                            onBackupAndRestoreClick = {
                                 if (isVibrationEnabled) performVibration(context)
-                                showBackupAndRestoreDialog = true 
+                                showBackupAndRestoreDialog = true
                             },
                             onDeleteTag = {
                                 if (isVibrationEnabled) performVibration(context)
@@ -1036,9 +1007,9 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
                                 onVibrationEnabledChange(it)
                                 SettingsRepository.setVibrationEnabled(context, it)
                             },
-                            onOpenAlbum = { albumName -> 
+                            onOpenAlbum = { albumName ->
                                 if (isVibrationEnabled) performVibration(context)
-                                currentScreen = Screen.Favorites(openAlbumName = albumName) 
+                                currentScreen = Screen.Favorites(openAlbumName = albumName)
                             },
                             isShowFileCountEnabled = isShowFileCountEnabled,
                             onShowFileCountChange = {
@@ -1054,6 +1025,21 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
                             onShakeToBlurEnabledChange = {
                                 onShakeToBlurEnabledChange(it)
                                 SettingsRepository.setShakeToBlurEnabled(context, it)
+                            },
+                            isLoopVideoEnabled = isLoopVideoEnabled,
+                            onLoopVideoEnabledChange = {
+                                onLoopVideoEnabledChange(it)
+                                SettingsRepository.setLoopVideoEnabled(context, it)
+                            },
+                            selectedBlurType = selectedBlurType,
+                            onBlurTypeChange = {
+                                selectedBlurType = it
+                                SettingsRepository.setBlurType(context, it)
+                            },
+                            isSwipeToDismissEnabled = isSwipeToDismissEnabled,
+                            onSwipeToDismissEnabledChange = {
+                                onSwipeToDismissEnabledChange(it)
+                                SettingsRepository.setSwipeToDismissEnabled(context, it)
                             }
                         )
                     } else {
@@ -1061,9 +1047,9 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                 Text("Permission required to access media.")
                                 Spacer(Modifier.height(8.dp))
-                                Button(onClick = { 
+                                Button(onClick = {
                                     if (isVibrationEnabled) performVibration(context)
-                                    permissionLauncher.launch(permissionsToRequest) 
+                                    permissionLauncher.launch(permissionsToRequest)
                                 }) {
                                     Text("Grant Permission")
                                 }
@@ -1111,17 +1097,19 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
                         }
                     },
                     onCopy = {
-                        fileToProcess = it
+                        filesToProcess = listOf(it)
                         currentFileOperation = FileOperation.COPY
                         showFolderSelectionDialog = true
                     },
                     onMove = {
-                        fileToProcess = it
+                        filesToProcess = listOf(it)
                         currentFileOperation = FileOperation.MOVE
                         showFolderSelectionDialog = true
                     },
                     isMuteVideoByDefault = isMuteVideoByDefault,
-                    zoomType = selectedZoomType
+                    zoomType = selectedZoomType,
+                    isLoopVideoEnabled = isLoopVideoEnabled,
+                    isSwipeToDismissEnabled = isSwipeToDismissEnabled
                 )
             }
         }

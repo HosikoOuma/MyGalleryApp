@@ -17,7 +17,10 @@ import com.example.nkdsify.data.SortType
 import android.content.Context
 import android.media.MediaPlayer
 import android.widget.Toast
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Row
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.unit.dp
 import com.example.nkdsify.R
 import com.example.nkdsify.ui.utils.performVibration
 
@@ -50,7 +53,9 @@ fun TopBar(
     onResetDateFilter: () -> Unit,
     onDetailsClick: () -> Unit,
     context: Context,
-    isVibrationEnabled: Boolean
+    isVibrationEnabled: Boolean,
+    onCopy: () -> Unit,
+    onMove: () -> Unit
 ) {
     if (isSelectionMode) {
         TopAppBar(
@@ -64,52 +69,75 @@ fun TopBar(
                 }
             },
             actions = {
-                if (currentScreen is Screen.Trash) {
-                    IconButton(onClick = {
-                        if (isVibrationEnabled) performVibration(context)
-                        onSelectAll()
-                    }) {
-                        Icon(Icons.Default.SelectAll, contentDescription = "Select All")
-                    }
-                    IconButton(onClick = {
-                        if (isVibrationEnabled) performVibration(context)
-                        onRestore()
-                    }) {
-                        Icon(Icons.Default.Restore, contentDescription = "Restore")
-                    }
-                    IconButton(onClick = {
-                        if (isVibrationEnabled) performVibration(context)
-                        onDeletePermanently()
-                    }) {
-                        Icon(Icons.Default.Delete, contentDescription = "Delete Permanently")
-                    }
-                } else {
-                    IconButton(onClick = {
-                        if (isVibrationEnabled) performVibration(context)
-                        onEditTags()
-                    }) {
-                        Icon(Icons.AutoMirrored.Filled.Label, contentDescription = "Edit Tags")
-                    }
-                    IconButton(onClick = {
-                        if (isVibrationEnabled) performVibration(context)
-                        onShare()
-                    }) {
-                        Icon(Icons.Filled.Share, contentDescription = "Share")
-                    }
-                    IconButton(onClick = {
-                        if (isVibrationEnabled) performVibration(context)
-                        onTrash()
-                    }) {
-                        Icon(Icons.Filled.Delete, contentDescription = "Delete")
-                    }
-                    IconButton(onClick = {
-                        if (isVibrationEnabled) performVibration(context)
-                        onToggleFavorite()
-                    }) {
-                        Icon(
-                            imageVector = if (isFavoritesScreen) Icons.Filled.FavoriteBorder else Icons.Filled.Favorite,
-                            contentDescription = if (isFavoritesScreen) "Remove from Favorites" else "Add to Favorites"
-                        )
+                Row(horizontalArrangement = Arrangement.spacedBy(0.dp)) {
+                    if (currentScreen is Screen.Trash) {
+                        IconButton(onClick = {
+                            if (isVibrationEnabled) performVibration(context)
+                            onSelectAll()
+                        }) {
+                            Icon(Icons.Default.SelectAll, contentDescription = "Select All")
+                        }
+                        IconButton(onClick = {
+                            if (isVibrationEnabled) performVibration(context)
+                            onRestore()
+                        }) {
+                            Icon(Icons.Default.Restore, contentDescription = "Restore")
+                        }
+                        IconButton(onClick = {
+                            if (isVibrationEnabled) performVibration(context)
+                            onDeletePermanently()
+                        }) {
+                            Icon(Icons.Default.Delete, contentDescription = "Delete Permanently")
+                        }
+                    } else {
+                        IconButton(onClick = {
+                            if (isVibrationEnabled) performVibration(context)
+                            onEditTags()
+                        }) {
+                            Icon(Icons.AutoMirrored.Filled.Label, contentDescription = "Edit Tags")
+                        }
+                        IconButton(onClick = {
+                            if (isVibrationEnabled) performVibration(context)
+                            onShare()
+                        }) {
+                            Icon(Icons.Filled.Share, contentDescription = "Share")
+                        }
+                        IconButton(onClick = {
+                            if (isVibrationEnabled) performVibration(context)
+                            onTrash()
+                        }) {
+                            Icon(Icons.Filled.Delete, contentDescription = "Delete")
+                        }
+                        IconButton(onClick = {
+                            if (isVibrationEnabled) performVibration(context)
+                            onToggleFavorite()
+                        }) {
+                            Icon(
+                                imageVector = if (isFavoritesScreen) Icons.Filled.FavoriteBorder else Icons.Filled.Favorite,
+                                contentDescription = if (isFavoritesScreen) "Remove from Favorites" else "Add to Favorites"
+                            )
+                        }
+                        var menuExpanded by remember { mutableStateOf(false) }
+                        Box {
+                            IconButton(onClick = { 
+                                if (isVibrationEnabled) performVibration(context)
+                                menuExpanded = true 
+                            }) {
+                                Icon(Icons.Default.MoreVert, contentDescription = "More Options")
+                            }
+                            DropdownMenu(expanded = menuExpanded, onDismissRequest = { menuExpanded = false }) {
+                                DropdownMenuItem(
+                                    text = { Text("Copy") },
+                                    onClick = { if (isVibrationEnabled) performVibration(context); onCopy(); menuExpanded = false },
+                                    leadingIcon = { Icon(Icons.Default.ContentCopy, contentDescription = "Copy") }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("Move") },
+                                    onClick = { if (isVibrationEnabled) performVibration(context); onMove(); menuExpanded = false },
+                                    leadingIcon = { Icon(Icons.Default.DriveFileMove, contentDescription = "Move") }
+                                )
+                            }
+                        }
                     }
                 }
             }

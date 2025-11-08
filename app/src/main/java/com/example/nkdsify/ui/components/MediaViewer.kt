@@ -103,7 +103,9 @@ fun MediaViewer(
     isExternal: Boolean = false,
     isTrashMode: Boolean,
     isMuteVideoByDefault: Boolean,
-    zoomType: ZoomType
+    zoomType: ZoomType,
+    isLoopVideoEnabled: Boolean,
+    isSwipeToDismissEnabled: Boolean
 ) {
     val pagerState = rememberPagerState(initialPage = startIndex, pageCount = { items.size })
     val context = LocalContext.current
@@ -132,7 +134,12 @@ fun MediaViewer(
             .fillMaxSize()
             .background(Color.Black)
     ) {
-        HorizontalPager(state = pagerState, modifier = Modifier.fillMaxSize(), key = { items[it].uri }) { page ->
+        HorizontalPager(
+            state = pagerState, 
+            modifier = Modifier.fillMaxSize(), 
+            key = { items[it].uri },
+            userScrollEnabled = isSwipeToDismissEnabled
+        ) { page ->
             val item = items[page]
             val isVisible by remember { derivedStateOf { pagerState.currentPage == page } }
             if (item.isVideo) {
@@ -141,7 +148,9 @@ fun MediaViewer(
                     isVisible = isVisible,
                     isMuted = isMuted,
                     controlsVisible = controlsVisible,
-                    onToggleControls = toggleControls
+                    onToggleControls = toggleControls,
+                    onMuteClick = { isMuted = !isMuted },
+                    isLoopVideoEnabled = isLoopVideoEnabled
                 )
             } else {
                 ZoomableImage(
@@ -183,18 +192,6 @@ fun MediaViewer(
                 Spacer(Modifier.weight(1f))
 
                 if (currentItem != null) {
-                    if (currentItem.isVideo) {
-                        IconButton(onClick = {
-                            if (isVibrationEnabled) performVibration(context)
-                            isMuted = !isMuted
-                        }) {
-                            Icon(
-                                imageVector = if (isMuted) Icons.AutoMirrored.Filled.VolumeOff else Icons.AutoMirrored.Filled.VolumeUp,
-                                contentDescription = "Mute/Unmute",
-                                tint = Color.White
-                            )
-                        }
-                    }
                     if (isTrashMode) {
                         IconButton(onClick = {
                             if (isVibrationEnabled) performVibration(context)
@@ -413,7 +410,9 @@ fun VideoPlayerPage(
     isVisible: Boolean,
     isMuted: Boolean,
     controlsVisible: Boolean,
-    onToggleControls: () -> Unit
+    onToggleControls: () -> Unit,
+    onMuteClick: () -> Unit,
+    isLoopVideoEnabled: Boolean
 ) {
     val context = LocalContext.current
     val exoPlayer = remember { ExoPlayer.Builder(context).build() }
@@ -462,6 +461,10 @@ fun VideoPlayerPage(
         } else {
             exoPlayer.pause()
         }
+    }
+
+    LaunchedEffect(isLoopVideoEnabled) {
+        exoPlayer.repeatMode = if (isLoopVideoEnabled) Player.REPEAT_MODE_ONE else Player.REPEAT_MODE_OFF
     }
 
     // Mute state
@@ -660,7 +663,14 @@ fun VideoPlayerPage(
                     ) {
                         Text(text = formatDuration(playbackPosition), color = Color.White)
 
-                        Row(horizontalArrangement = Arrangement.Center) {
+                        Row(horizontalArrangement = Arrangement.spacedBy(0.dp)) {
+                             IconButton(onClick = onMuteClick) {
+                                Icon(
+                                    imageVector = if (isMuted) Icons.AutoMirrored.Filled.VolumeOff else Icons.AutoMirrored.Filled.VolumeUp,
+                                    contentDescription = "Mute/Unmute",
+                                    tint = Color.White
+                                )
+                            }
                             Box {
                                 IconButton(onClick = { showSpeedMenu = true }) {
                                     Icon(imageVector = Icons.Default.Speed, contentDescription = "Playback Speed", tint = Color.White)

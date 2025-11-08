@@ -15,6 +15,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.platform.SoftwareKeyboardController
 import coil.ImageLoader
+import com.example.nkdsify.data.BlurType
 import com.example.nkdsify.data.MediaFolder
 import com.example.nkdsify.data.MediaItem
 import com.example.nkdsify.data.MediaViewerState
@@ -82,7 +83,13 @@ fun AppNavigation(
     isShuffleButtonVisible: Boolean,
     onShuffleButtonVisibleChange: (Boolean) -> Unit,
     isShakeToBlurEnabled: Boolean,
-    onShakeToBlurEnabledChange: (Boolean) -> Unit
+    onShakeToBlurEnabledChange: (Boolean) -> Unit,
+    isLoopVideoEnabled: Boolean,
+    onLoopVideoEnabledChange: (Boolean) -> Unit,
+    selectedBlurType: BlurType,
+    onBlurTypeChange: (BlurType) -> Unit,
+    isSwipeToDismissEnabled: Boolean,
+    onSwipeToDismissEnabledChange: (Boolean) -> Unit
 ) {
     val visibleFolders = remember(allFolders, hiddenFolders, isSearchActive, searchQuery) {
         val folders = allFolders.filterNot { hiddenFolders.contains(it.id.toString()) }
@@ -139,7 +146,8 @@ fun AppNavigation(
                 },
                 isBlurEnabled = isBlurEnabled,
                 gridState = foldersGridState,
-                isShowFileCountEnabled = isShowFileCountEnabled
+                isShowFileCountEnabled = isShowFileCountEnabled,
+                blurType = selectedBlurType
             )
 
             is Screen.FolderContent -> {
@@ -166,7 +174,8 @@ fun AppNavigation(
                             selectedItems.add(item.uri)
                         }
                     },
-                    onClearSelection = onClearSelection
+                    onClearSelection = onClearSelection,
+                    blurType = selectedBlurType
                 )
             }
 
@@ -193,7 +202,8 @@ fun AppNavigation(
                     openAlbumName = screen.openAlbumName,
                     onOpenAlbum = onOpenAlbum,
                     isShowFileCountEnabled = isShowFileCountEnabled,
-                    onClearSelection = onClearSelection
+                    onClearSelection = onClearSelection,
+                    blurType = selectedBlurType
                 )
             }
 
@@ -224,7 +234,13 @@ fun AppNavigation(
                     isShuffleButtonVisible = isShuffleButtonVisible,
                     onShuffleButtonVisibleChange = onShuffleButtonVisibleChange,
                     isShakeToBlurEnabled = isShakeToBlurEnabled,
-                    onShakeToBlurEnabledChange = onShakeToBlurEnabledChange
+                    onShakeToBlurEnabledChange = onShakeToBlurEnabledChange,
+                    isLoopVideoEnabled = isLoopVideoEnabled,
+                    onLoopVideoEnabledChange = onLoopVideoEnabledChange,
+                    selectedBlurType = selectedBlurType,
+                    onBlurTypeChange = onBlurTypeChange,
+                    isSwipeToDismissEnabled = isSwipeToDismissEnabled,
+                    onSwipeToDismissEnabledChange = onSwipeToDismissEnabledChange
                 )
             }
 
@@ -254,7 +270,8 @@ fun AppNavigation(
                     },
                     onClearTrash = onClearTrash,
                     isTrashBlurEnabled = isBlurEnabled,
-                    onClearSelection = onClearSelection
+                    onClearSelection = onClearSelection,
+                    blurType = selectedBlurType
                 )
             }
             is Screen.AllMedia -> {
@@ -275,7 +292,8 @@ fun AppNavigation(
                             selectedItems.add(item.uri)
                         }
                     },
-                    onClearSelection = onClearSelection
+                    onClearSelection = onClearSelection,
+                    blurType = selectedBlurType
                 )
             }
         }

@@ -14,6 +14,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import coil.ImageLoader
+import com.example.nkdsify.data.BlurType
 import com.example.nkdsify.data.MediaItem
 import com.example.nkdsify.ui.components.MediaGrid
 
@@ -26,7 +27,8 @@ fun TrashScreen(
     onToggleSelection: (MediaItem) -> Unit,
     onClearTrash: () -> Unit,
     isTrashBlurEnabled: Boolean,
-    onClearSelection: () -> Unit
+    onClearSelection: () -> Unit,
+    blurType: BlurType
 ) {
     if (items.isEmpty()) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -60,7 +62,8 @@ fun TrashScreen(
                 onItemClick = onItemClick,
                 onToggleSelection = onToggleSelection,
                 isBlurEnabled = isTrashBlurEnabled,
-                onClearSelection = onClearSelection
+                onClearSelection = onClearSelection,
+                blurType = blurType
             )
         }
     }

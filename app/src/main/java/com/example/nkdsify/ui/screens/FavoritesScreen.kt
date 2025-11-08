@@ -2,6 +2,7 @@ package com.example.nkdsify.ui.screens
 
 import android.net.Uri
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
@@ -11,23 +12,30 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.FrontHand
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.ripple.rememberRipple
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import coil.ImageLoader
 import coil.compose.rememberAsyncImagePainter
+import com.example.nkdsify.data.BlurType
 import com.example.nkdsify.data.MediaItem
 import com.example.nkdsify.ui.components.MediaGrid
 
@@ -45,7 +53,8 @@ fun FavoritesScreen(
     openAlbumName: String?,
     onOpenAlbum: (String) -> Unit,
     isShowFileCountEnabled: Boolean,
-    onClearSelection: () -> Unit
+    onClearSelection: () -> Unit,
+    blurType: BlurType
 ) {
     val taggedAlbums = items
         .flatMap { item -> (tags[item.uri.toString()] ?: emptySet()).map { tag -> tag to item } }
@@ -67,7 +76,9 @@ fun FavoritesScreen(
             imageLoader = imageLoader,
             onItemClick = { item -> onItemClick(albumToShow.second, item) },
             onToggleSelection = onToggleSelection,
-            onClearSelection = onClearSelection
+            onClearSelection = onClearSelection,
+            blurType = blurType,
+            isBlurEnabled = isBlurEnabled
         )
     } else {
         if (displayAlbums.isEmpty()) {
@@ -93,16 +104,33 @@ fun FavoritesScreen(
                                 ),
                             elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
                         ) {
-                            Column {
-                                Image(
-                                    painter = rememberAsyncImagePainter(model = albumItems.first().uri, imageLoader = imageLoader),
-                                    contentDescription = "Album cover for $albumName",
-                                    contentScale = ContentScale.Crop,
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .fillMaxWidth()
-                                        .then(if (isBlurEnabled) Modifier.blur(16.dp) else Modifier)
-                                )
+                            Column(modifier = Modifier.fillMaxSize()) {
+                                Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
+                                    if (isBlurEnabled && blurType == BlurType.PLACEHOLDER) {
+                                        Box(
+                                            modifier = Modifier
+                                                .fillMaxSize()
+                                                .background(Color.White),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.FrontHand,
+                                                contentDescription = "Hidden content",
+                                                tint = Color.Gray,
+                                                modifier = Modifier.size(48.dp)
+                                            )
+                                        }
+                                    } else {
+                                        Image(
+                                            painter = rememberAsyncImagePainter(model = albumItems.first().uri, imageLoader = imageLoader),
+                                            contentDescription = "Album cover for $albumName",
+                                            contentScale = ContentScale.Crop,
+                                            modifier = Modifier
+                                                .fillMaxSize()
+                                                .then(if (isBlurEnabled && blurType == BlurType.BLUR) Modifier.blur(16.dp) else Modifier)
+                                        )
+                                    }
+                                }
                                 if (isShowFileCountEnabled) {
                                     Text(text = "$albumName (${albumItems.size})", modifier = Modifier.padding(8.dp))
                                 } else {

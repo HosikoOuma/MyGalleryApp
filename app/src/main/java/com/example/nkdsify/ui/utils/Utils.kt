@@ -34,6 +34,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.core.content.edit
 import com.example.nkdsify.data.MediaDetails
@@ -292,6 +293,9 @@ fun MediaDetailsDialog(
     onMove: () -> Unit,
     onRename: () -> Unit
 ) {
+    val context = LocalContext.current
+    val isVibrationEnabled by remember { mutableStateOf(SettingsRepository.isVibrationEnabled(context)) }
+
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Details") },
@@ -307,22 +311,37 @@ fun MediaDetailsDialog(
         },
         confirmButton = {
             Row {
-                IconButton(onClick = onSetAsWallpaper) {
+                IconButton(onClick = {
+                    if (isVibrationEnabled) performVibration(context)
+                    onSetAsWallpaper()
+                }) {
                     Icon(Icons.Default.Wallpaper, contentDescription = "Set as wallpaper")
                 }
-                IconButton(onClick = onCopy) {
+                IconButton(onClick = {
+                    if (isVibrationEnabled) performVibration(context)
+                    onCopy()
+                }) {
                     Icon(Icons.Default.ContentCopy, contentDescription = "Copy")
                 }
-                IconButton(onClick = onMove) {
+                IconButton(onClick = {
+                    if (isVibrationEnabled) performVibration(context)
+                    onMove()
+                }) {
                     Icon(Icons.Default.DriveFileMove, contentDescription = "Move")
                 }
-                IconButton(onClick = onRename) {
+                IconButton(onClick = {
+                    if (isVibrationEnabled) performVibration(context)
+                    onRename()
+                }) {
                     Icon(Icons.Default.Edit, contentDescription = "Rename")
                 }
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
+            TextButton(onClick = {
+                if (isVibrationEnabled) performVibration(context)
+                onDismiss()
+            }) {
                 Text("OK")
             }
         }

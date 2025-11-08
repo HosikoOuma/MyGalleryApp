@@ -30,7 +30,9 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.FrontHand
 import androidx.compose.material.icons.filled.PlayCircle
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Card
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -38,6 +40,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
@@ -48,11 +51,15 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.dp
 import coil.ImageLoader
 import coil.compose.rememberAsyncImagePainter
+import com.example.nkdsify.data.BlurType
 import com.example.nkdsify.data.MediaItem
+import com.example.nkdsify.ui.utils.SettingsRepository
+import com.example.nkdsify.ui.utils.performVibration
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -66,7 +73,8 @@ fun MediaGrid(
     onItemClick: (MediaItem) -> Unit,
     onToggleSelection: (MediaItem) -> Unit,
     onClearSelection: () -> Unit,
-    isBlurEnabled: Boolean = false
+    isBlurEnabled: Boolean = false,
+    blurType: BlurType
 ) {
     if (items.isEmpty()) {
         Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -74,9 +82,11 @@ fun MediaGrid(
         }
         return
     }
+    val context = LocalContext.current
     val haptics = LocalHapticFeedback.current
     val gridState = rememberLazyGridState()
     val isSelectionMode = selectedItems.isNotEmpty()
+    val isVibrationEnabled by remember { mutableStateOf(SettingsRepository.isVibrationEnabled(context)) }
 
     BackHandler(enabled = isSelectionMode) {
         onClearSelection()
@@ -98,29 +108,47 @@ fun MediaGrid(
                         .pointerInput(item, isSelectionMode) {
                             detectTapGestures(onTap = {
                                 if (isSelectionMode) {
+                                    if (isVibrationEnabled) performVibration(context)
                                     onToggleSelection(item)
                                 } else {
                                     onItemClick(item)
                                 }
                             }, onLongPress = { _ ->
                                 if (!isSelectionMode) {
+                                    if (isVibrationEnabled) performVibration(context)
                                     haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                     onToggleSelection(item)
                                 }
                             })
                         }) {
-                        Image(
-                            painter = rememberAsyncImagePainter(
-                                model = item.uri,
-                                imageLoader = imageLoader
-                            ),
-                            contentDescription = null,
-                            contentScale = ContentScale.Crop,
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .then(if (isSelected) Modifier.alpha(0.5f) else Modifier)
-                                .then(if (isBlurEnabled) Modifier.blur(20.dp) else Modifier)
-                        )
+                        if (isBlurEnabled && blurType == BlurType.PLACEHOLDER) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .background(Color.White),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.FrontHand,
+                                    contentDescription = "Hidden content",
+                                    tint = Color.Gray,
+                                    modifier = Modifier.size(48.dp)
+                                )
+                            }
+                        } else {
+                            Image(
+                                painter = rememberAsyncImagePainter(
+                                    model = item.uri,
+                                    imageLoader = imageLoader
+                                ),
+                                contentDescription = null,
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .then(if (isSelected) Modifier.alpha(0.5f) else Modifier)
+                                    .then(if (isBlurEnabled && blurType == BlurType.BLUR) Modifier.blur(20.dp) else Modifier)
+                            )
+                        }
                     }
                     if (item.isVideo) {
                         Icon(
