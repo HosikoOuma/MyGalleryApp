@@ -1,6 +1,7 @@
 package com.example.nkdsify.ui
 
 import android.net.Uri
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -20,6 +21,9 @@ import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.material.icons.automirrored.filled.DriveFileMove
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.unit.dp
 import com.example.nkdsify.R
 import com.example.nkdsify.ui.utils.performVibration
@@ -134,8 +138,7 @@ fun TopBar(
                                 DropdownMenuItem(
                                     text = { Text("Move") },
                                     onClick = { if (isVibrationEnabled) performVibration(context); onMove(); menuExpanded = false },
-                                    leadingIcon = { Icon(Icons.Default.DriveFileMove, contentDescription = "Move") }
-                                )
+                                    leadingIcon = { Icon(Icons.AutoMirrored.Filled.DriveFileMove, contentDescription = "Move") }                                )
                             }
                         }
                     }
@@ -143,6 +146,20 @@ fun TopBar(
             }
         )
     } else {
+        val focusRequester = remember { FocusRequester() }
+
+        if (isSearchActive) {
+            BackHandler {
+                onCloseSearch()
+            }
+        }
+
+        LaunchedEffect(isSearchActive) {
+            if (isSearchActive) {
+                focusRequester.requestFocus()
+            }
+        }
+
         TopAppBar(
             title = {
                 if (isSearchActive) {
@@ -150,7 +167,7 @@ fun TopBar(
                         value = searchQuery,
                         onValueChange = onSearchQueryChange,
                         placeholder = { Text("Search...") },
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth().focusRequester(focusRequester)
                     )
                 } else {
                     Text(title)
