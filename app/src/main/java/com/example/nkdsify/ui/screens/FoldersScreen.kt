@@ -56,7 +56,7 @@ fun FoldersGrid(
                 .padding(8.dp)
                 .aspectRatio(1f)
                 .pointerInput(folder) { detectTapGestures(onTap = { _ -> onFolderClick(folder) }) }, elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)) {                Column {
-                    Image(painter = rememberAsyncImagePainter(model = folder.coverUri, imageLoader = imageLoader), 
+                    Image(painter = rememberAsyncImagePainter(model = folder.items.first().uri, imageLoader = imageLoader), 
                           contentDescription = "Folder cover", 
                           contentScale = ContentScale.Crop, 
                           modifier = Modifier

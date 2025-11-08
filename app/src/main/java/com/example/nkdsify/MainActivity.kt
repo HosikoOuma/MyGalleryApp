@@ -5,8 +5,13 @@ import android.Manifest
 import android.app.Activity
 import android.app.WallpaperManager
 import android.content.ContentValues
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.hardware.Sensor
+import android.hardware.SensorEvent
+import android.hardware.SensorEventListener
+import android.hardware.SensorManager
 import android.media.MediaPlayer
 import android.net.Uri
 import android.os.Build
@@ -43,6 +48,7 @@ import androidx.compose.material3.pulltorefresh.PullToRefreshContainer
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -89,6 +95,7 @@ import java.io.InputStreamReader
 import android.content.ContentUris
 import androidx.annotation.OptIn
 import androidx.compose.material3.LargeFloatingActionButton
+import kotlin.math.sqrt
 
 enum class FileOperation {
     COPY, MOVE
@@ -96,28 +103,117 @@ enum class FileOperation {
 
 @OptIn(UnstableApi::class, ExperimentalMaterial3Api::class)
 class MainActivity : ComponentActivity() {
+    private var sensorManager: SensorManager? = null
+    private var accelerometer: Sensor? = null
+    private var shakeDetector: ShakeDetector? = null
+
     //GEMINI НЕ ТРОГАЙ ЭТУ АНОТАЦИЮ
     @OptIn(ExperimentalMaterial3Api::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        sensorManager = getSystemService(Context.SENSOR_SERVICE) as SensorManager
+        accelerometer = sensorManager?.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
+        shakeDetector = ShakeDetector()
+
         setContent {
             val initialUri = if (intent?.action == Intent.ACTION_VIEW) intent.data else null
             val displayMetrics = resources.displayMetrics
             val screenWidth = displayMetrics.widthPixels
             val screenHeight = displayMetrics.heightPixels
-            MyApp(initialUri = initialUri, screenWidth = screenWidth, screenHeight = screenHeight)
+            var isShakeToBlurEnabled by remember { mutableStateOf(SettingsRepository.isShakeToBlurEnabled(this@MainActivity)) }
+            var isBlurEnabled by remember { mutableStateOf(SettingsRepository.isBlurEnabled(this@MainActivity)) }
+            var isVibrationEnabled by remember { mutableStateOf(SettingsRepository.isVibrationEnabled(this@MainActivity)) }
+            var isBlurInFolderEnabled by remember { mutableStateOf(SettingsRepository.isBlurInFolderEnabled(this@MainActivity)) }
+            var isViewerOpen by remember { mutableStateOf(false) }
+
+            MyApp(initialUri = initialUri, screenWidth = screenWidth, screenHeight = screenHeight,
+                isShakeToBlurEnabled = isShakeToBlurEnabled, onShakeToBlurEnabledChange = { isShakeToBlurEnabled = it },
+                isBlurEnabled = isBlurEnabled, onBlurEnabledChange = { isBlurEnabled = it },
+                isVibrationEnabled = isVibrationEnabled, onVibrationEnabledChange = { isVibrationEnabled = it },
+                isBlurInFolderEnabled = isBlurInFolderEnabled, onBlurInFolderEnabledChange = { isBlurInFolderEnabled = it },
+                isViewerOpen = isViewerOpen, onViewerOpenChange = { isViewerOpen = it })
+
+            shakeDetector?.setOnShakeListener {
+                if (isShakeToBlurEnabled && !isViewerOpen) {
+                    if (isVibrationEnabled) {
+                        performVibration(this@MainActivity)
+                    }
+                    isBlurEnabled = !isBlurEnabled
+                    SettingsRepository.setBlurEnabled(this@MainActivity, isBlurEnabled)
+                }
+            }
         }
     }
+
+    override fun onResume() {
+        super.onResume()
+        sensorManager?.registerListener(shakeDetector, accelerometer, SensorManager.SENSOR_DELAY_UI)
+    }
+
+    override fun onPause() {
+        super.onPause()
+        sensorManager?.unregisterListener(shakeDetector)
+    }
+}
+
+class ShakeDetector : SensorEventListener {
+    private var onShakeListener: (() -> Unit)? = null
+    private var lastTime: Long = 0
+    private var lastShakeTime: Long = 0
+    private var lastX = 0f
+    private var lastY = 0f
+    private var lastZ = 0f
+    private val shakeThreshold = 2000
+    private val shakeTimeout = 1000
+
+    fun setOnShakeListener(listener: () -> Unit) {
+        this.onShakeListener = listener
+    }
+
+    override fun onSensorChanged(event: SensorEvent) {
+        val currentTime = System.currentTimeMillis()
+        if (currentTime - lastTime > 100) {
+            val diffTime = currentTime - lastTime
+            lastTime = currentTime
+
+            val x = event.values[0]
+            val y = event.values[1]
+            val z = event.values[2]
+
+            val deltaX = x - lastX
+            val deltaY = y - lastY
+            val deltaZ = z - lastZ
+
+            val speed = sqrt(deltaX * deltaX + deltaY * deltaY + deltaZ * deltaZ) / diffTime * 10000f
+
+            if (speed > shakeThreshold) {
+                if (currentTime - lastShakeTime > shakeTimeout) {
+                    lastShakeTime = currentTime
+                    onShakeListener?.invoke()
+                }
+            }
+
+            lastX = x
+            lastY = y
+            lastZ = z
+        }
+    }
+
+    override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}
 }
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalComposeUiApi::class)
 @Composable
-fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int) {
+fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
+          isShakeToBlurEnabled: Boolean, onShakeToBlurEnabledChange: (Boolean) -> Unit,
+          isBlurEnabled: Boolean, onBlurEnabledChange: (Boolean) -> Unit,
+          isVibrationEnabled: Boolean, onVibrationEnabledChange: (Boolean) -> Unit,
+          isBlurInFolderEnabled: Boolean, onBlurInFolderEnabledChange: (Boolean) -> Unit,
+          isViewerOpen: Boolean, onViewerOpenChange: (Boolean) -> Unit) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
     var selectedTheme by remember { mutableStateOf(SettingsRepository.getTheme(context)) }
     var selectedZoomType by remember { mutableStateOf(SettingsRepository.getZoomType(context)) }
-    var isVibrationEnabled by remember { mutableStateOf(SettingsRepository.isVibrationEnabled(context)) }
     var isShowFileCountEnabled by remember { mutableStateOf(SettingsRepository.isShowFileCountEnabled(context)) }
     var isShuffleButtonVisible by remember { mutableStateOf(SettingsRepository.isShuffleButtonVisible(context)) }
     val keyboardController = LocalSoftwareKeyboardController.current
@@ -135,6 +231,10 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int) {
         var allFolders by remember { mutableStateOf<List<MediaFolder>>(emptyList()) }
         var allMedia by remember { mutableStateOf<List<MediaItem>>(emptyList()) }
         var viewerState by remember { mutableStateOf<MediaViewerState?>(null) }
+        
+        LaunchedEffect(viewerState) {
+            onViewerOpenChange(viewerState != null)
+        }
 
         var currentScreen by remember { mutableStateOf<Screen>(Screen.Folders) }
         val foldersGridState = rememberLazyGridState()
@@ -144,7 +244,6 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int) {
         var sortAscending by remember { mutableStateOf(false) }
         var selectedDate by remember { mutableStateOf<Long?>(null) }
         var refreshTrigger by remember { mutableIntStateOf(0) }
-        var isBlurEnabled by remember { mutableStateOf(SettingsRepository.isBlurEnabled(context)) }
         var isTrashBlurEnabled by remember { mutableStateOf(SettingsRepository.isTrashBlurEnabled(context)) }
         var isMuteVideoByDefault by remember { mutableStateOf(SettingsRepository.isMuteVideoByDefault(context)) }
         var isBlurAllMediaEnabled by remember { mutableStateOf(SettingsRepository.isBlurAllMediaEnabled(context)) }
@@ -846,6 +945,11 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int) {
                             imageLoader = imageLoader,
                             onFolderClick = { currentScreen = Screen.FolderContent(it) },
                             isBlurEnabled = isBlurEnabled,
+                            isBlurInFolderEnabled = isBlurInFolderEnabled,
+                            onBlurInFolderEnabledChange = { 
+                                onBlurInFolderEnabledChange(it)
+                                SettingsRepository.setBlurInFolderEnabled(context, it)
+                            },
                             foldersGridState = foldersGridState,
                             favorites = favorites,
                             selectedItems = selectedItems,
@@ -919,7 +1023,7 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int) {
                                 showConfirmDeleteDialog = true
                             },
                             onBlurEnabledChange = {
-                                isBlurEnabled = it
+                                onBlurEnabledChange(it)
                                 SettingsRepository.setBlurEnabled(context, it)
                             },
                             isBlurAllMediaEnabled = isBlurAllMediaEnabled,
@@ -929,7 +1033,7 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int) {
                             },
                             isVibrationEnabled = isVibrationEnabled,
                             onVibrationEnabledChange = {
-                                isVibrationEnabled = it
+                                onVibrationEnabledChange(it)
                                 SettingsRepository.setVibrationEnabled(context, it)
                             },
                             onOpenAlbum = { albumName -> 
@@ -945,6 +1049,11 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int) {
                             onShuffleButtonVisibleChange = {
                                 isShuffleButtonVisible = it
                                 SettingsRepository.setShuffleButtonVisible(context, it)
+                            },
+                            isShakeToBlurEnabled = isShakeToBlurEnabled,
+                            onShakeToBlurEnabledChange = {
+                                onShakeToBlurEnabledChange(it)
+                                SettingsRepository.setShakeToBlurEnabled(context, it)
                             }
                         )
                     } else {

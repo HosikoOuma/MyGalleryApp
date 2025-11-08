@@ -44,6 +44,8 @@ fun AppNavigation(
     imageLoader: ImageLoader,
     onFolderClick: (MediaFolder) -> Unit,
     isBlurEnabled: Boolean,
+    isBlurInFolderEnabled: Boolean,
+    onBlurInFolderEnabledChange: (Boolean) -> Unit,
     foldersGridState: LazyGridState,
     favorites: MutableList<Uri>,
     selectedItems: MutableList<Uri>,
@@ -78,7 +80,9 @@ fun AppNavigation(
     isShowFileCountEnabled: Boolean,
     onShowFileCountChange: (Boolean) -> Unit,
     isShuffleButtonVisible: Boolean,
-    onShuffleButtonVisibleChange: (Boolean) -> Unit
+    onShuffleButtonVisibleChange: (Boolean) -> Unit,
+    isShakeToBlurEnabled: Boolean,
+    onShakeToBlurEnabledChange: (Boolean) -> Unit
 ) {
     val visibleFolders = remember(allFolders, hiddenFolders, isSearchActive, searchQuery) {
         val folders = allFolders.filterNot { hiddenFolders.contains(it.id.toString()) }
@@ -150,6 +154,7 @@ fun AppNavigation(
                     favorites = favorites,
                     selectedItems = selectedItems,
                     imageLoader = imageLoader,
+                    isBlurEnabled = isBlurInFolderEnabled,
                     onItemClick = { item ->
                         keyboardController?.hide()
                         setViewerState(MediaViewerState(items = items, startIndex = items.indexOf(item)))
@@ -160,7 +165,8 @@ fun AppNavigation(
                         } else {
                             selectedItems.add(item.uri)
                         }
-                    }
+                    },
+                    onClearSelection = onClearSelection
                 )
             }
 
@@ -186,7 +192,8 @@ fun AppNavigation(
                     gridState = favoritesGridState,
                     openAlbumName = screen.openAlbumName,
                     onOpenAlbum = onOpenAlbum,
-                    isShowFileCountEnabled = isShowFileCountEnabled
+                    isShowFileCountEnabled = isShowFileCountEnabled,
+                    onClearSelection = onClearSelection
                 )
             }
 
@@ -194,6 +201,8 @@ fun AppNavigation(
                 SettingsScreen(
                     isBlurEnabled = isBlurEnabled,
                     onBlurEnabledChange = onBlurEnabledChange,
+                    isBlurInFolderEnabled = isBlurInFolderEnabled,
+                    onBlurInFolderEnabledChange = onBlurInFolderEnabledChange,
                     isTrashBlurEnabled = isTrashBlurEnabled,
                     onTrashBlurEnabledChange = onTrashBlurEnabledChange,
                     isMuteVideoByDefault = isMuteVideoByDefault,
@@ -213,7 +222,9 @@ fun AppNavigation(
                     isShowFileCountEnabled = isShowFileCountEnabled,
                     onShowFileCountChange = onShowFileCountChange,
                     isShuffleButtonVisible = isShuffleButtonVisible,
-                    onShuffleButtonVisibleChange = onShuffleButtonVisibleChange
+                    onShuffleButtonVisibleChange = onShuffleButtonVisibleChange,
+                    isShakeToBlurEnabled = isShakeToBlurEnabled,
+                    onShakeToBlurEnabledChange = onShakeToBlurEnabledChange
                 )
             }
 
@@ -242,7 +253,8 @@ fun AppNavigation(
                         }
                     },
                     onClearTrash = onClearTrash,
-                    isTrashBlurEnabled = isTrashBlurEnabled
+                    isTrashBlurEnabled = isBlurEnabled,
+                    onClearSelection = onClearSelection
                 )
             }
             is Screen.AllMedia -> {
@@ -251,7 +263,7 @@ fun AppNavigation(
                     favorites = favorites,
                     selectedItems = selectedItems,
                     imageLoader = imageLoader,
-                    isBlurEnabled = isBlurAllMediaEnabled,
+                    isBlurEnabled = isBlurEnabled,
                     onItemClick = { item ->
                         keyboardController?.hide()
                         setViewerState(MediaViewerState(items = filteredAllMedia, startIndex = filteredAllMedia.indexOf(item)))
@@ -262,7 +274,8 @@ fun AppNavigation(
                         } else {
                             selectedItems.add(item.uri)
                         }
-                    }
+                    },
+                    onClearSelection = onClearSelection
                 )
             }
         }

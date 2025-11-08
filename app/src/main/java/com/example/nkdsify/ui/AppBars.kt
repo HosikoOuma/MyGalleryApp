@@ -181,8 +181,8 @@ fun TopBar(
                                     onClick = { if (isVibrationEnabled) performVibration(context); onSortTypeChange(SortType.DATE_ADDED); menuExpanded = false }
                                 )
                                 DropdownMenuItem(
-                                    text = { Text("By Name") },
-                                    onClick = { if (isVibrationEnabled) performVibration(context); onSortTypeChange(SortType.NAME); menuExpanded = false }
+                                    text = { Text("By Alphabet") },
+                                    onClick = { if (isVibrationEnabled) performVibration(context); onSortTypeChange(SortType.ALPHABET); menuExpanded = false }
                                 )
                                 DropdownMenuItem(
                                     text = { Text("By Size") },

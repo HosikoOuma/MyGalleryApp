@@ -8,6 +8,7 @@ import com.example.nkdsify.data.ZoomType
 object SettingsRepository {
     private const val PREFS_NAME = "app_settings"
     private const val BLUR_ENABLED_KEY = "blur_enabled"
+    private const val BLUR_IN_FOLDER_ENABLED_KEY = "blur_in_folder_enabled"
     private const val MUTE_VIDEO_BY_DEFAULT_KEY = "mute_video_by_default"
     private const val THEME_KEY = "theme"
     private const val HIDDEN_FOLDERS_KEY = "hidden_folders"
@@ -17,6 +18,31 @@ object SettingsRepository {
     private const val VIBRATION_ENABLED_KEY = "vibration_enabled"
     private const val SHOW_FILE_COUNT_KEY = "show_file_count"
     private const val SHUFFLE_BUTTON_VISIBLE_KEY = "shuffle_button_visible"
+    private const val SHAKE_TO_BLUR_KEY = "shake_to_blur"
+
+    fun setBlurInFolderEnabled(context: Context, enabled: Boolean) {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit {
+            putBoolean(BLUR_IN_FOLDER_ENABLED_KEY, enabled)
+        }
+    }
+
+    fun isBlurInFolderEnabled(context: Context): Boolean {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        return prefs.getBoolean(BLUR_IN_FOLDER_ENABLED_KEY, false)
+    }
+
+    fun setShakeToBlurEnabled(context: Context, enabled: Boolean) {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit {
+            putBoolean(SHAKE_TO_BLUR_KEY, enabled)
+        }
+    }
+
+    fun isShakeToBlurEnabled(context: Context): Boolean {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        return prefs.getBoolean(SHAKE_TO_BLUR_KEY, false)
+    }
 
     fun setShuffleButtonVisible(context: Context, visible: Boolean) {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)

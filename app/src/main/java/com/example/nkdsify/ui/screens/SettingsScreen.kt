@@ -36,6 +36,8 @@ import com.example.nkdsify.ui.utils.performVibration
 fun SettingsScreen(
     isBlurEnabled: Boolean,
     onBlurEnabledChange: (Boolean) -> Unit,
+    isBlurInFolderEnabled: Boolean,
+    onBlurInFolderEnabledChange: (Boolean) -> Unit,
     isTrashBlurEnabled: Boolean,
     onTrashBlurEnabledChange: (Boolean) -> Unit,
     isMuteVideoByDefault: Boolean,
@@ -55,7 +57,9 @@ fun SettingsScreen(
     isShowFileCountEnabled: Boolean,
     onShowFileCountChange: (Boolean) -> Unit,
     isShuffleButtonVisible: Boolean,
-    onShuffleButtonVisibleChange: (Boolean) -> Unit
+    onShuffleButtonVisibleChange: (Boolean) -> Unit,
+    isShakeToBlurEnabled: Boolean,
+    onShakeToBlurEnabledChange: (Boolean) -> Unit
 ) {
     val context = LocalContext.current
     var themeMenuExpanded by remember { mutableStateOf(false) }
@@ -81,6 +85,21 @@ fun SettingsScreen(
                 onCheckedChange = {
                     if (isVibrationEnabled) performVibration(context)
                     onBlurEnabledChange(it)
+                }
+            )
+        }
+        Row(
+            modifier = Modifier
+                .fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text("Blur in folders")
+            Switch(
+                checked = isBlurInFolderEnabled,
+                onCheckedChange = {
+                    if (isVibrationEnabled) performVibration(context)
+                    onBlurInFolderEnabledChange(it)
                 }
             )
         }
@@ -171,6 +190,21 @@ fun SettingsScreen(
                 onCheckedChange = {
                     if (isVibrationEnabled) performVibration(context)
                     onVibrationEnabledChange(it)
+                }
+            )
+        }
+        Row(
+            modifier = Modifier
+                .fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text("Shake to blur")
+            Switch(
+                checked = isShakeToBlurEnabled,
+                onCheckedChange = {
+                    if (isVibrationEnabled) performVibration(context)
+                    onShakeToBlurEnabledChange(it)
                 }
             )
         }

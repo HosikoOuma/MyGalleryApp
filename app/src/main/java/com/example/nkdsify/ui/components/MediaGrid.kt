@@ -1,6 +1,7 @@
 package com.example.nkdsify.ui.components
 
 import android.net.Uri
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -64,6 +65,7 @@ fun MediaGrid(
     imageLoader: ImageLoader,
     onItemClick: (MediaItem) -> Unit,
     onToggleSelection: (MediaItem) -> Unit,
+    onClearSelection: () -> Unit,
     isBlurEnabled: Boolean = false
 ) {
     if (items.isEmpty()) {
@@ -75,6 +77,10 @@ fun MediaGrid(
     val haptics = LocalHapticFeedback.current
     val gridState = rememberLazyGridState()
     val isSelectionMode = selectedItems.isNotEmpty()
+
+    BackHandler(enabled = isSelectionMode) {
+        onClearSelection()
+    }
 
     Box(modifier = modifier.fillMaxSize()) {
         LazyVerticalGrid(

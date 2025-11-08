@@ -27,6 +27,7 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Label
@@ -59,6 +60,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.PointerEvent
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
@@ -354,6 +356,7 @@ fun ZoomableImage(
                         val event = awaitPointerEvent()
                         val zoom = event.calculateZoom()
                         val pan = event.calculatePan()
+                        val centroid = event.calculateCentroid(useCurrentPosition = true)
 
                         val newScale = (scale * zoom).coerceIn(1f, 5f)
 
@@ -362,19 +365,19 @@ fun ZoomableImage(
                             offsetY = 0f
                             scale = 1f
                         } else {
+                            val newOffsetX = offsetX + pan.x + (centroid.x - size.width / 2) * (1 - zoom)
+                            val newOffsetY = offsetY + pan.y + (centroid.y - size.height / 2) * (1 - zoom)
+
                             val maxOffsetX = (size.width * (newScale - 1)) / 2f
                             val maxOffsetY = (size.height * (newScale - 1)) / 2f
-
-                            val newOffsetX = (offsetX + pan.x).coerceIn(-maxOffsetX, maxOffsetY)
-                            val newOffsetY = (offsetY + pan.y).coerceIn(-maxOffsetY, maxOffsetY)
 
                             if (zoom != 1f || pan != Offset.Zero) {
                                 event.changes.forEach { it.consume() }
                             }
 
                             scale = newScale
-                            offsetX = newOffsetX
-                            offsetY = newOffsetY
+                            offsetX = newOffsetX.coerceIn(-maxOffsetX, maxOffsetX)
+                            offsetY = newOffsetY.coerceIn(-maxOffsetY, maxOffsetY)
                         }
                     } while (event.changes.any { it.pressed })
                 }
@@ -425,6 +428,7 @@ fun VideoPlayerPage(
     var speed by rememberSaveable { mutableFloatStateOf(1f) }
     var showSpeedMenu by remember { mutableStateOf(false) }
     var seekDirection by remember { mutableStateOf<SeekDirection?>(null) }
+    var isSeeking by remember { mutableStateOf(false) }
 
     // --- Zoom State ---
     var scale by rememberSaveable { mutableFloatStateOf(1f) }
@@ -488,10 +492,12 @@ fun VideoPlayerPage(
     }
 
     // Coroutine to update playback position
-    LaunchedEffect(isPlaying) {
-        while(isPlaying) {
-            playbackPosition = exoPlayer.currentPosition.coerceAtLeast(0)
-            delay(500)
+    LaunchedEffect(isPlaying, isSeeking) {
+        if (!isSeeking) {
+            while(isPlaying) {
+                playbackPosition = exoPlayer.currentPosition.coerceAtLeast(0)
+                delay(500)
+            }
         }
     }
 
@@ -521,6 +527,7 @@ fun VideoPlayerPage(
                         val event = awaitPointerEvent()
                         val zoom = event.calculateZoom()
                         val pan = event.calculatePan()
+                        val centroid = event.calculateCentroid(useCurrentPosition = true)
 
                         val newScale = (scale * zoom).coerceIn(1f, 5f)
 
@@ -529,19 +536,19 @@ fun VideoPlayerPage(
                             offsetY = 0f
                             scale = 1f
                         } else {
+                            val newOffsetX = offsetX + pan.x + (centroid.x - size.width / 2) * (1 - zoom)
+                            val newOffsetY = offsetY + pan.y + (centroid.y - size.height / 2) * (1 - zoom)
+
                             val maxOffsetX = (size.width * (newScale - 1)) / 2f
                             val maxOffsetY = (size.height * (newScale - 1)) / 2f
-
-                            val newOffsetX = (offsetX + pan.x).coerceIn(-maxOffsetX, maxOffsetY)
-                            val newOffsetY = (offsetY + pan.y).coerceIn(-maxOffsetY, maxOffsetY)
 
                             if (zoom != 1f || pan != Offset.Zero) {
                                 event.changes.forEach { it.consume() }
                             }
 
                             scale = newScale
-                            offsetX = newOffsetX
-                            offsetY = newOffsetY
+                            offsetX = newOffsetX.coerceIn(-maxOffsetX, maxOffsetX)
+                            offsetY = newOffsetY.coerceIn(-maxOffsetY, maxOffsetY)
                         }
                     } while (event.changes.any { it.pressed })
                 }
@@ -599,23 +606,6 @@ fun VideoPlayerPage(
             modifier = Modifier.fillMaxSize()
         ) {
             Box(modifier = Modifier.fillMaxSize()) {
-                IconButton(
-                    onClick = {
-                        if (playbackState == Player.STATE_ENDED) {
-                            exoPlayer.seekTo(0)
-                            exoPlayer.play()
-                        } else {
-                            if (exoPlayer.isPlaying) exoPlayer.pause() else exoPlayer.play()
-                        }
-                    },
-                    modifier = Modifier
-                        .align(Alignment.Center)
-                        .size(64.dp)
-                ) {
-                    val icon = if (isPlaying && playbackState != Player.STATE_ENDED) Icons.Filled.Pause else Icons.Filled.PlayArrow
-                    Icon(imageVector = icon, contentDescription = "Play/Pause", tint = Color.White, modifier = Modifier.fillMaxSize())
-                }
-
                 if (playbackState == Player.STATE_BUFFERING) {
                     CircularProgressIndicator(modifier = Modifier.align(Alignment.Center), color = Color.White)
                 }
@@ -624,15 +614,42 @@ fun VideoPlayerPage(
                     modifier = Modifier
                         .align(Alignment.BottomCenter)
                         .fillMaxWidth()
-                        .padding(16.dp)
+                        .padding(16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
                 ) {
+                    IconButton(
+                        onClick = {
+                            if (playbackState == Player.STATE_ENDED) {
+                                exoPlayer.seekTo(0)
+                                exoPlayer.play()
+                            } else {
+                                if (exoPlayer.isPlaying) exoPlayer.pause() else exoPlayer.play()
+                            }
+                        },
+                        modifier = Modifier
+                            .padding(bottom = 16.dp)
+                            .size(64.dp)
+                            .clip(RoundedCornerShape(16.dp))
+                            .background(Color.Black.copy(alpha = 0.5f))
+                    ) {
+                        val icon = if (isPlaying && playbackState != Player.STATE_ENDED) Icons.Filled.Pause else Icons.Filled.PlayArrow
+                        Icon(
+                            imageVector = icon, 
+                            contentDescription = "Play/Pause", 
+                            tint = Color.White, 
+                            modifier = Modifier.fillMaxSize(0.7f)
+                        )
+                    }
+
                     Slider(
                         value = playbackPosition.toFloat(),
                         onValueChange = { newPosition ->
+                            isSeeking = true
+                            playbackPosition = newPosition.toLong()
                             exoPlayer.seekTo(newPosition.toLong())
                         },
                         onValueChangeFinished = {
-                            playbackPosition = exoPlayer.currentPosition
+                            isSeeking = false
                         },
                         valueRange = 0f..totalDuration.toFloat().coerceAtLeast(0f)
                     )
@@ -672,6 +689,18 @@ fun VideoPlayerPage(
             }
         }
     }
+}
+
+private fun PointerEvent.calculateCentroid(useCurrentPosition: Boolean = false): Offset {
+    var sum = Offset.Zero
+    var count = 0
+    changes.forEach {
+        if (it.pressed) {
+            sum += if (useCurrentPosition) it.position else it.previousPosition
+            count++
+        }
+    }
+    return if (count == 0) Offset.Zero else sum / count.toFloat()
 }
 
 private fun formatDuration(millis: Long): String {

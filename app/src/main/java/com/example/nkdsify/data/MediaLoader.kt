@@ -67,7 +67,7 @@ fun loadAllMedia(
     val sortColumn = when (sortType) {
         SortType.DATE_MODIFIED -> MediaStore.Files.FileColumns.DATE_MODIFIED
         SortType.DATE_ADDED -> MediaStore.Files.FileColumns.DATE_ADDED
-        SortType.NAME -> MediaStore.Files.FileColumns.DISPLAY_NAME
+        SortType.ALPHABET -> MediaStore.Files.FileColumns.DISPLAY_NAME
         SortType.SIZE -> MediaStore.Files.FileColumns.SIZE
     }
     val sortDirection = if (sortAscending) "ASC" else "DESC"
@@ -154,7 +154,7 @@ fun loadMediaFolders(
     val sortColumn = when (sortType) {
         SortType.DATE_MODIFIED -> MediaStore.Files.FileColumns.DATE_MODIFIED
         SortType.DATE_ADDED -> MediaStore.Files.FileColumns.DATE_ADDED
-        SortType.NAME -> MediaStore.Files.FileColumns.DISPLAY_NAME
+        SortType.ALPHABET -> MediaStore.Files.FileColumns.DISPLAY_NAME
         SortType.SIZE -> MediaStore.Files.FileColumns.SIZE
     }
     val sortDirection = if (sortAscending) "ASC" else "DESC"
@@ -267,7 +267,7 @@ fun loadFavoriteMediaItems(
     val sortColumn = when (sortType) {
         SortType.DATE_MODIFIED -> MediaStore.Files.FileColumns.DATE_MODIFIED
         SortType.DATE_ADDED -> MediaStore.Files.FileColumns.DATE_ADDED
-        SortType.NAME -> MediaStore.Files.FileColumns.DISPLAY_NAME
+        SortType.ALPHABET -> MediaStore.Files.FileColumns.DISPLAY_NAME
         SortType.SIZE -> MediaStore.Files.FileColumns.SIZE
     }
     val sortDirection = if (sortAscending) "ASC" else "DESC"
@@ -324,7 +324,7 @@ fun loadTrashedMediaItems(
     val comparator = when (sortType) {
         SortType.DATE_MODIFIED -> compareBy<MediaItem> { it.dateModified }
         SortType.DATE_ADDED -> compareBy<MediaItem> { it.dateAdded }
-        SortType.NAME -> compareBy(String.CASE_INSENSITIVE_ORDER) { it.name }
+        SortType.ALPHABET -> compareBy(String.CASE_INSENSITIVE_ORDER) { it.name }
         SortType.SIZE -> compareBy<MediaItem> { it.size }
     }
 

@@ -25,7 +25,8 @@ fun TrashScreen(
     onItemClick: (MediaItem) -> Unit,
     onToggleSelection: (MediaItem) -> Unit,
     onClearTrash: () -> Unit,
-    isTrashBlurEnabled: Boolean
+    isTrashBlurEnabled: Boolean,
+    onClearSelection: () -> Unit
 ) {
     if (items.isEmpty()) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -58,7 +59,8 @@ fun TrashScreen(
                 imageLoader = imageLoader,
                 onItemClick = onItemClick,
                 onToggleSelection = onToggleSelection,
-                isBlurEnabled = isTrashBlurEnabled
+                isBlurEnabled = isTrashBlurEnabled,
+                onClearSelection = onClearSelection
             )
         }
     }

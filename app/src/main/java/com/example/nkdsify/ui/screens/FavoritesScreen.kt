@@ -44,7 +44,8 @@ fun FavoritesScreen(
     gridState: LazyGridState,
     openAlbumName: String?,
     onOpenAlbum: (String) -> Unit,
-    isShowFileCountEnabled: Boolean
+    isShowFileCountEnabled: Boolean,
+    onClearSelection: () -> Unit
 ) {
     val taggedAlbums = items
         .flatMap { item -> (tags[item.uri.toString()] ?: emptySet()).map { tag -> tag to item } }
@@ -65,7 +66,8 @@ fun FavoritesScreen(
             selectedItems = selectedItems,
             imageLoader = imageLoader,
             onItemClick = { item -> onItemClick(albumToShow.second, item) },
-            onToggleSelection = onToggleSelection
+            onToggleSelection = onToggleSelection,
+            onClearSelection = onClearSelection
         )
     } else {
         if (displayAlbums.isEmpty()) {

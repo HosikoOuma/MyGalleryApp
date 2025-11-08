@@ -58,7 +58,7 @@ data class MediaViewerState(
 )
 
 enum class SortType {
-    NAME,
+    ALPHABET,
     DATE_MODIFIED,
     DATE_ADDED,
     SIZE
