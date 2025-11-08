@@ -38,6 +38,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -107,7 +108,7 @@ class MainActivity : ComponentActivity() {
     @OptIn(ExperimentalMaterial3Api::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        sensorManager = getSystemService(Context.SENSOR_SERVICE) as SensorManager
+        sensorManager = getSystemService(SENSOR_SERVICE) as SensorManager
         accelerometer = sensorManager?.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
         shakeDetector = ShakeDetector()
 
@@ -123,15 +124,17 @@ class MainActivity : ComponentActivity() {
             var isViewerOpen by remember { mutableStateOf(false) }
             var isLoopVideoEnabled by remember { mutableStateOf(SettingsRepository.isLoopVideoEnabled(this@MainActivity)) }
             var isSwipeToDismissEnabled by remember { mutableStateOf(SettingsRepository.isSwipeToDismissEnabled(this@MainActivity)) }
+            var useLargeFab by remember { mutableStateOf(SettingsRepository.isUseLargeFab(this@MainActivity)) }
 
             MyApp(initialUri = initialUri, screenWidth = screenWidth, screenHeight = screenHeight,
                 isShakeToBlurEnabled = isShakeToBlurEnabled, onShakeToBlurEnabledChange = { isShakeToBlurEnabled = it },
                 isBlurEnabled = isBlurEnabled, onBlurEnabledChange = { isBlurEnabled = it },
                 isVibrationEnabled = isVibrationEnabled, onVibrationEnabledChange = { isVibrationEnabled = it },
                 isBlurInFolderEnabled = isBlurInFolderEnabled, onBlurInFolderEnabledChange = { isBlurInFolderEnabled = it },
-                isViewerOpen = isViewerOpen, onViewerOpenChange = { isViewerOpen = it },
+                onViewerOpenChange = { isViewerOpen = it },
                 isLoopVideoEnabled = isLoopVideoEnabled, onLoopVideoEnabledChange = {isLoopVideoEnabled = it},
-                isSwipeToDismissEnabled = isSwipeToDismissEnabled, onSwipeToDismissEnabledChange = {isSwipeToDismissEnabled = it})
+                isSwipeToDismissEnabled = isSwipeToDismissEnabled, onSwipeToDismissEnabledChange = {isSwipeToDismissEnabled = it},
+                useLargeFab = useLargeFab, onUseLargeFabChange = { useLargeFab = it })
 
             shakeDetector?.setOnShakeListener {
                 if (isShakeToBlurEnabled && !isViewerOpen) {
@@ -163,9 +166,10 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
           isBlurEnabled: Boolean, onBlurEnabledChange: (Boolean) -> Unit,
           isVibrationEnabled: Boolean, onVibrationEnabledChange: (Boolean) -> Unit,
           isBlurInFolderEnabled: Boolean, onBlurInFolderEnabledChange: (Boolean) -> Unit,
-          isViewerOpen: Boolean, onViewerOpenChange: (Boolean) -> Unit,
+          onViewerOpenChange: (Boolean) -> Unit,
           isLoopVideoEnabled: Boolean, onLoopVideoEnabledChange: (Boolean) -> Unit,
-          isSwipeToDismissEnabled: Boolean, onSwipeToDismissEnabledChange: (Boolean) -> Unit) {
+          isSwipeToDismissEnabled: Boolean, onSwipeToDismissEnabledChange: (Boolean) -> Unit,
+          useLargeFab: Boolean, onUseLargeFabChange: (Boolean) -> Unit) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
     var selectedTheme by remember { mutableStateOf(SettingsRepository.getTheme(context)) }
@@ -275,11 +279,8 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
         val imageLoader = remember(context) {
             ImageLoader.Builder(context)
                 .components {
-                    if (Build.VERSION.SDK_INT >= 28) {
-                        add(ImageDecoderDecoder.Factory())
-                    } else {
-                        add(GifDecoder.Factory())
-                    }
+                    add(ImageDecoderDecoder.Factory())
+                    add(GifDecoder.Factory())
                     add(VideoFrameDecoder.Factory())
                 }
                 .build()
@@ -413,7 +414,7 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
             if (!hasManageStoragePermission) {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
                     val intent = Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION)
-                    intent.data = Uri.parse("package:${context.packageName}")
+                    intent.data = "package:${context.packageName}".toUri()
                     manageStorageLauncher.launch(intent)
                 }
             }
@@ -450,7 +451,7 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
         val title = when (val screen = currentScreen) {
             is Screen.Folders -> "Folders"
             is Screen.FolderContent -> screen.folder.name
-            is Screen.Favorites -> if (screen.openAlbumName != null) screen.openAlbumName else "Favorites"
+            is Screen.Favorites -> screen.openAlbumName ?: "Favorites"
             is Screen.Settings -> "Settings"
             is Screen.TagManagement -> "Manage Tags"
             is Screen.Trash -> "Trash"
@@ -872,33 +873,43 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
                 },
                 floatingActionButton = {
                     if (isShuffleButtonVisible && currentScreen !is Screen.Trash && currentScreen !is Screen.Settings && currentScreen !is Screen.TagManagement) {
-                        LargeFloatingActionButton(
-                            onClick = {
-                                if (isVibrationEnabled) performVibration(context)
-                                val itemsToShuffle = when (val screen = currentScreen) {
-                                    is Screen.FolderContent -> screen.folder.items
-                                    is Screen.AllMedia -> allMedia
-                                    is Screen.Favorites -> {
-                                        if (screen.openAlbumName != null) {
-                                            val taggedAlbums = favoriteItems
-                                                .flatMap { item -> (tags[item.uri.toString()] ?: emptySet()).map { tag -> tag to item } }
-                                                .groupBy({ it.first }, { it.second })
-                                            if (screen.openAlbumName == "All Favorites") favoriteItems else taggedAlbums[screen.openAlbumName] ?: emptyList()
-                                        } else {
-                                            favoriteItems
-                                        }
+                        val onClick = {
+                            if (isVibrationEnabled) performVibration(context)
+                            val itemsToShuffle = when (val screen = currentScreen) {
+                                is Screen.FolderContent -> screen.folder.items
+                                is Screen.AllMedia -> allMedia
+                                is Screen.Favorites -> {
+                                    if (screen.openAlbumName != null) {
+                                        val taggedAlbums = favoriteItems
+                                            .flatMap { item -> (tags[item.uri.toString()] ?: emptySet()).map { tag -> tag to item } }
+                                            .groupBy({ it.first }, { it.second })
+                                        if (screen.openAlbumName == "All Favorites") favoriteItems else taggedAlbums[screen.openAlbumName]
+                                            ?: emptyList()
+                                    } else {
+                                        favoriteItems
                                     }
-                                    is Screen.Folders -> allMedia
-                                    else -> emptyList()
                                 }
-
-                                if (itemsToShuffle.isNotEmpty()) {
-                                    val shuffledItems = itemsToShuffle.shuffled()
-                                    viewerState = MediaViewerState(items = shuffledItems, startIndex = 0)
-                                }
+                                is Screen.Folders -> allMedia
+                                else -> emptyList()
                             }
-                        ) {
-                            Icon(Icons.Filled.Photo, contentDescription = "Shuffle Play", modifier = Modifier.size(40.dp))
+
+                            if (itemsToShuffle.isNotEmpty()) {
+                                val shuffledItems = itemsToShuffle.shuffled()
+                                viewerState = MediaViewerState(items = shuffledItems, startIndex = 0)
+                            }
+                        }
+                        if (useLargeFab) {
+                            LargeFloatingActionButton(
+                                onClick = onClick
+                            ) {
+                                Icon(Icons.Filled.Photo, contentDescription = "Shuffle Play", modifier = Modifier.size(40.dp))
+                            }
+                        } else {
+                            FloatingActionButton(
+                                onClick = onClick
+                            ) {
+                                Icon(Icons.Filled.Photo, contentDescription = "Shuffle Play", modifier = Modifier.size(24.dp))
+                            }
                         }
                     }
                 }
@@ -1040,6 +1051,11 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
                             onSwipeToDismissEnabledChange = {
                                 onSwipeToDismissEnabledChange(it)
                                 SettingsRepository.setSwipeToDismissEnabled(context, it)
+                            },
+                            useLargeFab = useLargeFab,
+                            onUseLargeFabChange = {
+                                onUseLargeFabChange(it)
+                                SettingsRepository.setUseLargeFab(context, it)
                             }
                         )
                     } else {

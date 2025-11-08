@@ -66,7 +66,9 @@ fun SettingsScreen(
     selectedBlurType: BlurType,
     onBlurTypeChange: (BlurType) -> Unit,
     isSwipeToDismissEnabled: Boolean,
-    onSwipeToDismissEnabledChange: (Boolean) -> Unit
+    onSwipeToDismissEnabledChange: (Boolean) -> Unit,
+    useLargeFab: Boolean,
+    onUseLargeFabChange: (Boolean) -> Unit
 ) {
     val context = LocalContext.current
     var themeMenuExpanded by remember { mutableStateOf(false) }
@@ -81,6 +83,21 @@ fun SettingsScreen(
             .verticalScroll(scrollState),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text("Use large shuffle button")
+            Switch(
+                checked = useLargeFab,
+                onCheckedChange = {
+                    if (isVibrationEnabled) performVibration(context)
+                    onUseLargeFabChange(it)
+                }
+            )
+        }
         Row(
             modifier = Modifier
                 .fillMaxWidth(),

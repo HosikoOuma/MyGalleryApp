@@ -23,6 +23,19 @@ object SettingsRepository {
     private const val SHAKE_TO_BLUR_KEY = "shake_to_blur"
     private const val LOOP_VIDEO_KEY = "loop_video"
     private const val SWIPE_TO_DISMISS_ENABLED_KEY = "swipe_to_dismiss_enabled"
+    private const val USE_LARGE_FAB_KEY = "use_large_fab"
+
+    fun setUseLargeFab(context: Context, enabled: Boolean) {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit {
+            putBoolean(USE_LARGE_FAB_KEY, enabled)
+        }
+    }
+
+    fun isUseLargeFab(context: Context): Boolean {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        return prefs.getBoolean(USE_LARGE_FAB_KEY, true)
+    }
 
     fun setSwipeToDismissEnabled(context: Context, enabled: Boolean) {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)

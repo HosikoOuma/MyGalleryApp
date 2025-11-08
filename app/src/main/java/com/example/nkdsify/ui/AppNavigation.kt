@@ -89,7 +89,9 @@ fun AppNavigation(
     selectedBlurType: BlurType,
     onBlurTypeChange: (BlurType) -> Unit,
     isSwipeToDismissEnabled: Boolean,
-    onSwipeToDismissEnabledChange: (Boolean) -> Unit
+    onSwipeToDismissEnabledChange: (Boolean) -> Unit,
+    useLargeFab: Boolean,
+    onUseLargeFabChange: (Boolean) -> Unit
 ) {
     val visibleFolders = remember(allFolders, hiddenFolders, isSearchActive, searchQuery) {
         val folders = allFolders.filterNot { hiddenFolders.contains(it.id.toString()) }
@@ -240,7 +242,9 @@ fun AppNavigation(
                     selectedBlurType = selectedBlurType,
                     onBlurTypeChange = onBlurTypeChange,
                     isSwipeToDismissEnabled = isSwipeToDismissEnabled,
-                    onSwipeToDismissEnabledChange = onSwipeToDismissEnabledChange
+                    onSwipeToDismissEnabledChange = onSwipeToDismissEnabledChange,
+                    useLargeFab = useLargeFab,
+                    onUseLargeFabChange = onUseLargeFabChange
                 )
             }
 
