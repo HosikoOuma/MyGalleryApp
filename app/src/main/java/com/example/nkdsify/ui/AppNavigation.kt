@@ -273,7 +273,7 @@ fun AppNavigation(
                         }
                     },
                     onClearTrash = onClearTrash,
-                    isTrashBlurEnabled = isBlurEnabled,
+                    isTrashBlurEnabled = isTrashBlurEnabled,
                     onClearSelection = onClearSelection,
                     blurType = selectedBlurType
                 )
@@ -284,7 +284,7 @@ fun AppNavigation(
                     favorites = favorites,
                     selectedItems = selectedItems,
                     imageLoader = imageLoader,
-                    isBlurEnabled = isBlurEnabled,
+                    isBlurEnabled = isBlurAllMediaEnabled,
                     onItemClick = { item ->
                         keyboardController?.hide()
                         setViewerState(MediaViewerState(items = filteredAllMedia, startIndex = filteredAllMedia.indexOf(item)))

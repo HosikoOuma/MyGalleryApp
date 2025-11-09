@@ -121,6 +121,8 @@ class MainActivity : ComponentActivity() {
             var isBlurEnabled by remember { mutableStateOf(SettingsRepository.isBlurEnabled(this@MainActivity)) }
             var isVibrationEnabled by remember { mutableStateOf(SettingsRepository.isVibrationEnabled(this@MainActivity)) }
             var isBlurInFolderEnabled by remember { mutableStateOf(SettingsRepository.isBlurInFolderEnabled(this@MainActivity)) }
+            var isTrashBlurEnabled by remember { mutableStateOf(SettingsRepository.isTrashBlurEnabled(context = this@MainActivity)) }
+            var isBlurAllMediaEnabled by remember { mutableStateOf(SettingsRepository.isBlurAllMediaEnabled(context = this@MainActivity)) }
             var isViewerOpen by remember { mutableStateOf(false) }
             var isLoopVideoEnabled by remember { mutableStateOf(SettingsRepository.isLoopVideoEnabled(this@MainActivity)) }
             var isSwipeToDismissEnabled by remember { mutableStateOf(SettingsRepository.isSwipeToDismissEnabled(this@MainActivity)) }
@@ -134,7 +136,10 @@ class MainActivity : ComponentActivity() {
                 onViewerOpenChange = { isViewerOpen = it },
                 isLoopVideoEnabled = isLoopVideoEnabled, onLoopVideoEnabledChange = {isLoopVideoEnabled = it},
                 isSwipeToDismissEnabled = isSwipeToDismissEnabled, onSwipeToDismissEnabledChange = {isSwipeToDismissEnabled = it},
-                useLargeFab = useLargeFab, onUseLargeFabChange = { useLargeFab = it })
+                useLargeFab = useLargeFab, onUseLargeFabChange = { useLargeFab = it }, isBlurAllMediaEnabled = isBlurAllMediaEnabled, isBlurAllMediaEnabledChange = { isBlurAllMediaEnabled = it }, isTrashBlurEnabled = isTrashBlurEnabled, isTrashBlurEnabledChange = { isTrashBlurEnabled = it },
+                onBlurAllMediaEnabledChange = { isBlurAllMediaEnabled = it },
+                onTrashBlurEnabledChange = { isTrashBlurEnabled = it }
+            )
 
             shakeDetector?.setOnShakeListener {
                 if (isShakeToBlurEnabled && !isViewerOpen) {
@@ -144,8 +149,12 @@ class MainActivity : ComponentActivity() {
                     val newBlurState = !isBlurEnabled
                     isBlurEnabled = newBlurState
                     isBlurInFolderEnabled = newBlurState
+                    isTrashBlurEnabled = newBlurState
+                    isBlurAllMediaEnabled = newBlurState
                     SettingsRepository.setBlurEnabled(this@MainActivity, newBlurState)
                     SettingsRepository.setBlurInFolderEnabled(this@MainActivity, newBlurState)
+                    SettingsRepository.setTrashBlurEnabled(this@MainActivity, newBlurState)
+                    SettingsRepository.setBlurAllMediaEnabled(this@MainActivity, newBlurState)
                 }
             }
         }
@@ -172,7 +181,11 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
           onViewerOpenChange: (Boolean) -> Unit,
           isLoopVideoEnabled: Boolean, onLoopVideoEnabledChange: (Boolean) -> Unit,
           isSwipeToDismissEnabled: Boolean, onSwipeToDismissEnabledChange: (Boolean) -> Unit,
-          useLargeFab: Boolean, onUseLargeFabChange: (Boolean) -> Unit) {
+          useLargeFab: Boolean, onUseLargeFabChange: (Boolean) -> Unit,
+          isBlurAllMediaEnabled: Boolean, isBlurAllMediaEnabledChange: (Boolean) -> Unit,
+          isTrashBlurEnabled: Boolean, isTrashBlurEnabledChange: (Boolean) -> Unit,
+          onBlurAllMediaEnabledChange: (Boolean) -> Unit,
+          onTrashBlurEnabledChange: (Boolean) -> Unit) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
     var selectedTheme by remember { mutableStateOf(SettingsRepository.getTheme(context)) }
@@ -208,9 +221,9 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
         var sortAscending by remember { mutableStateOf(false) }
         var selectedDate by remember { mutableStateOf<Long?>(null) }
         var refreshTrigger by remember { mutableIntStateOf(0) }
-        var isTrashBlurEnabled by remember { mutableStateOf(SettingsRepository.isTrashBlurEnabled(context)) }
+        //var isTrashBlurEnabled by remember { mutableStateOf(SettingsRepository.isTrashBlurEnabled(context)) }
         var isMuteVideoByDefault by remember { mutableStateOf(SettingsRepository.isMuteVideoByDefault(context)) }
-        var isBlurAllMediaEnabled by remember { mutableStateOf(SettingsRepository.isBlurAllMediaEnabled(context)) }
+        //var isBlurAllMediaEnabled by remember { mutableStateOf(SettingsRepository.isBlurAllMediaEnabled(context)) }
         var hiddenFolders by remember { mutableStateOf(SettingsRepository.getHiddenFolders(context)) }
 
         var showTagDialog by remember { mutableStateOf<Uri?>(null) }
@@ -949,7 +962,7 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
                             },
                             isTrashBlurEnabled = isTrashBlurEnabled,
                             onTrashBlurEnabledChange = {
-                                isTrashBlurEnabled = it
+                                onTrashBlurEnabledChange(it)
                                 SettingsRepository.setTrashBlurEnabled(context, it)
                             },
                             isMuteVideoByDefault = isMuteVideoByDefault,
@@ -1013,7 +1026,7 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
                             },
                             isBlurAllMediaEnabled = isBlurAllMediaEnabled,
                             onBlurAllMediaEnabledChange = {
-                                isBlurAllMediaEnabled = it
+                                onBlurAllMediaEnabledChange(it)
                                 SettingsRepository.setBlurAllMediaEnabled(context, it)
                             },
                             isVibrationEnabled = isVibrationEnabled,
