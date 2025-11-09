@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenu
@@ -18,6 +19,7 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -26,6 +28,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import com.example.nkdsify.data.BlurType
@@ -68,7 +71,11 @@ fun SettingsScreen(
     isSwipeToDismissEnabled: Boolean,
     onSwipeToDismissEnabledChange: (Boolean) -> Unit,
     useLargeFab: Boolean,
-    onUseLargeFabChange: (Boolean) -> Unit
+    onUseLargeFabChange: (Boolean) -> Unit,
+    autoDeleteTrashEnabled: Boolean,
+    onAutoDeleteTrashEnabledChange: (Boolean) -> Unit,
+    autoDeleteTrashDays: Int,
+    onAutoDeleteTrashDaysChange: (Int) -> Unit
 ) {
     val context = LocalContext.current
     var themeMenuExpanded by remember { mutableStateOf(false) }
@@ -83,6 +90,41 @@ fun SettingsScreen(
             .verticalScroll(scrollState),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text("Auto-delete trash")
+            Switch(
+                checked = autoDeleteTrashEnabled,
+                onCheckedChange = {
+                    if (isVibrationEnabled) performVibration(context)
+                    onAutoDeleteTrashEnabledChange(it)
+                }
+            )
+        }
+        if (autoDeleteTrashEnabled) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("Auto-delete trash after (days)")
+                TextField(
+                    value = autoDeleteTrashDays.toString(),
+                    onValueChange = { value ->
+                        if (isVibrationEnabled) performVibration(context)
+                        val intValue = value.filter { it.isDigit() }.toIntOrNull() ?: 0
+                        onAutoDeleteTrashDaysChange(intValue)
+                    },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    modifier = Modifier.weight(1f, fill = false)
+                )
+            }
+        }
         Row(
             modifier = Modifier
                 .fillMaxWidth(),

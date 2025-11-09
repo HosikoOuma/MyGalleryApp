@@ -91,7 +91,11 @@ fun AppNavigation(
     isSwipeToDismissEnabled: Boolean,
     onSwipeToDismissEnabledChange: (Boolean) -> Unit,
     useLargeFab: Boolean,
-    onUseLargeFabChange: (Boolean) -> Unit
+    onUseLargeFabChange: (Boolean) -> Unit,
+    autoDeleteTrashEnabled: Boolean,
+    onAutoDeleteTrashEnabledChange: (Boolean) -> Unit,
+    autoDeleteTrashDays: Int,
+    onAutoDeleteTrashDaysChange: (Int) -> Unit
 ) {
     val visibleFolders = remember(allFolders, hiddenFolders, isSearchActive, searchQuery) {
         val folders = allFolders.filterNot { hiddenFolders.contains(it.id.toString()) }
@@ -244,7 +248,11 @@ fun AppNavigation(
                     isSwipeToDismissEnabled = isSwipeToDismissEnabled,
                     onSwipeToDismissEnabledChange = onSwipeToDismissEnabledChange,
                     useLargeFab = useLargeFab,
-                    onUseLargeFabChange = onUseLargeFabChange
+                    onUseLargeFabChange = onUseLargeFabChange,
+                    autoDeleteTrashEnabled = autoDeleteTrashEnabled,
+                    onAutoDeleteTrashEnabledChange = onAutoDeleteTrashEnabledChange,
+                    autoDeleteTrashDays = autoDeleteTrashDays,
+                    onAutoDeleteTrashDaysChange = onAutoDeleteTrashDaysChange
                 )
             }
 

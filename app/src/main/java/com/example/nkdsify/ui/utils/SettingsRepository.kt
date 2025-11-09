@@ -24,6 +24,32 @@ object SettingsRepository {
     private const val LOOP_VIDEO_KEY = "loop_video"
     private const val SWIPE_TO_DISMISS_ENABLED_KEY = "swipe_to_dismiss_enabled"
     private const val USE_LARGE_FAB_KEY = "use_large_fab"
+    private const val AUTO_DELETE_TRASH_ENABLED_KEY = "auto_delete_trash_enabled"
+    private const val AUTO_DELETE_TRASH_DAYS_KEY = "auto_delete_trash_days"
+
+    fun setAutoDeleteTrashEnabled(context: Context, enabled: Boolean) {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit {
+            putBoolean(AUTO_DELETE_TRASH_ENABLED_KEY, enabled)
+        }
+    }
+
+    fun isAutoDeleteTrashEnabled(context: Context): Boolean {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        return prefs.getBoolean(AUTO_DELETE_TRASH_ENABLED_KEY, false)
+    }
+
+    fun setAutoDeleteTrashDays(context: Context, days: Int) {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit {
+            putInt(AUTO_DELETE_TRASH_DAYS_KEY, days)
+        }
+    }
+
+    fun getAutoDeleteTrashDays(context: Context): Int {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        return prefs.getInt(AUTO_DELETE_TRASH_DAYS_KEY, 30)
+    }
 
     fun setUseLargeFab(context: Context, enabled: Boolean) {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)

@@ -12,7 +12,7 @@ class ShakeDetector : SensorEventListener {
     private var lastX = 0f
     private var lastY = 0f
     private var lastZ = 0f
-    private val shakeThreshold = 2000
+    private val shakeThreshold = 4000
     private val shakeTimeout = 1000
 
     fun setOnShakeListener(listener: () -> Unit) {

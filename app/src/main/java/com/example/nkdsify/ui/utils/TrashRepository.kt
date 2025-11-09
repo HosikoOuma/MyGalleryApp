@@ -58,10 +58,8 @@ object TrashRepository {
                         inputStream.copyTo(outputStream)
                     }
 
-                    if (relativePath != null) {
-                        val pathFile = File(trashDir, destinationFile.name + ".path")
-                        pathFile.writeText(relativePath)
-                    }
+                    val pathFile = File(trashDir, destinationFile.name + ".path")
+                    pathFile.writeText(relativePath ?: "")
 
                     successfullyCopiedOriginalUris.add(uri)
                 }
@@ -196,5 +194,22 @@ object TrashRepository {
     fun clearTrash(context: Context) {
         val trashDir = getTrashDir(context)
         trashDir.listFiles()?.forEach { it.delete() }
+    }
+
+    fun deleteExpired(context: Context, days: Int) {
+        if (days <= 0) return
+
+        val expirationTime = System.currentTimeMillis() - days * 24 * 60 * 60 * 1000L
+        val trashDir = getTrashDir(context)
+
+        trashDir.listFiles { _, name -> name.endsWith(".path") }?.forEach { pathFile ->
+            if (pathFile.lastModified() < expirationTime) {
+                val mediaFile = File(trashDir, pathFile.name.removeSuffix(".path"))
+                if (mediaFile.exists()) {
+                    mediaFile.delete()
+                }
+                pathFile.delete()
+            }
+        }
     }
 }

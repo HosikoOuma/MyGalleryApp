@@ -127,6 +127,9 @@ class MainActivity : ComponentActivity() {
             var isLoopVideoEnabled by remember { mutableStateOf(SettingsRepository.isLoopVideoEnabled(this@MainActivity)) }
             var isSwipeToDismissEnabled by remember { mutableStateOf(SettingsRepository.isSwipeToDismissEnabled(this@MainActivity)) }
             var useLargeFab by remember { mutableStateOf(SettingsRepository.isUseLargeFab(this@MainActivity)) }
+            var autoDeleteTrashEnabled by remember { mutableStateOf(SettingsRepository.isAutoDeleteTrashEnabled(this@MainActivity)) }
+            var autoDeleteTrashDays by remember { mutableIntStateOf(SettingsRepository.getAutoDeleteTrashDays(this@MainActivity)) }
+
 
             MyApp(initialUri = initialUri, screenWidth = screenWidth, screenHeight = screenHeight,
                 isShakeToBlurEnabled = isShakeToBlurEnabled, onShakeToBlurEnabledChange = { isShakeToBlurEnabled = it },
@@ -138,7 +141,9 @@ class MainActivity : ComponentActivity() {
                 isSwipeToDismissEnabled = isSwipeToDismissEnabled, onSwipeToDismissEnabledChange = {isSwipeToDismissEnabled = it},
                 useLargeFab = useLargeFab, onUseLargeFabChange = { useLargeFab = it }, isBlurAllMediaEnabled = isBlurAllMediaEnabled, isBlurAllMediaEnabledChange = { isBlurAllMediaEnabled = it }, isTrashBlurEnabled = isTrashBlurEnabled, isTrashBlurEnabledChange = { isTrashBlurEnabled = it },
                 onBlurAllMediaEnabledChange = { isBlurAllMediaEnabled = it },
-                onTrashBlurEnabledChange = { isTrashBlurEnabled = it }
+                onTrashBlurEnabledChange = { isTrashBlurEnabled = it },
+                autoDeleteTrashEnabled = autoDeleteTrashEnabled, onAutoDeleteTrashEnabledChange = { autoDeleteTrashEnabled = it },
+                autoDeleteTrashDays = autoDeleteTrashDays, onAutoDeleteTrashDaysChange = { autoDeleteTrashDays = it }
             )
 
             shakeDetector?.setOnShakeListener {
@@ -185,7 +190,9 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
           isBlurAllMediaEnabled: Boolean, isBlurAllMediaEnabledChange: (Boolean) -> Unit,
           isTrashBlurEnabled: Boolean, isTrashBlurEnabledChange: (Boolean) -> Unit,
           onBlurAllMediaEnabledChange: (Boolean) -> Unit,
-          onTrashBlurEnabledChange: (Boolean) -> Unit) {
+          onTrashBlurEnabledChange: (Boolean) -> Unit,
+          autoDeleteTrashEnabled: Boolean, onAutoDeleteTrashEnabledChange: (Boolean) -> Unit,
+          autoDeleteTrashDays: Int, onAutoDeleteTrashDaysChange: (Int) -> Unit) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
     var selectedTheme by remember { mutableStateOf(SettingsRepository.getTheme(context)) }
@@ -365,6 +372,15 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
                 delay(1000) // For presentation purposes
                 refreshTrigger++
                 pullRefreshState.endRefresh()
+            }
+        }
+
+        LaunchedEffect(Unit) {
+            coroutineScope.launch(Dispatchers.IO) {
+                if (SettingsRepository.isAutoDeleteTrashEnabled(context)) {
+                    val days = SettingsRepository.getAutoDeleteTrashDays(context)
+                    TrashRepository.deleteExpired(context, days)
+                }
             }
         }
 
@@ -1072,6 +1088,16 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
                             onUseLargeFabChange = {
                                 onUseLargeFabChange(it)
                                 SettingsRepository.setUseLargeFab(context, it)
+                            },
+                            autoDeleteTrashEnabled = autoDeleteTrashEnabled,
+                            onAutoDeleteTrashEnabledChange = {
+                                onAutoDeleteTrashEnabledChange(it)
+                                SettingsRepository.setAutoDeleteTrashEnabled(context, it)
+                            },
+                            autoDeleteTrashDays = autoDeleteTrashDays,
+                            onAutoDeleteTrashDaysChange = {
+                                onAutoDeleteTrashDaysChange(it)
+                                SettingsRepository.setAutoDeleteTrashDays(context, it)
                             }
                         )
                     } else {
