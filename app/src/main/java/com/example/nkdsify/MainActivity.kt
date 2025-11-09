@@ -141,8 +141,11 @@ class MainActivity : ComponentActivity() {
                     if (isVibrationEnabled) {
                         performVibration(this@MainActivity)
                     }
-                    isBlurEnabled = !isBlurEnabled
-                    SettingsRepository.setBlurEnabled(this@MainActivity, isBlurEnabled)
+                    val newBlurState = !isBlurEnabled
+                    isBlurEnabled = newBlurState
+                    isBlurInFolderEnabled = newBlurState
+                    SettingsRepository.setBlurEnabled(this@MainActivity, newBlurState)
+                    SettingsRepository.setBlurInFolderEnabled(this@MainActivity, newBlurState)
                 }
             }
         }
