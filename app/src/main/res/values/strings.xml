@@ -158,4 +158,7 @@
     <string name="no_updates_available">You have the latest version installed.</string>
     <string name="version_label">Version: %1$s</string>
     <string name="dont_show_again_button">Dont show again</string>
+    <string name="privacy_section_title">Privacy</string>
+    <string name="main_section_title">Main</string>
+    <string name="media_section_title">Media</string>
 </resources>

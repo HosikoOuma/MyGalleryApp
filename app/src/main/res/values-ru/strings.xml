@@ -142,7 +142,6 @@
     <string name="rename_content_description">Переименовать</string>
     <string name="rename_dialog_title">Переименовать</string>
     <string name="rename_button">Переименовать</string>
-    <string name="select_a_folder_title">Выберите папку</string>
     <string name="language_label">Язык</string>
     <string name="language_system">Системный</string>
     <string name="language_english">Английский</string>
@@ -158,4 +157,8 @@
     <string name="no_updates_available">У вас установлена последняя версия.</string>
     <string name="version_label">Версия: %1$s</string>
     <string name="dont_show_again_button">Больше не показывать</string>
+    <string name="privacy_section_title">Приватность</string>
+    <string name="main_section_title">Главное</string>
+    <string name="media_section_title">Медиа</string>
+    <string name="select_a_folder_title">Выберите папку</string>
 </resources>

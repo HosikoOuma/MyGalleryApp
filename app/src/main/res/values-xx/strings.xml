@@ -142,7 +142,6 @@
     <string name="rename_content_description">Ренейм</string>
     <string name="rename_dialog_title">Ренейм</string>
     <string name="rename_button">Ренейм</string>
-    <string name="select_a_folder_title">Селект папо4ку</string>
     <string name="language_label">Язык в дыр.. ой что?</string>
     <string name="language_system">Сустем</string>
     <string name="language_english">Англ</string>
@@ -152,10 +151,14 @@
     <string name="special_language_code_label">Мя</string>
     <string name="activate_button">У</string>
     <string name="update_available_title">Апдейт есть!</string>
-    <string name="update_available_text">Новая версия (%1$s) есть. Будешь обновляться?</string>
-    <string name="update_button">Обновить</string>
+    <string name="update_available_text">Новая версия (%1$s) есть. Ебануть обнову?</string>
+    <string name="update_button">Апдейт</string>
     <string name="check_for_updates_button">Чекнуть апдейты</string>
-    <string name="no_updates_available">У тебя последняя версия, братик.</string>
+    <string name="no_updates_available">У тебя последняя версия, братик)</string>
     <string name="version_label">Версия: %1$s</string>
-    <string name="dont_show_again_button">Больше не показывать</string>
+    <string name="dont_show_again_button">В пизду</string>
+    <string name="privacy_section_title">Защита твоего порна)</string>
+    <string name="main_section_title">Хуявное</string>
+    <string name="media_section_title">Хуедия</string>
+    <string name="select_a_folder_title">Селект папо4ку</string>
 </resources>

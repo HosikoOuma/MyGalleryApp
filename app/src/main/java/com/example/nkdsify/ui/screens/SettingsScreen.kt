@@ -4,6 +4,7 @@ import android.content.Intent
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -15,15 +16,26 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Build
+import androidx.compose.material.icons.filled.PermMedia
+import androidx.compose.material.icons.filled.Photo
+import androidx.compose.material.icons.filled.PrivacyTip
+import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.LocalContentColor
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -33,7 +45,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import com.example.nkdsify.R
@@ -173,8 +187,12 @@ fun SettingsScreen(
             .padding(16.dp)
             .fillMaxWidth()
             .verticalScroll(scrollState),
-        horizontalAlignment = Alignment.CenterHorizontally
+        horizontalAlignment = Alignment.Start
     ) {
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 16.dp, bottom = 8.dp)) {
+            Icon(Icons.Default.Build, contentDescription = null, modifier = Modifier.padding(end = 8.dp))
+            Text(stringResource(id = R.string.main_section_title), style = MaterialTheme.typography.titleLarge)
+        }
         Row(
             modifier = Modifier
                 .fillMaxWidth(),
@@ -183,9 +201,9 @@ fun SettingsScreen(
         ) {
             Text(stringResource(id = R.string.language_label))
             Box {
-                TextButton(onClick = { 
+                TextButton(onClick = {
                     if (isVibrationEnabled) performVibration(context)
-                    languageMenuExpanded = true 
+                    languageMenuExpanded = true
                 }) {
                     Text(getLanguageName(selectedLanguage))
                 }
@@ -197,22 +215,53 @@ fun SettingsScreen(
                         if (language == Language.SPECIAL && !specialLanguageUnlocked) {
                             DropdownMenuItem(
                                 text = { Text(getLanguageName(language)) },
-                                onClick = { 
+                                onClick = {
                                     if (isVibrationEnabled) performVibration(context)
                                     showSpecialLanguageDialog = true
-                                    languageMenuExpanded = false 
+                                    languageMenuExpanded = false
                                 }
                             )
                         } else {
                             DropdownMenuItem(
                                 text = { Text(getLanguageName(language)) },
-                                onClick = { 
+                                onClick = {
                                     if (isVibrationEnabled) performVibration(context)
                                     onLanguageChange(language)
-                                    languageMenuExpanded = false 
+                                    languageMenuExpanded = false
                                 }
                             )
                         }
+                    }
+                }
+            }
+        }
+        Row(
+            modifier = Modifier
+                .fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(stringResource(id = R.string.theme_label))
+            Box {
+                TextButton(onClick = {
+                    if (isVibrationEnabled) performVibration(context)
+                    themeMenuExpanded = true
+                }) {
+                    Text(getThemeName(selectedTheme))
+                }
+                DropdownMenu(
+                    expanded = themeMenuExpanded,
+                    onDismissRequest = { themeMenuExpanded = false }
+                ) {
+                    Theme.entries.forEach { theme ->
+                        DropdownMenuItem(
+                            text = { Text(getThemeName(theme)) },
+                            onClick = {
+                                if (isVibrationEnabled) performVibration(context)
+                                onThemeChange(theme)
+                                themeMenuExpanded = false
+                            }
+                        )
                     }
                 }
             }
@@ -240,7 +289,7 @@ fun SettingsScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(stringResource(id = R.string.auto_delete_trash_days_label))
-                BasicTextField(
+                TextField(
                     value = autoDeleteTrashDays.toString(),
                     onValueChange = { value ->
                         if (isVibrationEnabled) performVibration(context)
@@ -258,6 +307,21 @@ fun SettingsScreen(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
+            Text(stringResource(id = R.string.show_shuffle_button_label))
+            Switch(
+                checked = isShuffleButtonVisible,
+                onCheckedChange = {
+                    if (isVibrationEnabled) performVibration(context)
+                    onShuffleButtonVisibleChange(it)
+                }
+            )
+        }
+        Row(
+            modifier = Modifier
+                .fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
             Text(stringResource(id = R.string.use_large_shuffle_button_label))
             Switch(
                 checked = useLargeFab,
@@ -266,6 +330,40 @@ fun SettingsScreen(
                     onUseLargeFabChange(it)
                 }
             )
+        }
+        Row(
+            modifier = Modifier
+                .fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(stringResource(id = R.string.vibration_label))
+            Switch(
+                checked = isVibrationEnabled,
+                onCheckedChange = {
+                    if (isVibrationEnabled) performVibration(context)
+                    onVibrationEnabledChange(it)
+                }
+            )
+        }
+        Row(
+            modifier = Modifier
+                .fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(stringResource(id = R.string.show_file_count_in_folders_label))
+            Switch(
+                checked = isShowFileCountEnabled,
+                onCheckedChange = {
+                    if (isVibrationEnabled) performVibration(context)
+                    onShowFileCountChange(it)
+                }
+            )
+        }
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 16.dp, bottom = 8.dp)) {
+            Icon(Icons.Default.PrivacyTip, contentDescription = null, modifier = Modifier.padding(end = 8.dp))
+            Text(stringResource(id = R.string.privacy_section_title), style = MaterialTheme.typography.titleLarge)
         }
         Row(
             modifier = Modifier
@@ -318,21 +416,6 @@ fun SettingsScreen(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(stringResource(id = R.string.mute_video_by_default_label))
-            Switch(
-                checked = isMuteVideoByDefault,
-                onCheckedChange = {
-                    if (isVibrationEnabled) performVibration(context)
-                    onMuteVideoByDefaultChange(it)
-                }
-            )
-        }
-        Row(
-            modifier = Modifier
-                .fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
             Text(stringResource(id = R.string.blur_all_media_label))
             Switch(
                 checked = isBlurAllMediaEnabled,
@@ -348,57 +431,62 @@ fun SettingsScreen(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(stringResource(id = R.string.show_file_count_in_folders_label))
-            Switch(
-                checked = isShowFileCountEnabled,
-                onCheckedChange = {
-                    if (isVibrationEnabled) performVibration(context)
-                    onShowFileCountChange(it)
-                }
-            )
-        }
-        Row(
-            modifier = Modifier
-                .fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(stringResource(id = R.string.show_shuffle_button_label))
-            Switch(
-                checked = isShuffleButtonVisible,
-                onCheckedChange = {
-                    if (isVibrationEnabled) performVibration(context)
-                    onShuffleButtonVisibleChange(it)
-                }
-            )
-        }
-        Row(
-            modifier = Modifier
-                .fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(stringResource(id = R.string.vibration_label))
-            Switch(
-                checked = isVibrationEnabled,
-                onCheckedChange = {
-                    if (isVibrationEnabled) performVibration(context)
-                    onVibrationEnabledChange(it)
-                }
-            )
-        }
-        Row(
-            modifier = Modifier
-                .fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
             Text(stringResource(id = R.string.shake_to_blur_label))
             Switch(
                 checked = isShakeToBlurEnabled,
                 onCheckedChange = {
                     if (isVibrationEnabled) performVibration(context)
                     onShakeToBlurEnabledChange(it)
+                }
+            )
+        }
+        Row(
+            modifier = Modifier
+                .fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(stringResource(id = R.string.blur_type_label))
+            Box {
+                TextButton(onClick = {
+                    if (isVibrationEnabled) performVibration(context)
+                    blurTypeMenuExpanded = true
+                }) {
+                    Text(getBlurTypeName(selectedBlurType))
+                }
+                DropdownMenu(
+                    expanded = blurTypeMenuExpanded,
+                    onDismissRequest = { blurTypeMenuExpanded = false }
+                ) {
+                    BlurType.entries.forEach { blurType ->
+                        DropdownMenuItem(
+                            text = { Text(getBlurTypeName(blurType)) },
+                            onClick = {
+                                if (isVibrationEnabled) performVibration(context)
+                                onBlurTypeChange(blurType)
+                                blurTypeMenuExpanded = false
+                            }
+                        )
+                    }
+                }
+            }
+        }
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 16.dp, bottom = 8.dp)) {
+            Icon(Icons.Default.Photo, contentDescription = null, modifier = Modifier.padding(end = 8.dp))
+            Text(stringResource(id = R.string.media_section_title), style = MaterialTheme.typography.titleLarge)
+        }
+        Row(
+            modifier = Modifier
+                .fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(stringResource(id = R.string.mute_video_by_default_label))
+            Switch(
+                checked = isMuteVideoByDefault,
+                onCheckedChange = {
+                    if (isVibrationEnabled) performVibration(context)
+                    onMuteVideoByDefaultChange(it)
                 }
             )
         }
@@ -438,37 +526,6 @@ fun SettingsScreen(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(stringResource(id = R.string.theme_label))
-            Box {
-                TextButton(onClick = { 
-                    if (isVibrationEnabled) performVibration(context)
-                    themeMenuExpanded = true 
-                }) {
-                    Text(getThemeName(selectedTheme))
-                }
-                DropdownMenu(
-                    expanded = themeMenuExpanded,
-                    onDismissRequest = { themeMenuExpanded = false }
-                ) {
-                    Theme.entries.forEach { theme ->
-                        DropdownMenuItem(
-                            text = { Text(getThemeName(theme)) },
-                            onClick = { 
-                                if (isVibrationEnabled) performVibration(context)
-                                onThemeChange(theme)
-                                themeMenuExpanded = false 
-                            }
-                        )
-                    }
-                }
-            }
-        }
-        Row(
-            modifier = Modifier
-                .fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
             Text(stringResource(id = R.string.zoom_gesture_label))
             Box {
                 TextButton(onClick = { 
@@ -494,95 +551,66 @@ fun SettingsScreen(
                 }
             }
         }
-        Row(
-            modifier = Modifier
-                .fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(stringResource(id = R.string.blur_type_label))
-            Box {
-                TextButton(onClick = { 
+        Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally){
+            Spacer(modifier = Modifier.height(16.dp))
+            Button(
+                onClick = {
                     if (isVibrationEnabled) performVibration(context)
-                    blurTypeMenuExpanded = true 
-                }) {
-                    Text(getBlurTypeName(selectedBlurType))
-                }
-                DropdownMenu(
-                    expanded = blurTypeMenuExpanded,
-                    onDismissRequest = { blurTypeMenuExpanded = false }
-                ) {
-                    BlurType.entries.forEach { blurType ->
-                        DropdownMenuItem(
-                            text = { Text(getBlurTypeName(blurType)) },
-                            onClick = { 
-                                if (isVibrationEnabled) performVibration(context)
-                                onBlurTypeChange(blurType)
-                                blurTypeMenuExpanded = false 
-                            }
-                        )
-                    }
-                }
+                    onManageHiddenFoldersClick()
+                },
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Text(stringResource(id = R.string.manage_hidden_folders_button))
             }
+            Button(
+                onClick = {
+                    if (isVibrationEnabled) performVibration(context)
+                    onManageTagsClick()
+                },
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Text(stringResource(id = R.string.manage_tags_button))
+            }
+            Button(
+                onClick = {
+                    if (isVibrationEnabled) performVibration(context)
+                    onBackupAndRestoreClick()
+                },
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Text(stringResource(id = R.string.backup_and_restore_button))
+            }
+            Spacer(modifier = Modifier.height(16.dp))
+            Button(
+                onClick = { 
+                    if (isVibrationEnabled) performVibration(context)
+                    val intent = Intent(Intent.ACTION_VIEW, "https://github.com/HosikoOuma/MyGalleryApp".toUri())
+                    context.startActivity(intent)
+                },
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Text(stringResource(id = R.string.github_button))
+            }
+            Button(
+                onClick = { 
+                    if (isVibrationEnabled) performVibration(context)
+                    onCheckForUpdates() 
+                },
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Text(stringResource(id = R.string.check_for_updates_button))
+            }
+            Button(
+                onClick = {
+                    if (isVibrationEnabled) performVibration(context)
+                    onEasterEggClick()
+                },
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Text(stringResource(id = R.string.easter_egg_button))
+            }
+            Spacer(modifier = Modifier.height(16.dp))
+            Text(text = stringResource(id = R.string.version_label, currentVersion))
         }
-        Spacer(modifier = Modifier.height(16.dp))
-        Button(
-            onClick = {
-                if (isVibrationEnabled) performVibration(context)
-                onManageHiddenFoldersClick()
-            },
-            shape = RoundedCornerShape(12.dp)
-        ) {
-            Text(stringResource(id = R.string.manage_hidden_folders_button))
-        }
-        Button(
-            onClick = {
-                if (isVibrationEnabled) performVibration(context)
-                onManageTagsClick()
-            },
-            shape = RoundedCornerShape(12.dp)
-        ) {
-            Text(stringResource(id = R.string.manage_tags_button))
-        }
-        Button(
-            onClick = {
-                if (isVibrationEnabled) performVibration(context)
-                onBackupAndRestoreClick()
-            },
-            shape = RoundedCornerShape(12.dp)
-        ) {
-            Text(stringResource(id = R.string.backup_and_restore_button))
-        }
-        Spacer(modifier = Modifier.height(16.dp))
-        Button(
-            onClick = { 
-                if (isVibrationEnabled) performVibration(context)
-                val intent = Intent(Intent.ACTION_VIEW, "https://github.com/HosikoOuma/MyGalleryApp".toUri())
-                context.startActivity(intent)
-            },
-            shape = RoundedCornerShape(12.dp)
-        ) {
-            Text(stringResource(id = R.string.github_button))
-        }
-        Button(
-            onClick = { 
-                if (isVibrationEnabled) performVibration(context)
-                onCheckForUpdates() 
-            },
-            shape = RoundedCornerShape(12.dp)
-        ) {
-            Text(stringResource(id = R.string.check_for_updates_button))
-        }
-        Button(
-            onClick = {
-                if (isVibrationEnabled) performVibration(context)
-                onEasterEggClick()
-            },
-            shape = RoundedCornerShape(12.dp)
-        ) {
-            Text(stringResource(id = R.string.easter_egg_button))
-        }
-        Spacer(modifier = Modifier.height(16.dp))
-        Text(text = stringResource(id = R.string.version_label, currentVersion))
     }
 }
