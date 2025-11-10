@@ -28,6 +28,19 @@ object SettingsRepository {
     private const val AUTO_DELETE_TRASH_ENABLED_KEY = "auto_delete_trash_enabled"
     private const val AUTO_DELETE_TRASH_DAYS_KEY = "auto_delete_trash_days"
     private const val LANGUAGE_KEY = "language"
+    private const val CHECK_FOR_UPDATES_ON_STARTUP_KEY = "check_for_updates_on_startup"
+
+    fun setCheckForUpdatesOnStartup(context: Context, enabled: Boolean) {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit {
+            putBoolean(CHECK_FOR_UPDATES_ON_STARTUP_KEY, enabled)
+        }
+    }
+
+    fun isCheckForUpdatesOnStartupEnabled(context: Context): Boolean {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        return prefs.getBoolean(CHECK_FOR_UPDATES_ON_STARTUP_KEY, true)
+    }
 
     fun setLanguage(context: Context, language: Language) {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)

@@ -17,6 +17,7 @@ appcompat = "1.7.1"
 material = "1.10.0"
 media3 = "1.8.0"
 foundationLayoutVersion = "1.9.4"
+retrofit = "2.9.0"
 
 [libraries]
 androidx-activity-compose-v192 = { module = "androidx.activity:activity-compose", version.ref = "activityComposeVersion" }
@@ -50,6 +51,8 @@ media3-exoplayer = { group = "androidx.media3", name = "media3-exoplayer" }
 media3-ui = { group = "androidx.media3", name = "media3-ui" }
 media3-transformer = { group = "androidx.media3", name = "media3-transformer" }
 androidx-foundation-layout = { group = "androidx.compose.foundation", name = "foundation-layout", version.ref = "foundationLayoutVersion" }
+retrofit = { group = "com.squareup.retrofit2", name = "retrofit", version.ref = "retrofit" }
+retrofit-converter-gson = { group = "com.squareup.retrofit2", name = "converter-gson", version.ref = "retrofit" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

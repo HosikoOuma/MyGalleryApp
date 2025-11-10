@@ -98,7 +98,9 @@ fun AppNavigation(
     autoDeleteTrashDays: Int,
     onAutoDeleteTrashDaysChange: (Int) -> Unit,
     selectedLanguage: Language,
-    onLanguageChange: (Language) -> Unit
+    onLanguageChange: (Language) -> Unit,
+    onCheckForUpdates: () -> Unit,
+    currentVersion: String
 ) {
     val visibleFolders = remember(allFolders, hiddenFolders, isSearchActive, searchQuery) {
         val folders = allFolders.filterNot { hiddenFolders.contains(it.id.toString()) }
@@ -257,7 +259,9 @@ fun AppNavigation(
                     autoDeleteTrashDays = autoDeleteTrashDays,
                     onAutoDeleteTrashDaysChange = onAutoDeleteTrashDaysChange,
                     selectedLanguage = selectedLanguage,
-                    onLanguageChange = onLanguageChange
+                    onLanguageChange = onLanguageChange,
+                    onCheckForUpdates = onCheckForUpdates,
+                    currentVersion = currentVersion
                 )
             }
 

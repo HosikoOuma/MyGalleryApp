@@ -1,6 +1,7 @@
 //GEMINI НЕ ТРОГАЙ ЭТУ АНОТАЦИЮ
 @file:kotlin.OptIn(ExperimentalMaterial3Api::class)
 package com.example.nkdsify
+
 import android.Manifest
 import android.app.Activity
 import android.app.WallpaperManager
@@ -97,6 +98,7 @@ import android.content.ContentUris
 import androidx.annotation.OptIn
 import androidx.compose.material3.LargeFloatingActionButton
 import androidx.compose.ui.res.stringResource
+
 enum class FileOperation {
     COPY, MOVE
 }
@@ -218,16 +220,60 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
     var isShuffleButtonVisible by remember { mutableStateOf(SettingsRepository.isShuffleButtonVisible(context)) }
     var selectedLanguage by remember { mutableStateOf(SettingsRepository.getLanguage(context)) }
     val keyboardController = LocalSoftwareKeyboardController.current
+    var showUpdateDialog by remember { mutableStateOf(false) }
+    var latestVersion by remember { mutableStateOf<String?>(null) }
+    val currentVersion = remember { context.packageManager.getPackageInfo(context.packageName, 0).versionName ?: "0.0" }
 
-     LaunchedEffect(selectedLanguage) {
-            // Проверяем, что это реальное изменение, а не первый запуск
-            if (selectedLanguage.code != SettingsRepository.getLanguage(context).code) {
-                // 1. Сохраняем новое значение
-                SettingsRepository.setLanguage(context, selectedLanguage)
-                // 2. Перезапускаем Activity, чтобы attachBaseContext снова сработал
-                (context as? Activity)?.recreate()
+    fun compareVersionNames(v1: String, v2: String): Int {
+        val parts1 = v1.removePrefix("v").split('.').map { it.toIntOrNull() ?: 0 }
+        val parts2 = v2.removePrefix("v").split('.').map { it.toIntOrNull() ?: 0 }
+        val size = maxOf(parts1.size, parts2.size)
+        for (i in 0 until size) {
+            val p1 = parts1.getOrElse(i) { 0 }
+            val p2 = parts2.getOrElse(i) { 0 }
+            if (p1 < p2) return -1
+            if (p1 > p2) return 1
+        }
+        return 0
+    }
+
+    val checkForUpdates: (Boolean) -> Unit = { isTriggeredByUser ->
+        coroutineScope.launch(Dispatchers.IO) {
+            if (!isTriggeredByUser && !SettingsRepository.isCheckForUpdatesOnStartupEnabled(context)) {
+                return@launch
             }
-     }
+
+            val release = GithubUpdateChecker.getLatestRelease("HosikoOuma", "MyGalleryApp")
+            release?.let {
+                if (compareVersionNames(it.tag_name, currentVersion) > 0) {
+                    withContext(Dispatchers.Main) {
+                        latestVersion = it.tag_name
+                        showUpdateDialog = true
+                    }
+                } else {
+                    if (isTriggeredByUser) {
+                        withContext(Dispatchers.Main) {
+                            Toast.makeText(context, context.getString(R.string.no_updates_available), Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        checkForUpdates(false)
+    }
+
+    LaunchedEffect(selectedLanguage) {
+        // Проверяем, что это реальное изменение, а не первый запуск
+        if (selectedLanguage.code != SettingsRepository.getLanguage(context).code) {
+            // 1. Сохраняем новое значение
+            SettingsRepository.setLanguage(context, selectedLanguage)
+            // 2. Перезапускаем Activity, чтобы attachBaseContext снова сработал
+            (context as? Activity)?.recreate()
+        }
+    }
 
     NkdsifyAppTheme(theme = selectedTheme) {
         val permissionsToRequest = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -255,9 +301,7 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
         var sortAscending by remember { mutableStateOf(false) }
         var selectedDate by remember { mutableStateOf<Long?>(null) }
         var refreshTrigger by remember { mutableIntStateOf(0) }
-        //var isTrashBlurEnabled by remember { mutableStateOf(SettingsRepository.isTrashBlurEnabled(context)) }
         var isMuteVideoByDefault by remember { mutableStateOf(SettingsRepository.isMuteVideoByDefault(context)) }
-        //var isBlurAllMediaEnabled by remember { mutableStateOf(SettingsRepository.isBlurAllMediaEnabled(context)) }
         var hiddenFolders by remember { mutableStateOf(SettingsRepository.getHiddenFolders(context)) }
 
         var showTagDialog by remember { mutableStateOf<Uri?>(null) }
@@ -307,7 +351,7 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
                         } catch (e: Exception) {
                             Toast.makeText(context, context.getString(R.string.failed_to_set_wallpaper, e.message), Toast.LENGTH_SHORT).show()
                         }
-                        isSettingWallpaper = false // Reset flag
+                        isSettingWallpaper = false
                         viewerState = null
                     }
                 }
@@ -346,13 +390,11 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
                     TrashRepository.clearTrash(context)
                     isClearingTrash = false
                 } else {
-                    // This is now the general case after copying to trash
-                    // or for permanent deletion
                 }
                 refreshTrigger++
                 selectedItems.clear()
                 itemsToDelete = emptyList()
-                viewerState = null // Dismiss viewer on successful deletion
+                viewerState = null
             }
             showConfirmDeleteDialog = false
         }
@@ -396,7 +438,7 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
         val pullRefreshState = rememberPullToRefreshState()
         if (pullRefreshState.isRefreshing) {
             LaunchedEffect(true) {
-                delay(1000) // For presentation purposes
+                delay(1000)
                 refreshTrigger++
                 pullRefreshState.endRefresh()
             }
@@ -519,6 +561,22 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
 
         val datePickerState = rememberDatePickerState()
         var showDatePicker by remember { mutableStateOf(false) }
+
+        if (showUpdateDialog && latestVersion != null) {
+            UpdateDialog(
+                onDismiss = { showUpdateDialog = false },
+                onConfirm = {
+                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/HosikoOuma/MyGalleryApp/releases/latest"))
+                    context.startActivity(intent)
+                    showUpdateDialog = false
+                },
+                onDoNotShowAgain = {
+                    SettingsRepository.setCheckForUpdatesOnStartup(context, false)
+                    showUpdateDialog = false
+                },
+                latestVersion = latestVersion!!
+            )
+        }
 
         if (showTagDialog != null) {
             val uri = showTagDialog!!
@@ -731,7 +789,6 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
                         TrashRepository.clearTrash(context)
                         isClearingTrash = false
                     } else {
-                        // Fallback for older APIs
                         TrashRepository.removeFromTrash(context, itemsToDelete)
                     }
                     refreshTrigger++
@@ -753,14 +810,13 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
                         if (intentSender != null) {
                             deleteRequestLauncher.launch(IntentSenderRequest.Builder(intentSender).build())
                         } else {
-                            // Fallback for older APIs, though less likely to be needed now
                             refreshTrigger++
                         }
                     }
                     selectedItems.clear()
                     itemsToTrash = emptyList()
                     showConfirmTrashDialog = false
-                    viewerState = null // Dismiss viewer if active
+                    viewerState = null
                 },
                 onDismiss = { showConfirmTrashDialog = false }
             )
@@ -786,7 +842,7 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
                     coroutineScope.launch {
                         val folderPath = destinationFolder.items.firstOrNull()?.let {
                             getFolderPathFromUri(context, it.uri)
-                        } ?: destinationFolder.name // Fallback to folder name if empty
+                        } ?: destinationFolder.name
 
                         when (currentFileOperation) {
                             FileOperation.COPY -> {
@@ -804,7 +860,7 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
                                 withContext(Dispatchers.Main) {
                                     Toast.makeText(context, context.getString(R.string.moved_to_folder, destinationFolder.name), Toast.LENGTH_SHORT).show()
                                 }
-                                viewerState = null // Close viewer after move
+                                viewerState = null
                             }
                             null -> {}
                         }
@@ -1130,7 +1186,11 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
                             onAutoDeleteTrashDaysChange = {
                                 onAutoDeleteTrashDaysChange(it)
                                 SettingsRepository.setAutoDeleteTrashDays(context, it)
-                            }
+                            },
+                            onCheckForUpdates = {
+                                checkForUpdates(true)
+                            },
+                            currentVersion = currentVersion
                         )
                     } else {
                         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -1162,7 +1222,7 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
                     favorites = favorites,
                     onDismiss = { viewerState = null },
                     imageLoader = imageLoader,
-                    isExternal = viewerState!!.isExternal, // Pass the flag
+                    isExternal = viewerState!!.isExternal,
                     isTrashMode = isTrashViewing,
                     onDelete = { uris ->
                         if (isTrashViewing) {

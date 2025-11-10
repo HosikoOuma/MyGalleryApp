@@ -12,8 +12,8 @@ android {
         applicationId = "com.example.nkdsify"
         minSdk = 29
         targetSdk = 36
-        versionCode = 10
-        versionName = "1.9"
+        versionCode = 11
+        versionName = "1.10"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -85,6 +85,8 @@ dependencies {
     implementation("androidx.media3:media3-transformer:1.8.0")
 
     implementation("com.google.code.gson:gson:2.10.1")
+    implementation(libs.retrofit)
+    implementation(libs.retrofit.converter.gson)
 
     // Test Dependencies
     testImplementation("junit:junit:4.13.2")

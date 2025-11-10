@@ -151,4 +151,11 @@
     <string name="enter_special_language_code_title">Мя</string>
     <string name="special_language_code_label">Мя</string>
     <string name="activate_button">У</string>
+    <string name="update_available_title">Апдейт есть!</string>
+    <string name="update_available_text">Новая версия (%1$s) есть. Будешь обновляться?</string>
+    <string name="update_button">Обновить</string>
+    <string name="check_for_updates_button">Чекнуть апдейты</string>
+    <string name="no_updates_available">У тебя последняя версия, братик.</string>
+    <string name="version_label">Версия: %1$s</string>
+    <string name="dont_show_again_button">Больше не показывать</string>
 </resources>

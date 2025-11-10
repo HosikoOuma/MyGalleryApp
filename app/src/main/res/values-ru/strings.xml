@@ -151,4 +151,11 @@
     <string name="enter_special_language_code_title">Введите код особого языка</string>
     <string name="special_language_code_label">Код особого языка</string>
     <string name="activate_button">Активировать</string>
+    <string name="update_available_title">Доступно обновление</string>
+    <string name="update_available_text">Доступна новая версия (%1$s). Хотите обновиться?</string>
+    <string name="update_button">Обновить</string>
+    <string name="check_for_updates_button">Проверить обновления</string>
+    <string name="no_updates_available">У вас установлена последняя версия.</string>
+    <string name="version_label">Версия: %1$s</string>
+    <string name="dont_show_again_button">Больше не показывать</string>
 </resources>

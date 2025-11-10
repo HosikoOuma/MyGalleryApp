@@ -82,7 +82,9 @@ fun SettingsScreen(
     autoDeleteTrashDays: Int,
     onAutoDeleteTrashDaysChange: (Int) -> Unit,
     selectedLanguage: Language,
-    onLanguageChange: (Language) -> Unit
+    onLanguageChange: (Language) -> Unit,
+    onCheckForUpdates: () -> Unit,
+    currentVersion: String
 ) {
     val context = LocalContext.current
     var themeMenuExpanded by remember { mutableStateOf(false) }
@@ -555,6 +557,15 @@ fun SettingsScreen(
             Text(stringResource(id = R.string.github_button))
         }
         Button(
+            onClick = { 
+                if (isVibrationEnabled) performVibration(context)
+                onCheckForUpdates() 
+            },
+            shape = RoundedCornerShape(12.dp)
+        ) {
+            Text(stringResource(id = R.string.check_for_updates_button))
+        }
+        Button(
             onClick = {
                 if (isVibrationEnabled) performVibration(context)
                 onEasterEggClick()
@@ -563,5 +574,7 @@ fun SettingsScreen(
         ) {
             Text(stringResource(id = R.string.easter_egg_button))
         }
+        Spacer(modifier = Modifier.height(16.dp))
+        Text(text = stringResource(id = R.string.version_label, currentVersion))
     }
 }
