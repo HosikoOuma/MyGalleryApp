@@ -9,14 +9,17 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -38,9 +41,11 @@ import com.example.nkdsify.data.BlurType
 import com.example.nkdsify.data.Language
 import com.example.nkdsify.data.Theme
 import com.example.nkdsify.data.ZoomType
+import com.example.nkdsify.ui.utils.SettingsRepository
 import com.example.nkdsify.ui.utils.performVibration
 
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
     isBlurEnabled: Boolean,
@@ -93,6 +98,7 @@ fun SettingsScreen(
     var languageMenuExpanded by remember { mutableStateOf(false) }
     var showSpecialLanguageDialog by remember { mutableStateOf(false) }
     val scrollState = rememberScrollState()
+    var specialLanguageUnlocked by remember { mutableStateOf(SettingsRepository.isSpecialLanguageUnlocked(context)) }
 
     @Composable
     fun getThemeName(theme: Theme): String {
@@ -145,6 +151,8 @@ fun SettingsScreen(
             confirmButton = {
                 Button(onClick = {
                     if (code == "Трип-МоиПрефиолетовыеВнутренности") {
+                        SettingsRepository.setSpecialLanguageUnlocked(context, true)
+                        specialLanguageUnlocked = true
                         onLanguageChange(Language.SPECIAL)
                     }
                     showSpecialLanguageDialog = false
@@ -186,7 +194,7 @@ fun SettingsScreen(
                     onDismissRequest = { languageMenuExpanded = false }
                 ) {
                     Language.entries.forEach { language ->
-                        if (language == Language.SPECIAL) {
+                        if (language == Language.SPECIAL && !specialLanguageUnlocked) {
                             DropdownMenuItem(
                                 text = { Text(getLanguageName(language)) },
                                 onClick = { 
@@ -232,7 +240,7 @@ fun SettingsScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(stringResource(id = R.string.auto_delete_trash_days_label))
-                TextField(
+                BasicTextField(
                     value = autoDeleteTrashDays.toString(),
                     onValueChange = { value ->
                         if (isVibrationEnabled) performVibration(context)
@@ -240,7 +248,7 @@ fun SettingsScreen(
                         onAutoDeleteTrashDaysChange(intValue)
                     },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    modifier = Modifier.weight(1f, fill = false)
+                    modifier = Modifier.width(80.dp)
                 )
             }
         }

@@ -29,6 +29,19 @@ object SettingsRepository {
     private const val AUTO_DELETE_TRASH_DAYS_KEY = "auto_delete_trash_days"
     private const val LANGUAGE_KEY = "language"
     private const val CHECK_FOR_UPDATES_ON_STARTUP_KEY = "check_for_updates_on_startup"
+    private const val SPECIAL_LANGUAGE_UNLOCKED_KEY = "special_language_unlocked"
+
+    fun setSpecialLanguageUnlocked(context: Context, unlocked: Boolean) {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit {
+            putBoolean(SPECIAL_LANGUAGE_UNLOCKED_KEY, unlocked)
+        }
+    }
+
+    fun isSpecialLanguageUnlocked(context: Context): Boolean {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        return prefs.getBoolean(SPECIAL_LANGUAGE_UNLOCKED_KEY, false)
+    }
 
     fun setCheckForUpdatesOnStartup(context: Context, enabled: Boolean) {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
