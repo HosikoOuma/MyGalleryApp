@@ -10,7 +10,9 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.example.nkdsify.R
 import com.example.nkdsify.data.MediaFolder
 
 @Composable
@@ -21,7 +23,7 @@ fun FolderSelectionDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Select a folder") },
+        title = { Text(stringResource(id = R.string.select_a_folder_title)) },
         text = {
             LazyColumn {
                 items(folders) { folder ->
@@ -40,7 +42,7 @@ fun FolderSelectionDialog(
         },
         confirmButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancel")
+                Text(stringResource(id = R.string.dialog_cancel))
             }
         }
     )

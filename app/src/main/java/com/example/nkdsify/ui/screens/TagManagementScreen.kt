@@ -23,7 +23,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.example.nkdsify.R
 
 @Composable
 fun TagManagementScreen(
@@ -38,12 +40,12 @@ fun TagManagementScreen(
         var newTag by remember { mutableStateOf(oldTag) }
         AlertDialog(
             onDismissRequest = { showEditDialog = null },
-            title = { Text("Edit Tag") },
+            title = { Text(stringResource(id = R.string.edit_tag_dialog_title)) },
             text = {
                 TextField(
                     value = newTag,
                     onValueChange = { newTag = it },
-                    label = { Text("New tag name") }
+                    label = { Text(stringResource(id = R.string.new_tag_name_label)) }
                 )
             },
             confirmButton = {
@@ -51,12 +53,12 @@ fun TagManagementScreen(
                     onEditTag(oldTag, newTag)
                     showEditDialog = null
                 }) {
-                    Text("Save")
+                    Text(stringResource(id = R.string.save_button))
                 }
             },
             dismissButton = {
                 Button(onClick = { showEditDialog = null }) {
-                    Text("Cancel")
+                    Text(stringResource(id = R.string.dialog_cancel))
                 }
             }
         )
@@ -64,7 +66,7 @@ fun TagManagementScreen(
 
     Column(modifier = Modifier.padding(16.dp)) {
         if (allTags.isEmpty()) {
-            Text("No tags found.")
+            Text(stringResource(id = R.string.no_tags_found))
         } else {
             LazyColumn {
                 items(allTags.toList()) { tag ->
@@ -76,10 +78,10 @@ fun TagManagementScreen(
                         Text(tag)
                         Row {
                             IconButton(onClick = { showEditDialog = tag }) {
-                                Icon(Icons.Default.Edit, contentDescription = "Edit Tag")
+                                Icon(Icons.Default.Edit, contentDescription = stringResource(id = R.string.edit_tag_content_description))
                             }
                             IconButton(onClick = { onDeleteTag(tag) }) {
-                                Icon(Icons.Default.Delete, contentDescription = "Delete Tag")
+                                Icon(Icons.Default.Delete, contentDescription = stringResource(id = R.string.delete_tag_content_description))
                             }
                         }
                     }

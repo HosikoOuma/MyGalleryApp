@@ -12,8 +12,10 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import coil.ImageLoader
+import com.example.nkdsify.R
 import com.example.nkdsify.data.BlurType
 import com.example.nkdsify.data.MediaItem
 import com.example.nkdsify.ui.components.MediaGrid
@@ -32,7 +34,7 @@ fun TrashScreen(
 ) {
     if (items.isEmpty()) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Text(text = "Trash is empty")
+            Text(text = stringResource(id = R.string.trash_is_empty))
         }
         return
     }
@@ -49,7 +51,7 @@ fun TrashScreen(
                     onClick = onClearTrash,
                     shape = RoundedCornerShape(8.dp)
                 ) {
-                    Text("Clear Trash")
+                    Text(stringResource(id = R.string.clear_trash_button))
                 }
             }
         }

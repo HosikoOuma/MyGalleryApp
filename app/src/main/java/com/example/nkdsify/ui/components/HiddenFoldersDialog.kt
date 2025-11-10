@@ -13,6 +13,8 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
+import com.example.nkdsify.R
 import com.example.nkdsify.data.MediaFolder
 
 @Composable
@@ -24,11 +26,11 @@ fun HiddenFoldersDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Manage Hidden Folders") },
+        title = { Text(stringResource(id = R.string.manage_hidden_folders_title)) },
         text = {
             Column {
                 if (allFolders.isEmpty()) {
-                    Text("No folders to hide.")
+                    Text(stringResource(id = R.string.no_folders_to_hide))
                 } else {
                     LazyColumn {
                         items(allFolders) { folder ->
@@ -52,7 +54,7 @@ fun HiddenFoldersDialog(
         },
         confirmButton = {
             Button(onClick = onDismiss) {
-                Text("Close")
+                Text(stringResource(id = R.string.close_button))
             }
         }
     )

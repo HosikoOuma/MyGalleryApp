@@ -32,9 +32,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import coil.ImageLoader
 import coil.compose.rememberAsyncImagePainter
+import com.example.nkdsify.R
 import com.example.nkdsify.data.BlurType
 import com.example.nkdsify.data.MediaItem
 import com.example.nkdsify.ui.components.MediaGrid
@@ -61,8 +63,9 @@ fun FavoritesScreen(
         .groupBy({ it.first }, { it.second })
 
     val displayAlbums = mutableListOf<Pair<String, List<MediaItem>>>()
+    val allFavoritesAlbumName = stringResource(id = R.string.album_name_all_favorites)
     if (items.isNotEmpty()) {
-        displayAlbums.add("All Favorites" to items)
+        displayAlbums.add(allFavoritesAlbumName to items)
     }
     displayAlbums.addAll(taggedAlbums.entries.map { it.key to it.value }.sortedBy { it.first })
 
@@ -83,7 +86,7 @@ fun FavoritesScreen(
     } else {
         if (displayAlbums.isEmpty()) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text(text = "No favorites yet")
+                Text(text = stringResource(id = R.string.no_favorites_yet))
             }
         } else {
             LazyVerticalGrid(
@@ -115,7 +118,7 @@ fun FavoritesScreen(
                                         ) {
                                             Icon(
                                                 imageVector = Icons.Default.FrontHand,
-                                                contentDescription = "Hidden content",
+                                                contentDescription = stringResource(id = R.string.hidden_content_placeholder),
                                                 tint = Color.Gray,
                                                 modifier = Modifier.size(48.dp)
                                             )
@@ -123,7 +126,7 @@ fun FavoritesScreen(
                                     } else {
                                         Image(
                                             painter = rememberAsyncImagePainter(model = albumItems.first().uri, imageLoader = imageLoader),
-                                            contentDescription = "Album cover for $albumName",
+                                            contentDescription = stringResource(id = R.string.album_cover_content_description, albumName),
                                             contentScale = ContentScale.Crop,
                                             modifier = Modifier
                                                 .fillMaxSize()

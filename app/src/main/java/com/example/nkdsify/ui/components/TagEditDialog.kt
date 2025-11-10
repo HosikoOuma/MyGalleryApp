@@ -19,7 +19,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.example.nkdsify.R
 
 @Composable
 fun TagEditDialog(
@@ -33,10 +35,10 @@ fun TagEditDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Edit Tags") },
+        title = { Text(stringResource(id = R.string.edit_tags_dialog_title)) },
         text = {
             Column {
-                Text("Separate tags with commas.")
+                Text(stringResource(id = R.string.edit_tags_dialog_info))
                 Spacer(Modifier.height(8.dp))
                 TextField(
                     value = tags,
@@ -46,7 +48,7 @@ fun TagEditDialog(
                 Spacer(Modifier.height(16.dp))
                 Box {
                     TextButton(onClick = { expanded = true }) {
-                        Text("Existing Tags")
+                        Text(stringResource(id = R.string.existing_tags_button))
                     }
                     DropdownMenu(
                         expanded = expanded,
@@ -71,12 +73,12 @@ fun TagEditDialog(
                 val tagSet = tags.split(",").map { it.trim() }.filter { it.isNotEmpty() }.toSet()
                 onSave(tagSet)
             }) {
-                Text("Save")
+                Text(stringResource(id = R.string.save_button))
             }
         },
         dismissButton = {
             Button(onClick = onDismiss) {
-                Text("Cancel")
+                Text(stringResource(id = R.string.dialog_cancel))
             }
         }
     )

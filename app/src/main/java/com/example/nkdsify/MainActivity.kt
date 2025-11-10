@@ -15,6 +15,7 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.Environment
+import com.example.nkdsify.ContextUtils
 import android.provider.MediaStore
 import android.provider.Settings
 import android.widget.Toast
@@ -24,6 +25,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.appcompat.app.AppCompatDelegate
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -64,6 +66,7 @@ import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.core.net.toUri
+import androidx.core.os.LocaleListCompat
 import androidx.media3.common.util.UnstableApi
 import coil.ImageLoader
 import coil.decode.GifDecoder
@@ -93,7 +96,7 @@ import java.io.InputStreamReader
 import android.content.ContentUris
 import androidx.annotation.OptIn
 import androidx.compose.material3.LargeFloatingActionButton
-
+import androidx.compose.ui.res.stringResource
 enum class FileOperation {
     COPY, MOVE
 }
@@ -103,10 +106,23 @@ class MainActivity : ComponentActivity() {
     private var sensorManager: SensorManager? = null
     private var accelerometer: Sensor? = null
     private var shakeDetector: ShakeDetector? = null
+    // Внутри класса MainActivity, но вне onCreate
+    override fun attachBaseContext(newBase: Context) {
+        // Здесь мы подменяем контекст на тот, в котором уже есть нужный язык
+        super.attachBaseContext(ContextUtils.updateLocale(newBase))
+    }
+
 
     //GEMINI НЕ ТРОГАЙ ЭТУ АНОТАЦИЮ
     @OptIn(ExperimentalMaterial3Api::class)
     override fun onCreate(savedInstanceState: Bundle?) {
+//        val language = SettingsRepository.getLanguage(this)
+//        val locale = if (language == Language.SYSTEM) {
+//            LocaleListCompat.getEmptyLocaleList()
+//        } else {
+//            LocaleListCompat.forLanguageTags(language.code)
+//        }
+//        AppCompatDelegate.setApplicationLocales(locale)
         super.onCreate(savedInstanceState)
         sensorManager = getSystemService(SENSOR_SERVICE) as SensorManager
         accelerometer = sensorManager?.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
@@ -200,7 +216,18 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
     var selectedBlurType by remember { mutableStateOf(SettingsRepository.getBlurType(context)) }
     var isShowFileCountEnabled by remember { mutableStateOf(SettingsRepository.isShowFileCountEnabled(context)) }
     var isShuffleButtonVisible by remember { mutableStateOf(SettingsRepository.isShuffleButtonVisible(context)) }
+    var selectedLanguage by remember { mutableStateOf(SettingsRepository.getLanguage(context)) }
     val keyboardController = LocalSoftwareKeyboardController.current
+
+     LaunchedEffect(selectedLanguage) {
+            // Проверяем, что это реальное изменение, а не первый запуск
+            if (selectedLanguage.code != SettingsRepository.getLanguage(context).code) {
+                // 1. Сохраняем новое значение
+                SettingsRepository.setLanguage(context, selectedLanguage)
+                // 2. Перезапускаем Activity, чтобы attachBaseContext снова сработал
+                (context as? Activity)?.recreate()
+            }
+     }
 
     NkdsifyAppTheme(theme = selectedTheme) {
         val permissionsToRequest = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -275,10 +302,10 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
                             val wallpaperManager = WallpaperManager.getInstance(context)
                             context.contentResolver.openInputStream(croppedImageUri)?.use { inputStream ->
                                 wallpaperManager.setStream(inputStream)
-                                Toast.makeText(context, "Wallpaper set successfully!", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(context, context.getString(R.string.wallpaper_set_successfully), Toast.LENGTH_SHORT).show()
                             }
                         } catch (e: Exception) {
-                            Toast.makeText(context, "Failed to set wallpaper: ${e.message}", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, context.getString(R.string.failed_to_set_wallpaper, e.message), Toast.LENGTH_SHORT).show()
                         }
                         isSettingWallpaper = false // Reset flag
                         viewerState = null
@@ -340,10 +367,10 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
                         favorites.clear()
                         favorites.addAll(importedFavorites.map { uriString -> uriString.toUri() })
                         refreshTrigger++
-                        Toast.makeText(context, "Favorites imported successfully!", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, context.getString(R.string.favorites_imported_successfully), Toast.LENGTH_SHORT).show()
                     }
                 } catch (_: Exception) {
-                    Toast.makeText(context, "Failed to import favorites!", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, context.getString(R.string.failed_to_import_favorites), Toast.LENGTH_SHORT).show()
                 }
             }
         }
@@ -358,10 +385,10 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
                         tags = importedTags
                         TagsRepository.saveTags(context, tags)
                         refreshTrigger++
-                        Toast.makeText(context, "Tags imported successfully!", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, context.getString(R.string.tags_imported_successfully), Toast.LENGTH_SHORT).show()
                     }
                 } catch (_: Exception) {
-                    Toast.makeText(context, "Failed to import tags!", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, context.getString(R.string.failed_to_import_tags), Toast.LENGTH_SHORT).show()
                 }
             }
         }
@@ -481,13 +508,13 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
         }
 
         val title = when (val screen = currentScreen) {
-            is Screen.Folders -> "Folders"
+            is Screen.Folders -> stringResource(id = R.string.screen_title_folders)
             is Screen.FolderContent -> screen.folder.name
-            is Screen.Favorites -> screen.openAlbumName ?: "Favorites"
-            is Screen.Settings -> "Settings"
-            is Screen.TagManagement -> "Manage Tags"
-            is Screen.Trash -> "Trash"
-            is Screen.AllMedia -> "All Media"
+            is Screen.Favorites -> screen.openAlbumName ?: stringResource(id = R.string.screen_title_favorites)
+            is Screen.Settings -> stringResource(id = R.string.screen_title_settings)
+            is Screen.TagManagement -> stringResource(id = R.string.screen_title_manage_tags)
+            is Screen.Trash -> stringResource(id = R.string.screen_title_trash)
+            is Screen.AllMedia -> stringResource(id = R.string.screen_title_all_media)
         }
 
         val datePickerState = rememberDatePickerState()
@@ -598,7 +625,7 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
                 val taggedAlbums = favoriteItems
                     .flatMap { item -> (tags[item.uri.toString()] ?: emptySet()).map { tag -> tag to item } }
                     .groupBy({ it.first }, { it.second })
-                val albumItems = if (screen.openAlbumName == "All Favorites") favoriteItems else taggedAlbums[screen.openAlbumName] ?: emptySet()
+                val albumItems = if (screen.openAlbumName == stringResource(id = R.string.album_name_all_favorites)) favoriteItems else taggedAlbums[screen.openAlbumName] ?: emptySet()
 
                 if (albumItems.isNotEmpty()) {
                     val totalSize = albumItems.sumOf { it.size }
@@ -646,12 +673,12 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
                             context.contentResolver.openOutputStream(uri)?.use {
                                 it.write(json.toByteArray())
                             }
-                            Toast.makeText(context, "Favorites exported successfully!", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, context.getString(R.string.favorites_exported_successfully), Toast.LENGTH_SHORT).show()
                         } catch (_: Exception) {
-                            Toast.makeText(context, "Failed to export favorites!", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, context.getString(R.string.failed_to_export_favorites), Toast.LENGTH_SHORT).show()
                         }
                     } else {
-                        Toast.makeText(context, "Failed to create backup file!", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, context.getString(R.string.failed_to_create_backup_file), Toast.LENGTH_SHORT).show()
                     }
                 },
                 onImportFavorites = { importFavoritesLauncher.launch("application/json") },
@@ -668,12 +695,12 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
                             context.contentResolver.openOutputStream(uri)?.use {
                                 it.write(json.toByteArray())
                             }
-                            Toast.makeText(context, "Tags exported successfully!", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, context.getString(R.string.tags_exported_successfully), Toast.LENGTH_SHORT).show()
                         } catch (_: Exception) {
-                            Toast.makeText(context, "Failed to export tags!", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, context.getString(R.string.failed_to_export_tags), Toast.LENGTH_SHORT).show()
                         }
                     } else {
-                        Toast.makeText(context, "Failed to create backup file!", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, context.getString(R.string.failed_to_create_backup_file), Toast.LENGTH_SHORT).show()
                     }
                 },
                 onImportTags = { importTagsLauncher.launch("application/json") }
@@ -683,11 +710,11 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
         if (showDatePicker) {
             DatePickerDialog(onDismissRequest = { showDatePicker = false }, confirmButton = {
                 TextButton(onClick = { selectedDate = datePickerState.selectedDateMillis; showDatePicker = false }) {
-                    Text("OK")
+                    Text(stringResource(id = R.string.dialog_ok))
                 }
             }, dismissButton = {
                 TextButton(onClick = { showDatePicker = false }) {
-                    Text("Cancel")
+                    Text(stringResource(id = R.string.dialog_cancel))
                 }
             }) {
                 DatePicker(state = datePickerState)
@@ -767,7 +794,7 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
                                     copyMediaToFolder(context, uri, folderPath)
                                 }
                                 withContext(Dispatchers.Main) {
-                                    Toast.makeText(context, "Copied to ${destinationFolder.name}", Toast.LENGTH_SHORT).show()
+                                    Toast.makeText(context, context.getString(R.string.copied_to_folder, destinationFolder.name), Toast.LENGTH_SHORT).show()
                                 }
                             }
                             FileOperation.MOVE -> {
@@ -775,7 +802,7 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
                                     moveMediaToFolder(context, uri, folderPath)
                                 }
                                 withContext(Dispatchers.Main) {
-                                    Toast.makeText(context, "Moved to ${destinationFolder.name}", Toast.LENGTH_SHORT).show()
+                                    Toast.makeText(context, context.getString(R.string.moved_to_folder, destinationFolder.name), Toast.LENGTH_SHORT).show()
                                 }
                                 viewerState = null // Close viewer after move
                             }
@@ -905,6 +932,7 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
                 },
                 floatingActionButton = {
                     if (isShuffleButtonVisible && currentScreen !is Screen.Trash && currentScreen !is Screen.Settings && currentScreen !is Screen.TagManagement) {
+                        val allFavoritesAlbumName = stringResource(id = R.string.album_name_all_favorites)
                         val onClick = {
                             if (isVibrationEnabled) performVibration(context)
                             val itemsToShuffle = when (val screen = currentScreen) {
@@ -915,7 +943,7 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
                                         val taggedAlbums = favoriteItems
                                             .flatMap { item -> (tags[item.uri.toString()] ?: emptySet()).map { tag -> tag to item } }
                                             .groupBy({ it.first }, { it.second })
-                                        if (screen.openAlbumName == "All Favorites") favoriteItems else taggedAlbums[screen.openAlbumName]
+                                        if (screen.openAlbumName == allFavoritesAlbumName) favoriteItems else taggedAlbums[screen.openAlbumName]
                                             ?: emptyList()
                                     } else {
                                         favoriteItems
@@ -934,13 +962,13 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
                             LargeFloatingActionButton(
                                 onClick = onClick
                             ) {
-                                Icon(Icons.Filled.Photo, contentDescription = "Shuffle Play", modifier = Modifier.size(40.dp))
+                                Icon(Icons.Filled.Photo, contentDescription = stringResource(id = R.string.content_description_shuffle_play), modifier = Modifier.size(40.dp))
                             }
                         } else {
                             FloatingActionButton(
                                 onClick = onClick
                             ) {
-                                Icon(Icons.Filled.Photo, contentDescription = "Shuffle Play", modifier = Modifier.size(24.dp))
+                                Icon(Icons.Filled.Photo, contentDescription = stringResource(id = R.string.content_description_shuffle_play), modifier = Modifier.size(24.dp))
                             }
                         }
                     }
@@ -1001,6 +1029,10 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
                             onThemeChange = { theme ->
                                 selectedTheme = theme
                                 SettingsRepository.setTheme(context, theme)
+                            },
+                            selectedLanguage = selectedLanguage,
+                            onLanguageChange = { language ->
+                                selectedLanguage = language
                             },
                             onManageHiddenFoldersClick = {
                                 if (isVibrationEnabled) performVibration(context)
@@ -1103,13 +1135,13 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
                     } else {
                         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                Text("Permission required to access media.")
+                                Text(stringResource(id = R.string.permission_required_message))
                                 Spacer(Modifier.height(8.dp))
                                 Button(onClick = {
                                     if (isVibrationEnabled) performVibration(context)
                                     permissionLauncher.launch(permissionsToRequest)
                                 }) {
-                                    Text("Grant Permission")
+                                    Text(stringResource(id = R.string.grant_permission_button))
                                 }
                             }
                         }

@@ -35,8 +35,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.core.content.edit
+import com.example.nkdsify.R
 import com.example.nkdsify.data.MediaDetails
 import java.io.InputStream
 import java.time.Instant
@@ -77,7 +79,7 @@ fun getMediaDetails(context: Context, uri: Uri): MediaDetails? {
                 val mimeType = cursor.getString(mimeTypeColumn)
                 val isVideo = mimeType?.startsWith("video/") ?: false
 
-                var resolution = "Unknown"
+                var resolution = context.getString(R.string.unknown_resolution)
                 try {
                     if (isVideo) {
                         val retriever = MediaMetadataRetriever()
@@ -161,19 +163,19 @@ fun ConfirmDeleteDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Confirm Deletion") },
-        text = { Text("Are you sure you want to permanently delete these items? This action cannot be undone.") },
+        title = { Text(stringResource(id = R.string.confirm_deletion_title)) },
+        text = { Text(stringResource(id = R.string.confirm_deletion_message)) },
         confirmButton = {
             Button(
                 onClick = onConfirm,
                 colors = ButtonDefaults.buttonColors(containerColor = Color.Red)
             ) {
-                Text("Delete")
+                Text(stringResource(id = R.string.delete_button))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancel")
+                Text(stringResource(id = R.string.dialog_cancel))
             }
         }
     )
@@ -186,18 +188,18 @@ fun ConfirmTrashDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Confirm Move to Trash") },
-        text = { Text("Are you sure you want to move these items to the trash?") },
+        title = { Text(stringResource(id = R.string.confirm_move_to_trash_title)) },
+        text = { Text(stringResource(id = R.string.confirm_move_to_trash_message)) },
         confirmButton = {
             Button(
                 onClick = onConfirm,
             ) {
-                Text("Move to Trash")
+                Text(stringResource(id = R.string.move_to_trash_button))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancel")
+                Text(stringResource(id = R.string.dialog_cancel))
             }
         }
     )
@@ -210,18 +212,18 @@ fun ConfirmRestoreDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Confirm Restore") },
-        text = { Text("Are you sure you want to restore these items?") },
+        title = { Text(stringResource(id = R.string.confirm_restore_title)) },
+        text = { Text(stringResource(id = R.string.confirm_restore_message)) },
         confirmButton = {
             Button(
                 onClick = onConfirm,
             ) {
-                Text("Restore")
+                Text(stringResource(id = R.string.restore_button))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancel")
+                Text(stringResource(id = R.string.dialog_cancel))
             }
         }
     )
@@ -231,11 +233,11 @@ fun ConfirmRestoreDialog(
 fun ExternalMediaErrorDialog(onDismiss: () -> Unit) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Action Not Allowed") },
-        text = { Text("This action is not allowed for media outside of this application.") },
+        title = { Text(stringResource(id = R.string.external_media_error_title)) },
+        text = { Text(stringResource(id = R.string.external_media_error_message)) },
         confirmButton = {
             TextButton(onClick = onDismiss) {
-                Text("OK")
+                Text(stringResource(id = R.string.dialog_ok))
             }
         }
     )
@@ -298,15 +300,15 @@ fun MediaDetailsDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Details") },
+        title = { Text(stringResource(id = R.string.details_title)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("Name: ${details.name}")
-                Text("Size: ${formatFileSize(details.size)}")
-                Text("Date Added: ${formatTimestamp(details.dateAdded)}")
-                Text("Date Modified: ${formatTimestamp(details.dateModified)}")
-                Text("Path: ${details.path}")
-                Text("Resolution: ${details.resolution}")
+                Text(stringResource(id = R.string.details_name, details.name))
+                Text(stringResource(id = R.string.details_size, formatFileSize(details.size)))
+                Text(stringResource(id = R.string.details_date_added, formatTimestamp(details.dateAdded)))
+                Text(stringResource(id = R.string.details_date_modified, formatTimestamp(details.dateModified)))
+                Text(stringResource(id = R.string.details_path, details.path))
+                Text(stringResource(id = R.string.details_resolution, details.resolution))
             }
         },
         confirmButton = {
@@ -315,25 +317,25 @@ fun MediaDetailsDialog(
                     if (isVibrationEnabled) performVibration(context)
                     onSetAsWallpaper()
                 }) {
-                    Icon(Icons.Default.Wallpaper, contentDescription = "Set as wallpaper")
+                    Icon(Icons.Default.Wallpaper, contentDescription = stringResource(id = R.string.set_as_wallpaper_content_description))
                 }
                 IconButton(onClick = {
                     if (isVibrationEnabled) performVibration(context)
                     onCopy()
                 }) {
-                    Icon(Icons.Default.ContentCopy, contentDescription = "Copy")
+                    Icon(Icons.Default.ContentCopy, contentDescription = stringResource(id = R.string.copy_content_description))
                 }
                 IconButton(onClick = {
                     if (isVibrationEnabled) performVibration(context)
                     onMove()
                 }) {
-                    Icon(Icons.Default.DriveFileMove, contentDescription = "Move")
+                    Icon(Icons.Default.DriveFileMove, contentDescription = stringResource(id = R.string.move_content_description))
                 }
                 IconButton(onClick = {
                     if (isVibrationEnabled) performVibration(context)
                     onRename()
                 }) {
-                    Icon(Icons.Default.Edit, contentDescription = "Rename")
+                    Icon(Icons.Default.Edit, contentDescription = stringResource(id = R.string.rename_content_description))
                 }
             }
         },
@@ -342,7 +344,7 @@ fun MediaDetailsDialog(
                 if (isVibrationEnabled) performVibration(context)
                 onDismiss()
             }) {
-                Text("OK")
+                Text(stringResource(id = R.string.dialog_ok))
             }
         }
     )
@@ -358,7 +360,7 @@ fun RenameDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Rename") },
+        title = { Text(stringResource(id = R.string.rename_dialog_title)) },
         text = {
             TextField(
                 value = newName,
@@ -368,12 +370,12 @@ fun RenameDialog(
         },
         confirmButton = {
             Button(onClick = { onRename(newName) }) {
-                Text("Rename")
+                Text(stringResource(id = R.string.rename_button))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancel")
+                Text(stringResource(id = R.string.dialog_cancel))
             }
         }
     )

@@ -24,6 +24,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.material.icons.automirrored.filled.DriveFileMove
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.example.nkdsify.R
 import com.example.nkdsify.ui.utils.performVibration
@@ -63,13 +64,13 @@ fun TopBar(
 ) {
     if (isSelectionMode) {
         TopAppBar(
-            title = { Text("${selectedItems.size} selected") },
+            title = { Text(stringResource(id = R.string.selected_items_title, selectedItems.size)) },
             navigationIcon = {
                 IconButton(onClick = {
                     if (isVibrationEnabled) performVibration(context)
                     onCloseSelection()
                 }) {
-                    Icon(Icons.Filled.Close, contentDescription = "Close selection")
+                    Icon(Icons.Filled.Close, contentDescription = stringResource(id = R.string.close_selection_content_description))
                 }
             },
             actions = {
@@ -79,38 +80,38 @@ fun TopBar(
                             if (isVibrationEnabled) performVibration(context)
                             onSelectAll()
                         }) {
-                            Icon(Icons.Default.SelectAll, contentDescription = "Select All")
+                            Icon(Icons.Default.SelectAll, contentDescription = stringResource(id = R.string.select_all_content_description))
                         }
                         IconButton(onClick = {
                             if (isVibrationEnabled) performVibration(context)
                             onRestore()
                         }) {
-                            Icon(Icons.Default.Restore, contentDescription = "Restore")
+                            Icon(Icons.Default.Restore, contentDescription = stringResource(id = R.string.restore_content_description))
                         }
                         IconButton(onClick = {
                             if (isVibrationEnabled) performVibration(context)
                             onDeletePermanently()
                         }) {
-                            Icon(Icons.Default.Delete, contentDescription = "Delete Permanently")
+                            Icon(Icons.Default.Delete, contentDescription = stringResource(id = R.string.delete_permanently_content_description))
                         }
                     } else {
                         IconButton(onClick = {
                             if (isVibrationEnabled) performVibration(context)
                             onEditTags()
                         }) {
-                            Icon(Icons.AutoMirrored.Filled.Label, contentDescription = "Edit Tags")
+                            Icon(Icons.AutoMirrored.Filled.Label, contentDescription = stringResource(id = R.string.edit_tags_content_description))
                         }
                         IconButton(onClick = {
                             if (isVibrationEnabled) performVibration(context)
                             onShare()
                         }) {
-                            Icon(Icons.Filled.Share, contentDescription = "Share")
+                            Icon(Icons.Filled.Share, contentDescription = stringResource(id = R.string.share_content_description))
                         }
                         IconButton(onClick = {
                             if (isVibrationEnabled) performVibration(context)
                             onTrash()
                         }) {
-                            Icon(Icons.Filled.Delete, contentDescription = "Delete")
+                            Icon(Icons.Filled.Delete, contentDescription = stringResource(id = R.string.delete_content_description))
                         }
                         IconButton(onClick = {
                             if (isVibrationEnabled) performVibration(context)
@@ -118,7 +119,7 @@ fun TopBar(
                         }) {
                             Icon(
                                 imageVector = if (isFavoritesScreen) Icons.Filled.FavoriteBorder else Icons.Filled.Favorite,
-                                contentDescription = if (isFavoritesScreen) "Remove from Favorites" else "Add to Favorites"
+                                contentDescription = if (isFavoritesScreen) stringResource(id = R.string.remove_from_favorites_content_description) else stringResource(id = R.string.add_to_favorites_content_description)
                             )
                         }
                         var menuExpanded by remember { mutableStateOf(false) }
@@ -127,18 +128,18 @@ fun TopBar(
                                 if (isVibrationEnabled) performVibration(context)
                                 menuExpanded = true 
                             }) {
-                                Icon(Icons.Default.MoreVert, contentDescription = "More Options")
+                                Icon(Icons.Default.MoreVert, contentDescription = stringResource(id = R.string.more_options_content_description))
                             }
                             DropdownMenu(expanded = menuExpanded, onDismissRequest = { menuExpanded = false }) {
                                 DropdownMenuItem(
-                                    text = { Text("Copy") },
+                                    text = { Text(stringResource(id = R.string.copy_button)) },
                                     onClick = { if (isVibrationEnabled) performVibration(context); onCopy(); menuExpanded = false },
-                                    leadingIcon = { Icon(Icons.Default.ContentCopy, contentDescription = "Copy") }
+                                    leadingIcon = { Icon(Icons.Default.ContentCopy, contentDescription = stringResource(id = R.string.copy_button)) }
                                 )
                                 DropdownMenuItem(
-                                    text = { Text("Move") },
+                                    text = { Text(stringResource(id = R.string.move_button)) },
                                     onClick = { if (isVibrationEnabled) performVibration(context); onMove(); menuExpanded = false },
-                                    leadingIcon = { Icon(Icons.AutoMirrored.Filled.DriveFileMove, contentDescription = "Move") }                                )
+                                    leadingIcon = { Icon(Icons.AutoMirrored.Filled.DriveFileMove, contentDescription = stringResource(id = R.string.move_button)) }                                )
                             }
                         }
                     }
@@ -166,7 +167,7 @@ fun TopBar(
                     TextField(
                         value = searchQuery,
                         onValueChange = onSearchQueryChange,
-                        placeholder = { Text("Search...") },
+                        placeholder = { Text(stringResource(id = R.string.search_placeholder)) },
                         modifier = Modifier.fillMaxWidth().focusRequester(focusRequester)
                     )
                 } else {
@@ -180,7 +181,7 @@ fun TopBar(
                         if (isVibrationEnabled) performVibration(context)
                         onBackClick()
                     }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(id = R.string.back_content_description))
                     }
                 }
             },
@@ -191,14 +192,14 @@ fun TopBar(
                             if (isVibrationEnabled) performVibration(context)
                             onCloseSearch()
                         }) {
-                            Icon(Icons.Filled.Close, contentDescription = "Close Search")
+                            Icon(Icons.Filled.Close, contentDescription = stringResource(id = R.string.close_search_content_description))
                         }
                     } else {
                         IconButton(onClick = {
                             if (isVibrationEnabled) performVibration(context)
                             onSearchClick()
                         }) {
-                            Icon(Icons.Filled.Search, contentDescription = "Search")
+                            Icon(Icons.Filled.Search, contentDescription = stringResource(id = R.string.search_content_description))
                         }
                         var menuExpanded by remember { mutableStateOf(false) }
 
@@ -206,7 +207,7 @@ fun TopBar(
                             if (isVibrationEnabled) performVibration(context)
                             onFilterByDateClick()
                         }) {
-                            Icon(Icons.Filled.DateRange, contentDescription = "Filter by date")
+                            Icon(Icons.Filled.DateRange, contentDescription = stringResource(id = R.string.filter_by_date_content_description))
                         }
 
                         Box {
@@ -214,33 +215,33 @@ fun TopBar(
                                 if (isVibrationEnabled) performVibration(context)
                                 menuExpanded = true 
                             }) {
-                                Icon(Icons.AutoMirrored.Filled.Sort, contentDescription = "Sort By")
+                                Icon(Icons.AutoMirrored.Filled.Sort, contentDescription = stringResource(id = R.string.sort_by_content_description))
                             }
                             DropdownMenu(expanded = menuExpanded, onDismissRequest = { menuExpanded = false }) {
                                 DropdownMenuItem(
-                                    text = { Text("By Date Modified") },
+                                    text = { Text(stringResource(id = R.string.sort_by_date_modified)) },
                                     onClick = { if (isVibrationEnabled) performVibration(context); onSortTypeChange(SortType.DATE_MODIFIED); menuExpanded = false }
                                 )
                                 DropdownMenuItem(
-                                    text = { Text("By Date Added") },
+                                    text = { Text(stringResource(id = R.string.sort_by_date_added)) },
                                     onClick = { if (isVibrationEnabled) performVibration(context); onSortTypeChange(SortType.DATE_ADDED); menuExpanded = false }
                                 )
                                 DropdownMenuItem(
-                                    text = { Text("By Alphabet") },
+                                    text = { Text(stringResource(id = R.string.sort_by_alphabet)) },
                                     onClick = { if (isVibrationEnabled) performVibration(context); onSortTypeChange(SortType.ALPHABET); menuExpanded = false }
                                 )
                                 DropdownMenuItem(
-                                    text = { Text("By Size") },
+                                    text = { Text(stringResource(id = R.string.sort_by_size)) },
                                     onClick = { if (isVibrationEnabled) performVibration(context); onSortTypeChange(SortType.SIZE); menuExpanded = false }
                                 )
                                 DropdownMenuItem(
-                                    text = { Text("Reverse") },
-                                    trailingIcon = { Icon(Icons.Filled.SwapVert, contentDescription = "Reverse Sort") },
+                                    text = { Text(stringResource(id = R.string.reverse_sort)) },
+                                    trailingIcon = { Icon(Icons.Filled.SwapVert, contentDescription = stringResource(id = R.string.reverse_sort_content_description)) },
                                     onClick = { if (isVibrationEnabled) performVibration(context); onReverseSort(); menuExpanded = false }
                                 )
                                 if (selectedDate != null) {
                                     DropdownMenuItem(
-                                        text = { Text("Reset Date Filter") },
+                                        text = { Text(stringResource(id = R.string.reset_date_filter)) },
                                         onClick = { if (isVibrationEnabled) performVibration(context); onResetDateFilter(); menuExpanded = false }
                                     )
                                  }
@@ -251,7 +252,7 @@ fun TopBar(
                                 if (isVibrationEnabled) performVibration(context)
                                 onDetailsClick()
                             }) {
-                                Icon(Icons.Filled.Info, contentDescription = "Details")
+                                Icon(Icons.Filled.Info, contentDescription = stringResource(id = R.string.details_content_description))
                             }
                         }
                     }
@@ -274,32 +275,32 @@ fun BottomBar(
     
     NavigationBar {
         NavigationBarItem(
-            icon = { Icon(Icons.Filled.Settings, contentDescription = "Settings") },
-            label = { Text("Settings") },
+            icon = { Icon(Icons.Filled.Settings, contentDescription = stringResource(id = R.string.settings_content_description)) },
+            label = { Text(stringResource(id = R.string.screen_title_settings)) },
             selected = currentScreen is Screen.Settings,
             onClick = { if (isVibrationEnabled) performVibration(context); onSettingsClick() }
         )
         NavigationBarItem(
-            icon = { Icon(Icons.Filled.Delete, contentDescription = "Trash") },
-            label = { Text("Trash") },
+            icon = { Icon(Icons.Filled.Delete, contentDescription = stringResource(id = R.string.trash_content_description)) },
+            label = { Text(stringResource(id = R.string.screen_title_trash)) },
             selected = currentScreen is Screen.Trash,
             onClick = { if (isVibrationEnabled) performVibration(context); onScreenChange(Screen.Trash) }
         )
         NavigationBarItem(
-            icon = { Icon(Icons.Filled.PhotoLibrary, contentDescription = "Folders") },
-            label = { Text("Folders") },
+            icon = { Icon(Icons.Filled.PhotoLibrary, contentDescription = stringResource(id = R.string.folders_content_description)) },
+            label = { Text(stringResource(id = R.string.screen_title_folders)) },
             selected = currentScreen is Screen.Folders || currentScreen is Screen.FolderContent,
             onClick = { if (isVibrationEnabled) performVibration(context); onScreenChange(Screen.Folders) }
         )
         NavigationBarItem(
-            icon = { Icon(Icons.Default.PermMedia, contentDescription = "All Media") },
-            label = { Text("All Media") },
+            icon = { Icon(Icons.Default.PermMedia, contentDescription = stringResource(id = R.string.all_media_content_description)) },
+            label = { Text(stringResource(id = R.string.screen_title_all_media)) },
             selected = currentScreen is Screen.AllMedia,
             onClick = { if (isVibrationEnabled) performVibration(context); onScreenChange(Screen.AllMedia) }
         )
         NavigationBarItem(
-            icon = { Icon(Icons.Filled.Favorite, contentDescription = "Favorites") },
-            label = { Text("Favorites") },
+            icon = { Icon(Icons.Filled.Favorite, contentDescription = stringResource(id = R.string.favorites_content_description)) },
+            label = { Text(stringResource(id = R.string.screen_title_favorites)) },
             selected = currentScreen is Screen.Favorites,
             onClick = {
                 if (isVibrationEnabled) performVibration(context)
@@ -315,7 +316,7 @@ fun BottomBar(
                 if (tapCount == 10) {
                     if (isVibrationEnabled) performVibration(context)
                     tapCount = 0
-                    Toast.makeText(context, "UwU", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, context.getString(R.string.uwu_toast), Toast.LENGTH_SHORT).show()
                     val mediaPlayer = MediaPlayer.create(context, R.raw.uwu)
                     mediaPlayer.setOnCompletionListener { it.release() }
                     mediaPlayer.start()

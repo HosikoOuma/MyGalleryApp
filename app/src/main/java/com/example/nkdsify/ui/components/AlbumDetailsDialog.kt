@@ -12,7 +12,9 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.example.nkdsify.R
 import com.example.nkdsify.data.AlbumDetails
 import com.example.nkdsify.ui.utils.formatDateRange
 import com.example.nkdsify.ui.utils.formatFileSize
@@ -24,7 +26,7 @@ fun AlbumDetailsDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Album Details") },
+        title = { Text(stringResource(id = R.string.album_details_title)) },
         text = {
             if (details == null) {
                 Box(
@@ -36,19 +38,19 @@ fun AlbumDetailsDialog(
             } else {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     if (details.path != null) {
-                        Text("Path: ${details.path}")
+                        Text(stringResource(id = R.string.album_details_path, details.path))
                     }
-                    Text("Total Size: ${formatFileSize(details.totalSize)}")
+                    Text(stringResource(id = R.string.album_details_total_size, formatFileSize(details.totalSize)))
                     if (details.dateRange != null) {
-                        Text("Date Range: ${formatDateRange(details.dateRange.first, details.dateRange.second)}")
+                        Text(stringResource(id = R.string.album_details_date_range, formatDateRange(details.dateRange.first, details.dateRange.second)))
                     }
-                    Text("Items: ${details.itemCount}")
+                    Text(stringResource(id = R.string.album_details_items, details.itemCount.toString()))
                 }
             }
         },
         confirmButton = {
             TextButton(onClick = onDismiss) {
-                Text("OK")
+                Text(stringResource(id = R.string.dialog_ok))
             }
         }
     )

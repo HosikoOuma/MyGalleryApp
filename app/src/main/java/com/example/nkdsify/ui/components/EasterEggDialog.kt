@@ -13,6 +13,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.nkdsify.R
@@ -21,21 +22,21 @@ import com.example.nkdsify.R
 fun EasterEggDialog(onDismiss: () -> Unit) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Meow!") },
+        title = { Text(stringResource(id = R.string.easter_egg_title)) },
         text = {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Image(
                     painter = painterResource(id = R.drawable.avatar),
-                    contentDescription = "Avatar",
+                    contentDescription = stringResource(id = R.string.avatar_content_description),
                     modifier = Modifier.clip(RoundedCornerShape(16.dp))
                 )
                 Spacer(Modifier.height(8.dp))
-                Text("Made by NekoDosi (NKDS)", fontWeight = FontWeight.Bold)
+                Text(stringResource(id = R.string.easter_egg_author), fontWeight = FontWeight.Bold)
             }
         },
         confirmButton = {
             Button(onClick = onDismiss) {
-                Text("Close")
+                Text(stringResource(id = R.string.close_button))
             }
         }
     )

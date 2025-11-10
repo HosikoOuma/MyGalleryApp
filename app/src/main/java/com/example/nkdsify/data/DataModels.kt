@@ -74,3 +74,10 @@ enum class ZoomType {
     PINCH,
     DOUBLE_TAP
 }
+
+enum class Language(val code: String) {
+    SYSTEM("system"),
+    ENGLISH("en"),
+    RUSSIAN("ru"),
+    SPECIAL("xx")
+}

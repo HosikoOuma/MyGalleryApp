@@ -3,6 +3,7 @@ package com.example.nkdsify.ui.utils
 import android.content.Context
 import androidx.core.content.edit
 import com.example.nkdsify.data.BlurType
+import com.example.nkdsify.data.Language
 import com.example.nkdsify.data.Theme
 import com.example.nkdsify.data.ZoomType
 
@@ -26,6 +27,20 @@ object SettingsRepository {
     private const val USE_LARGE_FAB_KEY = "use_large_fab"
     private const val AUTO_DELETE_TRASH_ENABLED_KEY = "auto_delete_trash_enabled"
     private const val AUTO_DELETE_TRASH_DAYS_KEY = "auto_delete_trash_days"
+    private const val LANGUAGE_KEY = "language"
+
+    fun setLanguage(context: Context, language: Language) {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit(commit = true) {
+            putString(LANGUAGE_KEY, language.name)
+        }
+    }
+
+    fun getLanguage(context: Context): Language {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val languageName = prefs.getString(LANGUAGE_KEY, Language.SYSTEM.name) ?: Language.SYSTEM.name
+        return Language.valueOf(languageName)
+    }
 
     fun setAutoDeleteTrashEnabled(context: Context, enabled: Boolean) {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)

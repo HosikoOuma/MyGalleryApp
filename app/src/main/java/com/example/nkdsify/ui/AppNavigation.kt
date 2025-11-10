@@ -16,6 +16,7 @@ import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.platform.SoftwareKeyboardController
 import coil.ImageLoader
 import com.example.nkdsify.data.BlurType
+import com.example.nkdsify.data.Language
 import com.example.nkdsify.data.MediaFolder
 import com.example.nkdsify.data.MediaItem
 import com.example.nkdsify.data.MediaViewerState
@@ -95,7 +96,9 @@ fun AppNavigation(
     autoDeleteTrashEnabled: Boolean,
     onAutoDeleteTrashEnabledChange: (Boolean) -> Unit,
     autoDeleteTrashDays: Int,
-    onAutoDeleteTrashDaysChange: (Int) -> Unit
+    onAutoDeleteTrashDaysChange: (Int) -> Unit,
+    selectedLanguage: Language,
+    onLanguageChange: (Language) -> Unit
 ) {
     val visibleFolders = remember(allFolders, hiddenFolders, isSearchActive, searchQuery) {
         val folders = allFolders.filterNot { hiddenFolders.contains(it.id.toString()) }
@@ -252,7 +255,9 @@ fun AppNavigation(
                     autoDeleteTrashEnabled = autoDeleteTrashEnabled,
                     onAutoDeleteTrashEnabledChange = onAutoDeleteTrashEnabledChange,
                     autoDeleteTrashDays = autoDeleteTrashDays,
-                    onAutoDeleteTrashDaysChange = onAutoDeleteTrashDaysChange
+                    onAutoDeleteTrashDaysChange = onAutoDeleteTrashDaysChange,
+                    selectedLanguage = selectedLanguage,
+                    onLanguageChange = onLanguageChange
                 )
             }
 
