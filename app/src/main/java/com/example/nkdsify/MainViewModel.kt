@@ -128,32 +128,176 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun clearTrash() {
+    // Export favorites JSON to Downloads — callback on main: (success, message)
+    fun exportFavorites(onResult: (Boolean, String?) -> Unit) {
         viewModelScope.launch(Dispatchers.IO) {
-            TrashRepository.clearTrash(getApplication())
-            // refresh
-            trashedItems.value = loadTrashedMediaItems(getApplication(), SortType.DATE_MODIFIED, false)
-        }
-    }
-
-    fun restoreFromTrash(uris: List<Uri>) {
-        viewModelScope.launch(Dispatchers.IO) {
-            TrashRepository.restoreFromTrash(getApplication(), uris)
-            trashedItems.value = loadTrashedMediaItems(getApplication(), SortType.DATE_MODIFIED, false)
-        }
-    }
-
-    fun copyToTrashAndDelete(uris: List<Uri>) {
-        viewModelScope.launch(Dispatchers.IO) {
-            val copied = TrashRepository.copyToTrash(getApplication(), uris)
-            // try to delete originals
-            var itemsDeleted = false
-            copied.forEach { uri ->
-                try {
-                    if (getApplication< Application>().contentResolver.delete(uri, null, null) > 0) itemsDeleted = true
-                } catch (_: Exception) {}
+            try {
+                val json = com.google.gson.Gson().toJson(favorites.map { it.toString() })
+                val values = android.content.ContentValues().apply {
+                    put(android.provider.MediaStore.MediaColumns.DISPLAY_NAME, "favorites_backup.json")
+                    put(android.provider.MediaStore.MediaColumns.MIME_TYPE, "application/json")
+                    put(android.provider.MediaStore.MediaColumns.RELATIVE_PATH, android.os.Environment.DIRECTORY_DOWNLOADS)
+                }
+                val uri = getApplication<Application>().contentResolver.insert(android.provider.MediaStore.Downloads.EXTERNAL_CONTENT_URI, values)
+                if (uri != null) {
+                    getApplication<Application>().contentResolver.openOutputStream(uri)?.use { it.write(json.toByteArray()) }
+                    withContext(Dispatchers.Main) { onResult(true, null) }
+                } else {
+                    withContext(Dispatchers.Main) { onResult(false, "failed_to_create") }
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) { onResult(false, e.message ?: "error") }
             }
-            if (itemsDeleted) trashedItems.value = loadTrashedMediaItems(getApplication(), SortType.DATE_MODIFIED, false)
+        }
+    }
+
+    fun exportTags(onResult: (Boolean, String?) -> Unit) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val json = com.google.gson.Gson().toJson(tags.value)
+                val values = android.content.ContentValues().apply {
+                    put(android.provider.MediaStore.MediaColumns.DISPLAY_NAME, "tags_backup.json")
+                    put(android.provider.MediaStore.MediaColumns.MIME_TYPE, "application/json")
+                    put(android.provider.MediaStore.MediaColumns.RELATIVE_PATH, android.os.Environment.DIRECTORY_DOWNLOADS)
+                }
+                val uri = getApplication<Application>().contentResolver.insert(android.provider.MediaStore.Downloads.EXTERNAL_CONTENT_URI, values)
+                if (uri != null) {
+                    getApplication<Application>().contentResolver.openOutputStream(uri)?.use { it.write(json.toByteArray()) }
+                    withContext(Dispatchers.Main) { onResult(true, null) }
+                } else {
+                    withContext(Dispatchers.Main) { onResult(false, "failed_to_create") }
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) { onResult(false, e.message ?: "error") }
+            }
+        }
+    }
+
+    fun renameItem(uri: Uri, newName: String, onResult: (Boolean) -> Unit) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                // reuse utility
+                com.example.nkdsify.ui.utils.renameMedia(getApplication(), uri, newName)
+                withContext(Dispatchers.Main) { onResult(true) }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) { onResult(false) }
+            }
+        }
+    }
+
+    fun removeFromTrash(uris: List<Uri>, onResult: (Boolean) -> Unit = {}) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                TrashRepository.removeFromTrash(getApplication(), uris)
+                // refresh trashedItems
+                val updated = loadTrashedMediaItems(getApplication(), SortType.DATE_MODIFIED, false)
+                withContext(Dispatchers.Main) {
+                    trashedItems.value = updated
+                    onResult(true)
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) { onResult(false) }
+            }
+        }
+    }
+
+    fun clearTrash(onResult: (Boolean) -> Unit = {}) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                TrashRepository.clearTrash(getApplication())
+                val updated = loadTrashedMediaItems(getApplication(), SortType.DATE_MODIFIED, false)
+                withContext(Dispatchers.Main) {
+                    trashedItems.value = updated
+                    onResult(true)
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) { onResult(false) }
+            }
+        }
+    }
+
+    fun copyToTrashAndDelete(uris: List<Uri>, onResult: (Boolean) -> Unit = {}) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val copiedUris = TrashRepository.copyToTrash(getApplication(), uris)
+                if (copiedUris.isNotEmpty()) {
+                    deleteMedia(getApplication(), copiedUris)
+                }
+                // refresh data
+                val folders = loadMediaFolders(getApplication(), SortType.DATE_MODIFIED, false, null)
+                val all = loadAllMedia(getApplication(), SortType.DATE_MODIFIED, false, SettingsRepository.getHiddenFolders(getApplication()), null)
+                val trash = loadTrashedMediaItems(getApplication(), SortType.DATE_MODIFIED, false)
+                withContext(Dispatchers.Main) {
+                    allFolders.value = folders
+                    allMedia.value = all
+                    trashedItems.value = trash
+                    onResult(true)
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) { onResult(false) }
+            }
+        }
+    }
+
+    fun restoreFromTrash(uris: List<Uri>, onResult: (Boolean) -> Unit = {}) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                TrashRepository.restoreFromTrash(getApplication(), uris)
+                // refresh data
+                val folders = loadMediaFolders(getApplication(), SortType.DATE_MODIFIED, false, null)
+                val all = loadAllMedia(getApplication(), SortType.DATE_MODIFIED, false, SettingsRepository.getHiddenFolders(getApplication()), null)
+                val trash = loadTrashedMediaItems(getApplication(), SortType.DATE_MODIFIED, false)
+                withContext(Dispatchers.Main) {
+                    allFolders.value = folders
+                    allMedia.value = all
+                    trashedItems.value = trash
+                    onResult(true)
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) { onResult(false) }
+            }
+        }
+    }
+
+    fun performFileOperation(uris: List<Uri>, folderPath: String, operation: FileOperation?, onComplete: (Boolean) -> Unit = {}) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                if (operation == FileOperation.COPY) {
+                    uris.forEach { com.example.nkdsify.ui.utils.copyMediaToFolder(getApplication(), it, folderPath) }
+                } else if (operation == FileOperation.MOVE) {
+                    uris.forEach { com.example.nkdsify.ui.utils.moveMediaToFolder(getApplication(), it, folderPath) }
+                }
+                // refresh data
+                val folders = loadMediaFolders(getApplication(), SortType.DATE_MODIFIED, false, null)
+                val all = loadAllMedia(getApplication(), SortType.DATE_MODIFIED, false, SettingsRepository.getHiddenFolders(getApplication()), null)
+                withContext(Dispatchers.Main) {
+                    allFolders.value = folders
+                    allMedia.value = all
+                    onComplete(true)
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) { onComplete(false) }
+            }
+        }
+    }
+
+    fun removeTagFromAllItems(tag: String, onComplete: () -> Unit = {}) {
+        viewModelScope.launch(Dispatchers.IO) {
+            TagsRepository.removeTagFromAllItems(getApplication(), tag)
+            withContext(Dispatchers.Main) {
+                tags.value = TagsRepository.getTags(getApplication())
+                onComplete()
+            }
+        }
+    }
+
+    fun renameTag(oldTag: String, newTag: String, onComplete: () -> Unit = {}) {
+        viewModelScope.launch(Dispatchers.IO) {
+            TagsRepository.renameTag(getApplication(), oldTag, newTag)
+            withContext(Dispatchers.Main) {
+                tags.value = TagsRepository.getTags(getApplication())
+                onComplete()
+            }
         }
     }
 }

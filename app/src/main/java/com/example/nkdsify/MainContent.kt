@@ -427,7 +427,7 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
             onRenameFromDetails = { uri -> showRenameDialog = uri; showDetailsDialog = null },
             showRenameDialog = showRenameDialog,
             onDismissRenameDialog = { showRenameDialog = null },
-            onRenameItem = { uri, newName -> renameMedia(context, uri, newName); refreshTrigger++ },
+            onRenameItem = { uri, newName -> vm.renameItem(uri, newName) { ok -> if (ok) refreshTrigger++ } },
             showAlbumDetailsDialog = showAlbumDetailsDialog,
             albumDetailsProvider = {
                 val screen = currentScreen
@@ -461,48 +461,18 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
             showBackupAndRestoreDialog = showBackupAndRestoreDialog,
             onDismissBackupAndRestore = { showBackupAndRestoreDialog = false },
             onExportFavorites = {
-                 val json = Gson().toJson(favorites.map { it.toString() })
-                 val values = ContentValues().apply {
-                     put(MediaStore.MediaColumns.DISPLAY_NAME, "favorites_backup.json")
-                     put(MediaStore.MediaColumns.MIME_TYPE, "application/json")
-                     put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS)
-                 }
-                 val uri = context.contentResolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values)
-                 if (uri != null) {
-                     try {
-                         context.contentResolver.openOutputStream(uri)?.use {
-                             it.write(json.toByteArray())
-                         }
-                         Toast.makeText(context, context.getString(R.string.favorites_exported_successfully), Toast.LENGTH_SHORT).show()
-                     } catch (_: Exception) {
-                         Toast.makeText(context, context.getString(R.string.failed_to_export_favorites), Toast.LENGTH_SHORT).show()
-                     }
-                 } else {
-                     Toast.makeText(context, context.getString(R.string.failed_to_create_backup_file), Toast.LENGTH_SHORT).show()
-                 }
-             },
+                vm.exportFavorites { success, err ->
+                    if (success) Toast.makeText(context, context.getString(R.string.favorites_exported_successfully), Toast.LENGTH_SHORT).show()
+                    else Toast.makeText(context, context.getString(R.string.failed_to_export_favorites), Toast.LENGTH_SHORT).show()
+                }
+            },
             onImportFavorites = { appLaunchers.launchImportFavorites() },
             onExportTags = {
-                 val json = Gson().toJson(tags)
-                 val values = ContentValues().apply {
-                     put(MediaStore.MediaColumns.DISPLAY_NAME, "tags_backup.json")
-                     put(MediaStore.MediaColumns.MIME_TYPE, "application/json")
-                     put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS)
-                 }
-                 val uri = context.contentResolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values)
-                 if (uri != null) {
-                     try {
-                         context.contentResolver.openOutputStream(uri)?.use {
-                             it.write(json.toByteArray())
-                         }
-                         Toast.makeText(context, context.getString(R.string.tags_exported_successfully), Toast.LENGTH_SHORT).show()
-                     } catch (_: Exception) {
-                         Toast.makeText(context, context.getString(R.string.failed_to_export_tags), Toast.LENGTH_SHORT).show()
-                     }
-                 } else {
-                     Toast.makeText(context, context.getString(R.string.failed_to_create_backup_file), Toast.LENGTH_SHORT).show()
-                 }
-             },
+                vm.exportTags { success, err ->
+                    if (success) Toast.makeText(context, context.getString(R.string.tags_exported_successfully), Toast.LENGTH_SHORT).show()
+                    else Toast.makeText(context, context.getString(R.string.failed_to_export_tags), Toast.LENGTH_SHORT).show()
+                }
+            },
             onImportTags = { appLaunchers.launchImportTags() },
             showDatePicker = showDatePicker,
             datePickerStateProvider = { datePickerState },
@@ -514,7 +484,7 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
                     vm.clearTrash()
                     isClearingTrash = false
                 } else {
-                    TrashRepository.removeFromTrash(context, itemsToDelete)
+                    vm.removeFromTrash(itemsToDelete) { ok -> if (!ok) Toast.makeText(context, context.getString(R.string.failed_to_remove_from_trash), Toast.LENGTH_SHORT).show() }
                 }
                 if (isVibrationEnabled) performVibration(context)
                 refreshTrigger++
@@ -545,17 +515,14 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
             showFolderSelectionDialog = showFolderSelectionDialog,
             onDismissFolderSelection = { showFolderSelectionDialog = false },
             onFolderSelected = { destinationFolder ->
-                coroutineScope.launch {
-                    val folderPath = destinationFolder.items.firstOrNull()?.let { getFolderPathFromUri(context, it.uri) } ?: destinationFolder.name
-                    when (currentFileOperation) {
-                        FileOperation.COPY -> filesToProcess.forEach { copyMediaToFolder(context, it, folderPath) }
-                        FileOperation.MOVE -> filesToProcess.forEach { moveMediaToFolder(context, it, folderPath); viewerState = null }
-                        null -> {}
-                    }
-                    refreshTrigger++
+                val folderPath = destinationFolder.items.firstOrNull()?.let { getFolderPathFromUri(context, it.uri) } ?: destinationFolder.name
+                vm.performFileOperation(filesToProcess, folderPath, currentFileOperation) { success ->
+                    if (success) Toast.makeText(context, context.getString(R.string.operation_successful), Toast.LENGTH_SHORT).show()
+                    else Toast.makeText(context, context.getString(R.string.operation_failed), Toast.LENGTH_SHORT).show()
                     showFolderSelectionDialog = false
                     filesToProcess = emptyList()
                     currentFileOperation = null
+                    if (currentFileOperation == FileOperation.MOVE) viewerState = null
                 }
             },
             favorites = favorites,

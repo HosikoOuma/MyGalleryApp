@@ -162,4 +162,7 @@
     <string name="media_section_title">Хуедия</string>
     <string name="select_a_folder_title">Селект папо4ку</string>
     <string name="no_folders_found">Папо4ек нема, братик(</string>
+    <string name="failed_to_remove_from_trash">Failed to remove from trash!</string>
+    <string name="operation_successful">Operation successful!</string>
+    <string name="operation_failed">Operation failed!</string>
 </resources>
