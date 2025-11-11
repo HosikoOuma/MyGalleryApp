@@ -71,6 +71,8 @@ dependencies {
     // Compose Tooling
     implementation(libs.androidx.ui.tooling.preview)
     debugImplementation(libs.androidx.ui.tooling)
+    // Lifecycle ViewModel for Compose
+    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.6.1")
 
     // Coil for image loading (versions are not in Compose BOM)
     implementation("io.coil-kt:coil-compose:2.7.0")

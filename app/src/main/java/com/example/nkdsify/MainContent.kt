@@ -92,6 +92,7 @@ import androidx.annotation.OptIn
 import androidx.compose.material3.LargeFloatingActionButton
 import androidx.compose.ui.res.stringResource
 import com.example.nkdsify.ui.components.FolderSelectionDialog
+import androidx.lifecycle.viewmodel.compose.viewModel
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalComposeUiApi::class)
 @Composable
@@ -115,6 +116,15 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
 
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
+    // ViewModel: перенос бизнес-логики и данных
+    val vm: MainViewModel = viewModel()
+    val allFolders by vm.allFolders
+    val allMedia by vm.allMedia
+    val favoriteItems by vm.favoriteItems
+    val trashedItems by vm.trashedItems
+    val tags by vm.tags
+    val favorites = vm.favorites
+
     var selectedTheme by remember { mutableStateOf(SettingsRepository.getTheme(context)) }
     var selectedZoomType by remember { mutableStateOf(SettingsRepository.getZoomType(context)) }
     var selectedBlurType by remember { mutableStateOf(SettingsRepository.getBlurType(context)) }
@@ -164,8 +174,7 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
         var hasPermissions by remember { mutableStateOf(permissionsToRequest.all { ContextCompat.checkSelfPermission(context, it) == PackageManager.PERMISSION_GRANTED }) }
         var hasManageStoragePermission by remember { mutableStateOf(if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) Environment.isExternalStorageManager() else true) }
 
-        var allFolders by remember { mutableStateOf<List<MediaFolder>>(emptyList()) }
-        var allMedia by remember { mutableStateOf<List<MediaItem>>(emptyList()) }
+        // данные берутся из ViewModel: allFolders/allMedia/favoriteItems/trashedItems/tags
         var viewerState by remember { mutableStateOf<MediaViewerState?>(null) }
 
         LaunchedEffect(viewerState) {
@@ -209,15 +218,7 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
 
         var isSettingWallpaper by remember { mutableStateOf(false) }
 
-        // Favorites, tags и selection объявляем до appLaunchers, чтобы колбэки могли на них ссылаться
-        val favorites = remember {
-            val initialFavorites = FavoritesRepository.getFavorites(context).map { it.toUri() }
-            mutableStateListOf(*initialFavorites.toTypedArray())
-        }
-        var favoriteItems by remember { mutableStateOf<List<MediaItem>>(emptyList()) }
-        var trashedItems by remember { mutableStateOf<List<MediaItem>>(emptyList()) }
-        var tags by remember { mutableStateOf(TagsRepository.getTags(context)) }
-
+        // selection остаётся в UI
         val selectedItems = remember { mutableStateListOf<Uri>() }
         val isSelectionMode = selectedItems.isNotEmpty()
 
@@ -258,38 +259,10 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
                  showDetailsDialog = null
              },
              onImportFavoritesResult = { uri ->
-                 uri?.let {
-                     try {
-                         context.contentResolver.openInputStream(it)?.use { inputStream ->
-                             val json = BufferedReader(InputStreamReader(inputStream)).readText()
-                             val type = object : TypeToken<Set<String>>() {}.type
-                             val importedFavorites: Set<String> = Gson().fromJson(json, type)
-                             favorites.clear()
-                             favorites.addAll(importedFavorites.map { uriString -> uriString.toUri() })
-                             refreshTrigger++
-                             Toast.makeText(context, context.getString(R.string.favorites_imported_successfully), Toast.LENGTH_SHORT).show()
-                         }
-                     } catch (_: Exception) {
-                         Toast.makeText(context, context.getString(R.string.failed_to_import_favorites), Toast.LENGTH_SHORT).show()
-                     }
-                 }
+                 vm.importFavoritesFromUri(uri) { context.contentResolver }
              },
              onImportTagsResult = { uri ->
-                 uri?.let {
-                     try {
-                         context.contentResolver.openInputStream(it)?.use { inputStream ->
-                             val json = BufferedReader(InputStreamReader(inputStream)).readText()
-                             val type = object : TypeToken<Map<String, Set<String>>>() {}.type
-                             val importedTags: Map<String, Set<String>> = Gson().fromJson(json, type)
-                             tags = importedTags
-                             TagsRepository.saveTags(context, tags)
-                             refreshTrigger++
-                             Toast.makeText(context, context.getString(R.string.tags_imported_successfully), Toast.LENGTH_SHORT).show()
-                         }
-                     } catch (_: Exception) {
-                         Toast.makeText(context, context.getString(R.string.failed_to_import_tags), Toast.LENGTH_SHORT).show()
-                     }
-                 }
+                 vm.importTagsFromUri(uri) { context.contentResolver }
              }
          )
 
@@ -304,47 +277,39 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
         }
 
         LaunchedEffect(Unit) {
-            coroutineScope.launch(Dispatchers.IO) {
-                if (SettingsRepository.isAutoDeleteTrashEnabled(context)) {
-                    val days = SettingsRepository.getAutoDeleteTrashDays(context)
-                    TrashRepository.deleteExpired(context, days)
-                }
-            }
+            // Перенесено в ViewModel
+            vm.deleteExpiredTrashIfNeeded()
         }
 
         LaunchedEffect(initialUri, hasPermissions) {
             if (initialUri != null && hasPermissions) {
-                withContext(Dispatchers.IO) {
-                    val loadedFolders = loadMediaFolders(context, sortType, sortAscending, null)
+                // Загружаем данные в VM и затем пытаемся найти initialUri в загруженных папках
+                vm.loadData(sortType, sortAscending, null, hiddenFolders)
+                // Если VM уже содержит папки, попробуем найти элемент — иначе сработает LaunchedEffect на allFolders
+                val mediaUri = if (initialUri.scheme == "file") {
+                    val path = initialUri.path
+                    context.contentResolver.query(MediaStore.Files.getContentUri("external"), arrayOf(MediaStore.Files.FileColumns._ID), "${MediaStore.Files.FileColumns.DATA} = ?", arrayOf(path), null)?.use { cursor ->
+                        if (cursor.moveToFirst()) {
+                            val id = cursor.getLong(0)
+                            ContentUris.withAppendedId(MediaStore.Files.getContentUri("external"), id)
+                        } else null
+                    }
+                } else initialUri
+
+                if (mediaUri != null) {
+                    val loaded = vm.allFolders.value
                     var targetFolder: MediaFolder? = null
                     var targetItemIndex = -1
-
-                    val mediaUri = if (initialUri.scheme == "file") {
-                        val path = initialUri.path
-                        context.contentResolver.query(MediaStore.Files.getContentUri("external"), arrayOf(MediaStore.Files.FileColumns._ID), "${MediaStore.Files.FileColumns.DATA} = ?", arrayOf(path), null)?.use { cursor ->
-                            if (cursor.moveToFirst()) {
-                                val id = cursor.getLong(0)
-                                ContentUris.withAppendedId(MediaStore.Files.getContentUri("external"), id)
-                            } else null
-                        }
-                    } else {
-                        initialUri
-                    }
-
-                    if (mediaUri != null) {
-                        for (folder in loadedFolders) {
-                            val index = folder.items.indexOfFirst { item -> item.uri == mediaUri }
-                            if (index != -1) {
-                                targetFolder = folder
-                                targetItemIndex = index
-                                break
-                            }
+                    for (folder in loaded) {
+                        val index = folder.items.indexOfFirst { item -> item.uri == mediaUri }
+                        if (index != -1) {
+                            targetFolder = folder
+                            targetItemIndex = index
+                            break
                         }
                     }
-
-                    if (targetFolder != null) {
-                        viewerState = MediaViewerState(targetFolder.items, targetItemIndex)
-                    } else {
+                    if (targetFolder != null) viewerState = MediaViewerState(targetFolder.items, targetItemIndex)
+                    else {
                         val details = getMediaDetails(context, initialUri)
                         val name = details?.name ?: ""
                         val isVideo = context.contentResolver.getType(initialUri)?.startsWith("video/") == true
@@ -354,17 +319,42 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
             }
         }
 
-        LaunchedEffect(favorites.toList()) {
-            val favoriteStrings = favorites.map { it.toString() }.toSet()
-            FavoritesRepository.saveFavorites(context, favoriteStrings)
+        LaunchedEffect(hasPermissions, sortType, sortAscending, selectedDate, hiddenFolders, refreshTrigger) {
+            if (hasPermissions) {
+                vm.loadData(sortType, sortAscending, selectedDate, hiddenFolders)
+            }
         }
 
-        LaunchedEffect(currentScreen) {
-            if (currentScreen !is Screen.FolderContent && currentScreen !is Screen.Favorites) {
-                isSearchActive = false
-                searchQuery = ""
+        LaunchedEffect(allFolders) {
+             val screen = currentScreen
+             if (screen is Screen.FolderContent) {
+                 val updatedFolder = allFolders.find { it.id == screen.folder.id }
+                 if (updatedFolder == null || updatedFolder.items.isEmpty()) {
+                     currentScreen = Screen.Folders
+                 } else {
+                     if (screen.folder != updatedFolder) {
+                         currentScreen = Screen.FolderContent(updatedFolder)
+                     }
+                 }
+             }
+         }
+
+        LaunchedEffect(hasPermissions, sortType, sortAscending, selectedDate, favorites.size, refreshTrigger) {
+            if (hasPermissions) {
+                vm.loadFavoriteItems(sortType, sortAscending, selectedDate)
             }
-            selectedItems.clear()
+        }
+
+        LaunchedEffect(favorites.toList()) {
+            vm.saveFavoritesToRepo()
+        }
+
+        LaunchedEffect(selectedTheme) {
+            SettingsRepository.setTheme(context, selectedTheme)
+        }
+
+        LaunchedEffect(selectedLanguage) {
+            SettingsRepository.setLanguage(context, selectedLanguage)
         }
 
         LaunchedEffect(Unit) {
@@ -377,34 +367,6 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
                     intent.data = "package:${context.packageName}".toUri()
                     appLaunchers.launchManageStorage(intent)
                 }
-            }
-        }
-
-        LaunchedEffect(hasPermissions, sortType, sortAscending, selectedDate, hiddenFolders, refreshTrigger) {
-            if (hasPermissions) {
-                allFolders = withContext(Dispatchers.IO) { loadMediaFolders(context, sortType, sortAscending, selectedDate) }
-                trashedItems = withContext(Dispatchers.IO) { loadTrashedMediaItems(context, sortType, sortAscending) }
-                allMedia = withContext(Dispatchers.IO) { loadAllMedia(context, sortType, sortAscending, hiddenFolders, selectedDate) }
-            }
-        }
-
-        LaunchedEffect(allFolders) {
-            val screen = currentScreen
-            if (screen is Screen.FolderContent) {
-                val updatedFolder = allFolders.find { it.id == screen.folder.id }
-                if (updatedFolder == null || updatedFolder.items.isEmpty()) {
-                    currentScreen = Screen.Folders
-                } else {
-                    if (screen.folder != updatedFolder) {
-                        currentScreen = Screen.FolderContent(updatedFolder)
-                    }
-                }
-            }
-        }
-
-        LaunchedEffect(hasPermissions, sortType, sortAscending, selectedDate, favorites.size, refreshTrigger) {
-            if (hasPermissions) {
-                favoriteItems = withContext(Dispatchers.IO) { loadFavoriteMediaItems(context, favorites.toSet(), sortType, sortAscending, selectedDate) }
             }
         }
 
@@ -440,7 +402,7 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
             },
             showTagDialog = showTagDialog,
             onDismissTagDialog = { showTagDialog = null },
-            onSaveTagsForItem = { uri, tagSet -> TagsRepository.setTagsForItem(context, uri, tagSet); tags = TagsRepository.getTags(context) },
+            onSaveTagsForItem = { uri, tagSet -> TagsRepository.setTagsForItem(context, uri, tagSet); vm.refreshTags() },
             tagsMap = tags,
             showBulkTagDialog = showBulkTagDialog,
             onDismissBulkTagDialog = { showBulkTagDialog = false },
@@ -454,7 +416,7 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
                     currentTags.removeAll(tagsToRemove)
                     TagsRepository.setTagsForItem(context, uri, currentTags)
                 }
-                tags = TagsRepository.getTags(context)
+                vm.refreshTags()
             },
             selectedItemsForBulk = selectedItems.toList(),
             showDetailsDialog = showDetailsDialog,
@@ -499,48 +461,48 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
             showBackupAndRestoreDialog = showBackupAndRestoreDialog,
             onDismissBackupAndRestore = { showBackupAndRestoreDialog = false },
             onExportFavorites = {
-                val json = Gson().toJson(favorites.map { it.toString() })
-                val values = ContentValues().apply {
-                    put(MediaStore.MediaColumns.DISPLAY_NAME, "favorites_backup.json")
-                    put(MediaStore.MediaColumns.MIME_TYPE, "application/json")
-                    put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS)
-                }
-                val uri = context.contentResolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values)
-                if (uri != null) {
-                    try {
-                        context.contentResolver.openOutputStream(uri)?.use {
-                            it.write(json.toByteArray())
-                        }
-                        Toast.makeText(context, context.getString(R.string.favorites_exported_successfully), Toast.LENGTH_SHORT).show()
-                    } catch (_: Exception) {
-                        Toast.makeText(context, context.getString(R.string.failed_to_export_favorites), Toast.LENGTH_SHORT).show()
-                    }
-                } else {
-                    Toast.makeText(context, context.getString(R.string.failed_to_create_backup_file), Toast.LENGTH_SHORT).show()
-                }
-            },
+                 val json = Gson().toJson(favorites.map { it.toString() })
+                 val values = ContentValues().apply {
+                     put(MediaStore.MediaColumns.DISPLAY_NAME, "favorites_backup.json")
+                     put(MediaStore.MediaColumns.MIME_TYPE, "application/json")
+                     put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS)
+                 }
+                 val uri = context.contentResolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values)
+                 if (uri != null) {
+                     try {
+                         context.contentResolver.openOutputStream(uri)?.use {
+                             it.write(json.toByteArray())
+                         }
+                         Toast.makeText(context, context.getString(R.string.favorites_exported_successfully), Toast.LENGTH_SHORT).show()
+                     } catch (_: Exception) {
+                         Toast.makeText(context, context.getString(R.string.failed_to_export_favorites), Toast.LENGTH_SHORT).show()
+                     }
+                 } else {
+                     Toast.makeText(context, context.getString(R.string.failed_to_create_backup_file), Toast.LENGTH_SHORT).show()
+                 }
+             },
             onImportFavorites = { appLaunchers.launchImportFavorites() },
             onExportTags = {
-                val json = Gson().toJson(tags)
-                val values = ContentValues().apply {
-                    put(MediaStore.MediaColumns.DISPLAY_NAME, "tags_backup.json")
-                    put(MediaStore.MediaColumns.MIME_TYPE, "application/json")
-                    put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS)
-                }
-                val uri = context.contentResolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values)
-                if (uri != null) {
-                    try {
-                        context.contentResolver.openOutputStream(uri)?.use {
-                            it.write(json.toByteArray())
-                        }
-                        Toast.makeText(context, context.getString(R.string.tags_exported_successfully), Toast.LENGTH_SHORT).show()
-                    } catch (_: Exception) {
-                        Toast.makeText(context, context.getString(R.string.failed_to_export_tags), Toast.LENGTH_SHORT).show()
-                    }
-                } else {
-                    Toast.makeText(context, context.getString(R.string.failed_to_create_backup_file), Toast.LENGTH_SHORT).show()
-                }
-            },
+                 val json = Gson().toJson(tags)
+                 val values = ContentValues().apply {
+                     put(MediaStore.MediaColumns.DISPLAY_NAME, "tags_backup.json")
+                     put(MediaStore.MediaColumns.MIME_TYPE, "application/json")
+                     put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS)
+                 }
+                 val uri = context.contentResolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values)
+                 if (uri != null) {
+                     try {
+                         context.contentResolver.openOutputStream(uri)?.use {
+                             it.write(json.toByteArray())
+                         }
+                         Toast.makeText(context, context.getString(R.string.tags_exported_successfully), Toast.LENGTH_SHORT).show()
+                     } catch (_: Exception) {
+                         Toast.makeText(context, context.getString(R.string.failed_to_export_tags), Toast.LENGTH_SHORT).show()
+                     }
+                 } else {
+                     Toast.makeText(context, context.getString(R.string.failed_to_create_backup_file), Toast.LENGTH_SHORT).show()
+                 }
+             },
             onImportTags = { appLaunchers.launchImportTags() },
             showDatePicker = showDatePicker,
             datePickerStateProvider = { datePickerState },
@@ -549,7 +511,7 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
             showConfirmDeleteDialog = showConfirmDeleteDialog,
             onConfirmDelete = {
                 if (isClearingTrash) {
-                    TrashRepository.clearTrash(context)
+                    vm.clearTrash()
                     isClearingTrash = false
                 } else {
                     TrashRepository.removeFromTrash(context, itemsToDelete)
@@ -563,21 +525,7 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
             onDismissConfirmDelete = { showConfirmDeleteDialog = false },
             showConfirmTrashDialog = showConfirmTrashDialog,
             onConfirmTrash = {
-                val urisToTrash = itemsToTrash
-                coroutineScope.launch(Dispatchers.IO) {
-                    val copiedUris = TrashRepository.copyToTrash(context, urisToTrash)
-                    if (copiedUris.isNotEmpty()) {
-                        var itemsDeleted = false
-                        copiedUris.forEach { uri ->
-                            try {
-                                if (context.contentResolver.delete(uri, null, null) > 0) {
-                                    itemsDeleted = true
-                                }
-                            } catch (_: Exception) {}
-                        }
-                        if (itemsDeleted) withContext(Dispatchers.Main) { refreshTrigger++ }
-                    }
-                }
+                vm.copyToTrashAndDelete(itemsToTrash)
                 if (isVibrationEnabled) performVibration(context)
                 selectedItems.clear()
                 itemsToTrash = emptyList()
@@ -587,7 +535,7 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
             onDismissConfirmTrash = { showConfirmTrashDialog = false },
             showConfirmRestoreDialog = showConfirmRestoreDialog,
             onConfirmRestore = {
-                TrashRepository.restoreFromTrash(context, itemsToRestore)
+                vm.restoreFromTrash(itemsToRestore)
                 selectedItems.clear()
                 refreshTrigger++
                 showConfirmRestoreDialog = false
@@ -613,7 +561,7 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
             favorites = favorites,
             favoriteItems = favoriteItems,
             tags = tags
-        )
+         )
 
         Box(Modifier.fillMaxSize()) {
             BackHandler(enabled = isSelectionMode) {
@@ -680,7 +628,7 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
                             if (currentScreen is Screen.Favorites) {
                                 val urisToUnfavorite = selectedItems.toList()
                                 favorites.removeAll(urisToUnfavorite.toSet())
-                                favoriteItems = favoriteItems.filterNot { it.uri in urisToUnfavorite.toSet() }
+                                vm.favoriteItems.value = vm.favoriteItems.value.filterNot { it.uri in urisToUnfavorite.toSet() }
                             } else {
                                 val urisToAdd = selectedItems.filterNot { favorites.contains(it) }
                                 if (urisToAdd.isNotEmpty()) {
@@ -864,12 +812,12 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
                             onDeleteTag = {
                                 if (isVibrationEnabled) performVibration(context)
                                 TagsRepository.removeTagFromAllItems(context, it)
-                                tags = TagsRepository.getTags(context)
+                                vm.refreshTags()
                             },
                             onEditTag = { oldTag, newTag ->
                                 if (isVibrationEnabled) performVibration(context)
                                 TagsRepository.renameTag(context, oldTag, newTag)
-                                tags = TagsRepository.getTags(context)
+                                vm.refreshTags()
                             },
                             trashedItems = trashedItems,
                             onClearTrash = {
