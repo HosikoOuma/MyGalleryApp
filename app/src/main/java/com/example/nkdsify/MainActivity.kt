@@ -93,6 +93,7 @@ import android.content.ContentUris
 import androidx.annotation.OptIn
 import androidx.compose.material3.LargeFloatingActionButton
 import androidx.compose.ui.res.stringResource
+
 import com.example.nkdsify.ui.components.FolderSelectionDialog
 
 enum class FileOperation {
@@ -595,276 +596,144 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
             )
         }
 
-        if (showDetailsDialog != null) {
-            val uri = showDetailsDialog!!
-            val details = getMediaDetails(context, uri)
-            if (details != null) {
-                MediaDetailsDialog(
-                    details = details,
-                    onDismiss = { showDetailsDialog = null },
-                    onSetAsWallpaper = {
-                        isSettingWallpaper = true
-                        val cropOptions = CropImageContractOptions(uri, CropImageOptions(
-                            guidelines = CropImageView.Guidelines.ON,
-                            fixAspectRatio = true,
-                            aspectRatioX = screenWidth,
-                            aspectRatioY = screenHeight,
-                            outputRequestWidth = screenWidth,
-                            outputRequestHeight = screenHeight,
-                            outputRequestSizeOptions = CropImageView.RequestSizeOptions.RESIZE_EXACT
-                        ))
-                        cropImageLauncher.launch(cropOptions)
-                    },
-                    onCopy = {
-                        filesToProcess = listOf(uri)
-                        currentFileOperation = FileOperation.COPY
-                        showFolderSelectionDialog = true
-                        showDetailsDialog = null
-                    },
-                    onMove = {
-                        filesToProcess = listOf(uri)
-                        currentFileOperation = FileOperation.MOVE
-                        showFolderSelectionDialog = true
-                        showDetailsDialog = null
-                    },
-                    onRename = {
-                        showRenameDialog = uri
-                        showDetailsDialog = null
-                    }
-                )
-            }
-        }
-
-        if (showRenameDialog != null) {
-            val uri = showRenameDialog!!
-            val currentName = getMediaDetails(context, uri)?.name ?: ""
-            RenameDialog(
-                currentName = currentName,
-                onDismiss = { showRenameDialog = null },
-                onRename = { newName ->
-                    renameMedia(context, uri, newName)
-                    showRenameDialog = null
-                    refreshTrigger++
+        AppDialogs(
+            showDetailsDialog = showDetailsDialog,
+            showRenameDialog = showRenameDialog,
+            showAlbumDetailsDialog = showAlbumDetailsDialog,
+            showEasterEggDialog = showEasterEggDialog,
+            showHiddenFoldersDialog = showHiddenFoldersDialog,
+            showBackupAndRestoreDialog = showBackupAndRestoreDialog,
+            showDatePicker = showDatePicker,
+            showConfirmDeleteDialog = showConfirmDeleteDialog,
+            showConfirmTrashDialog = showConfirmTrashDialog,
+            showConfirmRestoreDialog = showConfirmRestoreDialog,
+            showFolderSelectionDialog = showFolderSelectionDialog,
+            isClearingTrash = isClearingTrash,
+            isVibrationEnabled = isVibrationEnabled,
+            currentScreen = currentScreen,
+            favoriteItems = favoriteItems,
+            tags = tags,
+            allFolders = allFolders,
+            hiddenFolders = hiddenFolders,
+            favorites = favorites,
+            importFavoritesLauncher = importFavoritesLauncher,
+            importTagsLauncher = importTagsLauncher,
+            datePickerState = datePickerState,
+            currentFileOperation = currentFileOperation,
+            filesToProcess = filesToProcess,
+            onDismiss = {
+                when (it) {
+                    DialogType.DETAILS -> showDetailsDialog = null
+                    DialogType.RENAME -> showRenameDialog = null
+                    DialogType.ALBUM_DETAILS -> showAlbumDetailsDialog = false
+                    DialogType.EASTER_EGG -> showEasterEggDialog = false
+                    DialogType.HIDDEN_FOLDERS -> showHiddenFoldersDialog = false
+                    DialogType.BACKUP_AND_RESTORE -> showBackupAndRestoreDialog = false
+                    DialogType.DATE_PICKER -> showDatePicker = false
+                    DialogType.CONFIRM_DELETE -> showConfirmDeleteDialog = false
+                    DialogType.CONFIRM_TRASH -> showConfirmTrashDialog = false
+                    DialogType.CONFIRM_RESTORE -> showConfirmRestoreDialog = false
+                    DialogType.FOLDER_SELECTION -> showFolderSelectionDialog = false
                 }
-            )
-        }
-
-        if (showAlbumDetailsDialog) {
-            val screen = currentScreen
-            if (screen is Screen.FolderContent) {
-                val folder = screen.folder
-                val path = getMediaDetails(context, folder.items.first().uri)?.path?.substringBeforeLast('/') ?: ""
-                AlbumDetailsDialog(
-                    details = AlbumDetails(path, folder.totalSize, folder.dateRange, folder.itemCount),
-                    onDismiss = { showAlbumDetailsDialog = false })
-            } else if (screen is Screen.Favorites && screen.openAlbumName != null) {
-                val taggedAlbums = favoriteItems
-                    .flatMap { item -> (tags[item.uri.toString()] ?: emptySet()).map { tag -> tag to item } }
-                    .groupBy({ it.first }, { it.second })
-                val albumItems = if (screen.openAlbumName == stringResource(id = R.string.album_name_all_favorites)) favoriteItems else taggedAlbums[screen.openAlbumName] ?: emptySet()
-
-                if (albumItems.isNotEmpty()) {
-                    val totalSize = albumItems.sumOf { it.size }
-                    AlbumDetailsDialog(
-                        details = AlbumDetails(totalSize = totalSize, itemCount = albumItems.size),
-                        onDismiss = { showAlbumDetailsDialog = false })
-                }
-            }
-        }
-
-        if (showEasterEggDialog) {
-            EasterEggDialog(onDismiss = { showEasterEggDialog = false })
-        }
-
-        if (showHiddenFoldersDialog) {
-            HiddenFoldersDialog(
-                allFolders = allFolders,
-                hiddenFolders = hiddenFolders,
-                onDismiss = { showHiddenFoldersDialog = false },
-                onFolderHiddenChange = { folderId, isHidden ->
-                    val newHiddenFolders = if (isHidden) {
-                        hiddenFolders + folderId
-                    } else {
-                        hiddenFolders - folderId
-                    }
-                    hiddenFolders = newHiddenFolders
-                    SettingsRepository.setHiddenFolders(context, newHiddenFolders)
-                }
-            )
-        }
-
-        if (showBackupAndRestoreDialog) {
-            BackupAndRestoreDialog(
-                onDismiss = { showBackupAndRestoreDialog = false },
-                onExportFavorites = {
-                    val json = Gson().toJson(favorites.map { it.toString() })
-                    val values = ContentValues().apply {
-                        put(MediaStore.MediaColumns.DISPLAY_NAME, "favorites_backup.json")
-                        put(MediaStore.MediaColumns.MIME_TYPE, "application/json")
-                        put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS)
-                    }
-                    val uri = context.contentResolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values)
-                    if (uri != null) {
-                        try {
-                            context.contentResolver.openOutputStream(uri)?.use {
-                                it.write(json.toByteArray())
-                            }
-                            Toast.makeText(context, context.getString(R.string.favorites_exported_successfully), Toast.LENGTH_SHORT).show()
-                        } catch (_: Exception) {
-                            Toast.makeText(context, context.getString(R.string.failed_to_export_favorites), Toast.LENGTH_SHORT).show()
-                        }
-                    } else {
-                        Toast.makeText(context, context.getString(R.string.failed_to_create_backup_file), Toast.LENGTH_SHORT).show()
-                    }
-                },
-                onImportFavorites = { importFavoritesLauncher.launch("application/json") },
-                onExportTags = {
-                    val json = Gson().toJson(tags)
-                    val values = ContentValues().apply {
-                        put(MediaStore.MediaColumns.DISPLAY_NAME, "tags_backup.json")
-                        put(MediaStore.MediaColumns.MIME_TYPE, "application/json")
-                        put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS)
-                    }
-                    val uri = context.contentResolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values)
-                    if (uri != null) {
-                        try {
-                            context.contentResolver.openOutputStream(uri)?.use {
-                                it.write(json.toByteArray())
-                            }
-                            Toast.makeText(context, context.getString(R.string.tags_exported_successfully), Toast.LENGTH_SHORT).show()
-                        } catch (_: Exception) {
-                            Toast.makeText(context, context.getString(R.string.failed_to_export_tags), Toast.LENGTH_SHORT).show()
-                        }
-                    } else {
-                        Toast.makeText(context, context.getString(R.string.failed_to_create_backup_file), Toast.LENGTH_SHORT).show()
-                    }
-                },
-                onImportTags = { importTagsLauncher.launch("application/json") }
-            )
-        }
-
-        if (showDatePicker) {
-            DatePickerDialog(onDismissRequest = { showDatePicker = false }, confirmButton = {
-                TextButton(onClick = { selectedDate = datePickerState.selectedDateMillis; showDatePicker = false }) {
-                    Text(stringResource(id = R.string.dialog_ok))
-                }
-            }, dismissButton = {
-                TextButton(onClick = { showDatePicker = false }) {
-                    Text(stringResource(id = R.string.dialog_cancel))
-                }
-            }) {
-                DatePicker(state = datePickerState)
-            }
-        }
-
-        if (showConfirmDeleteDialog) {
-            ConfirmDeleteDialog(onConfirm = {
-                if (isClearingTrash) {
-                    TrashRepository.clearTrash(context)
-                    isClearingTrash = false
-                } else {
-                    TrashRepository.removeFromTrash(context, itemsToDelete)
-                }
-                if (isVibrationEnabled) performVibration(context)
-                refreshTrigger++
-                selectedItems.clear()
-                viewerState = null
-                showConfirmDeleteDialog = false
-            }, onDismiss = { showConfirmDeleteDialog = false
-                if (isVibrationEnabled) performVibration(context)
-            })
-        }
-
-        if (showConfirmTrashDialog) {
-            ConfirmTrashDialog(
-                onConfirm = {
-                    val urisToTrash = itemsToTrash
-                    coroutineScope.launch(Dispatchers.IO) {
-                        val copiedUris = TrashRepository.copyToTrash(context, urisToTrash)
-                        if (copiedUris.isNotEmpty()) {
-                            var itemsDeleted = false
-                            copiedUris.forEach { uri ->
-                                try {
-                                    // Удаляем каждый файл индивидуально
-                                    if (context.contentResolver.delete(uri, null, null) > 0) {
-                                        itemsDeleted = true
-                                    }
-                                } catch (e: Exception) {
-                                    // Можно добавить обработку ошибок для каждого файла
-                                }
-                            }
-                            if (itemsDeleted) {
-                                withContext(Dispatchers.Main) {
-                                    refreshTrigger++
-                                }
-                            }
+            },
+            onConfirm = { dialogType, data ->
+                when (dialogType) {
+                    DialogType.DETAILS -> {
+                        if (data == "rename") {
+                            showRenameDialog = showDetailsDialog
+                            showDetailsDialog = null
+                        } else {
+                            filesToProcess = listOf(showDetailsDialog!!)
+                            currentFileOperation = data as FileOperation
+                            showFolderSelectionDialog = true
+                            showDetailsDialog = null
                         }
                     }
-                    if (isVibrationEnabled) performVibration(context)
-                    selectedItems.clear()
-                    itemsToTrash = emptyList()
-                    showConfirmTrashDialog = false
-                    viewerState = null
-                },
-                onDismiss = { showConfirmTrashDialog = false
-                    if (isVibrationEnabled) performVibration(context)
-                }
-            )
-        }
-
-        if (showConfirmRestoreDialog) {
-            ConfirmRestoreDialog(
-                onConfirm = {
-                    TrashRepository.restoreFromTrash(context, itemsToRestore)
-                    selectedItems.clear()
-                    refreshTrigger++
-                    showConfirmRestoreDialog = false
-                    if (isVibrationEnabled) performVibration(context)
-                },
-                onDismiss = { showConfirmRestoreDialog = false
-                    if (isVibrationEnabled) performVibration(context)
-                }
-            )
-        }
-
-        if (showFolderSelectionDialog) {
-            FolderSelectionDialog(
-                folders = allFolders,
-                onDismiss = { showFolderSelectionDialog = false },
-                onFolderSelected = { destinationFolder: MediaFolder ->
-                    coroutineScope.launch {
-                        val folderPath = destinationFolder.items.firstOrNull()?.let {
-                            getFolderPathFromUri(context, it.uri)
-                        } ?: destinationFolder.name
-
-                        when (currentFileOperation) {
-                            FileOperation.COPY -> {
-                                filesToProcess.forEach { uri ->
-                                    copyMediaToFolder(context, uri, folderPath)
-                                }
-                                withContext(Dispatchers.Main) {
-                                    Toast.makeText(context, context.getString(R.string.copied_to_folder, destinationFolder.name), Toast.LENGTH_SHORT).show()
-                                }
-                            }
-                            FileOperation.MOVE -> {
-                                filesToProcess.forEach { uri ->
-                                    moveMediaToFolder(context, uri, folderPath)
-                                }
-                                withContext(Dispatchers.Main) {
-                                    Toast.makeText(context, context.getString(R.string.moved_to_folder, destinationFolder.name), Toast.LENGTH_SHORT).show()
-                                }
-                                viewerState = null
-                            }
-                            null -> {}
-                        }
+                    DialogType.DATE_PICKER -> {
+                        selectedDate = data as Long?
+                        showDatePicker = false
+                    }
+                    DialogType.CONFIRM_DELETE -> {
+                        isClearingTrash = false
                         refreshTrigger++
-                        showFolderSelectionDialog = false
-                        filesToProcess = emptyList()
-                        currentFileOperation = null
+                        selectedItems.clear()
+                        viewerState = null
+                        showConfirmDeleteDialog = false
                     }
+                    DialogType.CONFIRM_TRASH -> {
+                        refreshTrigger++
+                        selectedItems.clear()
+                        itemsToTrash = emptyList()
+                        showConfirmTrashDialog = false
+                        viewerState = null
+                    }
+                    DialogType.CONFIRM_RESTORE -> {
+                        selectedItems.clear()
+                        refreshTrigger++
+                        showConfirmRestoreDialog = false
+                    }
+                    DialogType.FOLDER_SELECTION -> {
+                        coroutineScope.launch {
+                            val destinationFolder = data as MediaFolder
+                            val folderPath = destinationFolder.items.firstOrNull()?.let {
+                                getFolderPathFromUri(context, it.uri)
+                            } ?: destinationFolder.name
+
+                            when (currentFileOperation) {
+                                FileOperation.COPY -> {
+                                    filesToProcess.forEach { uri ->
+                                        copyMediaToFolder(context, uri, folderPath)
+                                    }
+                                    withContext(Dispatchers.Main) {
+                                        Toast.makeText(context, context.getString(R.string.copied_to_folder, destinationFolder.name), Toast.LENGTH_SHORT).show()
+                                    }
+                                }
+                                FileOperation.MOVE -> {
+                                    filesToProcess.forEach { uri ->
+                                        moveMediaToFolder(context, uri, folderPath)
+                                    }
+                                    withContext(Dispatchers.Main) {
+                                        Toast.makeText(context, context.getString(R.string.moved_to_folder, destinationFolder.name), Toast.LENGTH_SHORT).show()
+                                    }
+                                    viewerState = null
+                                }
+                                null -> {}
+                            }
+                            refreshTrigger++
+                            showFolderSelectionDialog = false
+                            filesToProcess = emptyList()
+                            currentFileOperation = null
+                        }
+                    }
+                    else -> {}
                 }
-            )
-        }
+            },
+            onSetWallpaper = {
+                isSettingWallpaper = true
+                showDetailsDialog = null
+            },
+            onRename = { uri, newName ->
+                renameMedia(context, uri, newName)
+                showRenameDialog = null
+                refreshTrigger++
+            },
+            onFolderHiddenChange = { folderId, isHidden ->
+                val newHiddenFolders = if (isHidden) {
+                    hiddenFolders + folderId
+                } else {
+                    hiddenFolders - folderId
+                }
+                hiddenFolders = newHiddenFolders
+                SettingsRepository.setHiddenFolders(context, newHiddenFolders)
+            },
+            coroutineScope = coroutineScope,
+            itemsToTrash = itemsToTrash,
+            itemsToRestore = itemsToRestore,
+            itemsToDelete = itemsToDelete,
+            screenWidth = screenWidth,
+            screenHeight = screenHeight,
+            cropImageLauncher = cropImageLauncher
+        )
 
         Box(Modifier.fillMaxSize()) {
             BackHandler(enabled = isSelectionMode) {
