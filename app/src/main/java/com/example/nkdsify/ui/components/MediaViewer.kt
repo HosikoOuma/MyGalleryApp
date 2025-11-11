@@ -64,9 +64,12 @@ import androidx.compose.ui.input.pointer.PointerEvent
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.media3.common.MediaItem as Media3Item
 import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
@@ -135,8 +138,8 @@ fun MediaViewer(
             .background(Color.Black)
     ) {
         HorizontalPager(
-            state = pagerState, 
-            modifier = Modifier.fillMaxSize(), 
+            state = pagerState,
+            modifier = Modifier.fillMaxSize(),
             key = { items[it].uri },
             userScrollEnabled = isSwipeToDismissEnabled
         ) { page ->
@@ -435,6 +438,11 @@ fun VideoPlayerPage(
     var offsetY by rememberSaveable { mutableFloatStateOf(0f) }
     var size by remember { mutableStateOf(IntSize.Zero) }
 
+    // --- Lifecycle State ---
+    val lifecycleOwner = LocalLifecycleOwner.current
+    var wasPlayingBeforePause by rememberSaveable { mutableStateOf(false) }
+
+
     // --- Effects ---
     // Reset states when uri changes
     LaunchedEffect(key1 = uri) {
@@ -462,6 +470,32 @@ fun VideoPlayerPage(
             exoPlayer.pause()
         }
     }
+
+    // App Lifecycle Observer
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            when (event) {
+                Lifecycle.Event.ON_PAUSE -> {
+                    if (exoPlayer.isPlaying) {
+                        wasPlayingBeforePause = true
+                        exoPlayer.pause()
+                    }
+                }
+                Lifecycle.Event.ON_RESUME -> {
+                    if (wasPlayingBeforePause) {
+                        exoPlayer.play()
+                        wasPlayingBeforePause = false
+                    }
+                }
+                else -> {}
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
+
 
     LaunchedEffect(isLoopVideoEnabled) {
         exoPlayer.repeatMode = if (isLoopVideoEnabled) Player.REPEAT_MODE_ONE else Player.REPEAT_MODE_OFF
@@ -637,9 +671,9 @@ fun VideoPlayerPage(
                     ) {
                         val icon = if (isPlaying && playbackState != Player.STATE_ENDED) Icons.Filled.Pause else Icons.Filled.PlayArrow
                         Icon(
-                            imageVector = icon, 
-                            contentDescription = "Play/Pause", 
-                            tint = Color.White, 
+                            imageVector = icon,
+                            contentDescription = "Play/Pause",
+                            tint = Color.White,
                             modifier = Modifier.fillMaxSize(0.7f)
                         )
                     }
@@ -664,7 +698,7 @@ fun VideoPlayerPage(
                         Text(text = formatDuration(playbackPosition), color = Color.White)
 
                         Row(horizontalArrangement = Arrangement.spacedBy(0.dp)) {
-                             IconButton(onClick = onMuteClick) {
+                            IconButton(onClick = onMuteClick) {
                                 Icon(
                                     imageVector = if (isMuted) Icons.AutoMirrored.Filled.VolumeOff else Icons.AutoMirrored.Filled.VolumeUp,
                                     contentDescription = "Mute/Unmute",
@@ -718,4 +752,3 @@ private fun formatDuration(millis: Long): String {
     val seconds = TimeUnit.MILLISECONDS.toSeconds(millis) % 60
     return String.format("%02d:%02d", minutes, seconds)
 }
-

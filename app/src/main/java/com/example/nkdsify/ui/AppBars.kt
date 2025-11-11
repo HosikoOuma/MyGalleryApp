@@ -176,7 +176,7 @@ fun TopBar(
             },
             modifier = Modifier.statusBarsPadding(),
             navigationIcon = {
-                if (currentScreen is Screen.FolderContent || currentScreen is Screen.TagManagement || currentScreen is Screen.AllMedia || (currentScreen is Screen.Favorites && currentScreen.openAlbumName != null)) {
+                if (currentScreen is Screen.FolderContent || currentScreen is Screen.TagManagement || (currentScreen is Screen.Favorites && currentScreen.openAlbumName != null)) {
                     IconButton(onClick = {
                         if (isVibrationEnabled) performVibration(context)
                         onBackClick()

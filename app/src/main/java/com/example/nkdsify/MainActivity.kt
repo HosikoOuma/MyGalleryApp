@@ -873,6 +873,25 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
         }
 
         Box(Modifier.fillMaxSize()) {
+            BackHandler(enabled = isSelectionMode) {
+                selectedItems.clear()
+            }
+            BackHandler(enabled = currentScreen is Screen.FolderContent) {
+                currentScreen = Screen.Folders
+            }
+            BackHandler(enabled = currentScreen is Screen.Favorites && (currentScreen as Screen.Favorites).openAlbumName != null) {
+                currentScreen = Screen.Favorites()
+            }
+            BackHandler(enabled = currentScreen is Screen.Settings) {
+                currentScreen = Screen.Folders
+            }
+            BackHandler(enabled = currentScreen is Screen.TagManagement) {
+                currentScreen = Screen.Settings
+            }
+            BackHandler(enabled = currentScreen is Screen.Trash) { currentScreen = Screen.Folders }
+            BackHandler(enabled = currentScreen is Screen.AllMedia) {
+                currentScreen = Screen.Folders
+            }
             Scaffold(
                 topBar = {
                     TopBar(

@@ -135,14 +135,23 @@ fun AppNavigation(
     }
 
     AnimatedContent(targetState = currentScreen, transitionSpec = {
-        if ((targetState is Screen.FolderContent && initialState is Screen.Folders) || (targetState is Screen.Favorites && (initialState as? Screen.Favorites)?.openAlbumName == null) || (targetState is Screen.AllMedia && initialState is Screen.Folders)) {
-            slideInHorizontally { it } togetherWith slideOutHorizontally { -it } + fadeOut()
-        } else if ((targetState is Screen.Folders && initialState is Screen.FolderContent) || (targetState is Screen.Folders && initialState is Screen.AllMedia) || (targetState is Screen.Favorites && (targetState as? Screen.Favorites)?.openAlbumName == null)) {
-            slideInHorizontally { -it } togetherWith slideOutHorizontally { it } + fadeOut()
-        } else if (targetState is Screen.TagManagement && initialState is Screen.Settings) {
-            slideInHorizontally { it } togetherWith slideOutHorizontally { -it } + fadeOut()
-        } else if (targetState is Screen.Settings && initialState is Screen.TagManagement) {
-            slideInHorizontally { -it } togetherWith slideOutHorizontally { it } + fadeOut()
+        fun getScreenOrder(screen: Screen): Int = when (screen) {
+            is Screen.Folders -> 0
+            is Screen.AllMedia -> 1
+            is Screen.Favorites -> if (screen.openAlbumName == null) 2 else 12
+            is Screen.Trash -> 3
+            is Screen.Settings -> 4
+            is Screen.FolderContent -> 10
+            is Screen.TagManagement -> 14
+        }
+
+        val initialOrder = getScreenOrder(initialState)
+        val targetOrder = getScreenOrder(targetState)
+
+        if (targetOrder > initialOrder) {
+            (slideInHorizontally { it } + fadeIn()) togetherWith (slideOutHorizontally { -it } + fadeOut())
+        } else if (targetOrder < initialOrder) {
+            (slideInHorizontally { -it } + fadeIn()) togetherWith (slideOutHorizontally { it } + fadeOut())
         } else {
             fadeIn() togetherWith fadeOut()
         }
