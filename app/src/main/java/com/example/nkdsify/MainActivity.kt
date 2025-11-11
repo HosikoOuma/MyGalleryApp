@@ -765,11 +765,14 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
                 } else {
                     TrashRepository.removeFromTrash(context, itemsToDelete)
                 }
+                if (isVibrationEnabled) performVibration(context)
                 refreshTrigger++
                 selectedItems.clear()
                 viewerState = null
                 showConfirmDeleteDialog = false
-            }, onDismiss = { showConfirmDeleteDialog = false })
+            }, onDismiss = { showConfirmDeleteDialog = false
+                if (isVibrationEnabled) performVibration(context)
+            })
         }
 
         if (showConfirmTrashDialog) {
@@ -797,12 +800,15 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
                             }
                         }
                     }
+                    if (isVibrationEnabled) performVibration(context)
                     selectedItems.clear()
                     itemsToTrash = emptyList()
                     showConfirmTrashDialog = false
                     viewerState = null
                 },
-                onDismiss = { showConfirmTrashDialog = false }
+                onDismiss = { showConfirmTrashDialog = false
+                    if (isVibrationEnabled) performVibration(context)
+                }
             )
         }
 
@@ -813,8 +819,11 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
                     selectedItems.clear()
                     refreshTrigger++
                     showConfirmRestoreDialog = false
+                    if (isVibrationEnabled) performVibration(context)
                 },
-                onDismiss = { showConfirmRestoreDialog = false }
+                onDismiss = { showConfirmRestoreDialog = false
+                    if (isVibrationEnabled) performVibration(context)
+                }
             )
         }
 
