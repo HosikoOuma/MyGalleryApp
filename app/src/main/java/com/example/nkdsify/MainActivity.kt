@@ -16,7 +16,6 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.Environment
-import com.example.nkdsify.ContextUtils
 import android.provider.MediaStore
 import android.provider.Settings
 import android.widget.Toast
@@ -24,9 +23,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
-import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.appcompat.app.AppCompatDelegate
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -67,7 +64,6 @@ import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.core.net.toUri
-import androidx.core.os.LocaleListCompat
 import androidx.media3.common.util.UnstableApi
 import coil.ImageLoader
 import coil.decode.GifDecoder
@@ -84,7 +80,6 @@ import com.example.nkdsify.ui.TopBar
 import com.example.nkdsify.ui.components.*
 import com.example.nkdsify.ui.theme.NkdsifyAppTheme
 import com.example.nkdsify.ui.utils.*
-import com.example.nkdsify.ui.utils.deleteMediaPermanently
 import com.example.nkdsify.ui.utils.getMediaDetails
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
@@ -158,7 +153,7 @@ class MainActivity : ComponentActivity() {
                 onViewerOpenChange = { isViewerOpen = it },
                 isLoopVideoEnabled = isLoopVideoEnabled, onLoopVideoEnabledChange = {isLoopVideoEnabled = it},
                 isSwipeToDismissEnabled = isSwipeToDismissEnabled, onSwipeToDismissEnabledChange = {isSwipeToDismissEnabled = it},
-                useLargeFab = useLargeFab, onUseLargeFabChange = { useLargeFab = it }, isBlurAllMediaEnabled = isBlurAllMediaEnabled, isBlurAllMediaEnabledChange = { isBlurAllMediaEnabled = it }, isTrashBlurEnabled = isTrashBlurEnabled, isTrashBlurEnabledChange = { isTrashBlurEnabled = it },
+                useLargeFab = useLargeFab, onUseLargeFabChange = { useLargeFab = it }, isBlurAllMediaEnabled = isBlurAllMediaEnabled, isTrashBlurEnabled = isTrashBlurEnabled,
                 onBlurAllMediaEnabledChange = { isBlurAllMediaEnabled = it },
                 onTrashBlurEnabledChange = { isTrashBlurEnabled = it },
                 autoDeleteTrashEnabled = autoDeleteTrashEnabled, onAutoDeleteTrashEnabledChange = { autoDeleteTrashEnabled = it },
@@ -206,8 +201,8 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
           isLoopVideoEnabled: Boolean, onLoopVideoEnabledChange: (Boolean) -> Unit,
           isSwipeToDismissEnabled: Boolean, onSwipeToDismissEnabledChange: (Boolean) -> Unit,
           useLargeFab: Boolean, onUseLargeFabChange: (Boolean) -> Unit,
-          isBlurAllMediaEnabled: Boolean, isBlurAllMediaEnabledChange: (Boolean) -> Unit,
-          isTrashBlurEnabled: Boolean, isTrashBlurEnabledChange: (Boolean) -> Unit,
+          isBlurAllMediaEnabled: Boolean,
+          isTrashBlurEnabled: Boolean,
           onBlurAllMediaEnabledChange: (Boolean) -> Unit,
           onTrashBlurEnabledChange: (Boolean) -> Unit,
           autoDeleteTrashEnabled: Boolean, onAutoDeleteTrashEnabledChange: (Boolean) -> Unit,
@@ -381,22 +376,6 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
         val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { permissions ->
             hasPermissions = permissions.values.all { it }
         }
-
-        val deleteRequestLauncher = rememberLauncherForActivityResult(contract = ActivityResultContracts.StartIntentSenderForResult()) { result ->
-            if (result.resultCode == Activity.RESULT_OK) {
-                if (isClearingTrash) {
-                    TrashRepository.clearTrash(context)
-                    isClearingTrash = false
-                } else {
-                }
-                refreshTrigger++
-                selectedItems.clear()
-                itemsToDelete = emptyList()
-                viewerState = null
-            }
-            showConfirmDeleteDialog = false
-        }
-
         val importFavoritesLauncher = rememberLauncherForActivityResult(contract = ActivityResultContracts.GetContent()) { uri: Uri? ->
             uri?.let {
                 try {
@@ -780,21 +759,16 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
 
         if (showConfirmDeleteDialog) {
             ConfirmDeleteDialog(onConfirm = {
-                val intentSender = deleteMediaPermanently(context, itemsToDelete)
-                if (intentSender != null) {
-                    deleteRequestLauncher.launch(IntentSenderRequest.Builder(intentSender).build())
+                if (isClearingTrash) {
+                    TrashRepository.clearTrash(context)
+                    isClearingTrash = false
                 } else {
-                    if (isClearingTrash) {
-                        TrashRepository.clearTrash(context)
-                        isClearingTrash = false
-                    } else {
-                        TrashRepository.removeFromTrash(context, itemsToDelete)
-                    }
-                    refreshTrigger++
-                    selectedItems.clear()
-                    viewerState = null
-                    showConfirmDeleteDialog = false
+                    TrashRepository.removeFromTrash(context, itemsToDelete)
                 }
+                refreshTrigger++
+                selectedItems.clear()
+                viewerState = null
+                showConfirmDeleteDialog = false
             }, onDismiss = { showConfirmDeleteDialog = false })
         }
 
@@ -802,14 +776,25 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
             ConfirmTrashDialog(
                 onConfirm = {
                     val urisToTrash = itemsToTrash
-                    val copiedUris = TrashRepository.copyToTrash(context, urisToTrash)
-                    if(copiedUris.isNotEmpty()) {
-                        itemsToDelete = copiedUris
-                        val intentSender = deleteMediaPermanently(context, copiedUris)
-                        if (intentSender != null) {
-                            deleteRequestLauncher.launch(IntentSenderRequest.Builder(intentSender).build())
-                        } else {
-                            refreshTrigger++
+                    coroutineScope.launch(Dispatchers.IO) {
+                        val copiedUris = TrashRepository.copyToTrash(context, urisToTrash)
+                        if (copiedUris.isNotEmpty()) {
+                            var itemsDeleted = false
+                            copiedUris.forEach { uri ->
+                                try {
+                                    // Удаляем каждый файл индивидуально
+                                    if (context.contentResolver.delete(uri, null, null) > 0) {
+                                        itemsDeleted = true
+                                    }
+                                } catch (e: Exception) {
+                                    // Можно добавить обработку ошибок для каждого файла
+                                }
+                            }
+                            if (itemsDeleted) {
+                                withContext(Dispatchers.Main) {
+                                    refreshTrigger++
+                                }
+                            }
                         }
                     }
                     selectedItems.clear()

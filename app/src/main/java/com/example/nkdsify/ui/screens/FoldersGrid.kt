@@ -31,11 +31,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import coil.ImageLoader
 import coil.compose.rememberAsyncImagePainter
+import com.example.nkdsify.R
 import com.example.nkdsify.data.BlurType
 import com.example.nkdsify.data.MediaFolder
+import com.example.nkdsify.ui.utils.SettingsRepository.isVibrationEnabled
+import com.example.nkdsify.ui.utils.performVibration
 
 @Composable
 fun FoldersGrid(
@@ -46,7 +51,15 @@ fun FoldersGrid(
     gridState: LazyGridState,
     isShowFileCountEnabled: Boolean,
     blurType: BlurType
+
 ) {
+    val context = LocalContext.current
+    if (folders.isEmpty()) {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Text(stringResource(R.string.no_folders_found), color = Color.Gray)
+        }
+        return
+    }
     LazyVerticalGrid(
         columns = GridCells.Fixed(2),
         state = gridState,
@@ -61,7 +74,9 @@ fun FoldersGrid(
                         .clickable(
                             interactionSource = remember { MutableInteractionSource() },
                             indication = rememberRipple(),
-                            onClick = { onFolderClick(folder) }
+                            onClick = { onFolderClick(folder)
+                                if (isVibrationEnabled(context)) performVibration(context)
+                            }
                         ),
                     elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
                 ) {

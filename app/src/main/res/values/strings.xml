@@ -161,4 +161,5 @@
     <string name="privacy_section_title">Privacy</string>
     <string name="main_section_title">Main</string>
     <string name="media_section_title">Media</string>
+    <string name="no_folders_found">No folders found</string>
 </resources>

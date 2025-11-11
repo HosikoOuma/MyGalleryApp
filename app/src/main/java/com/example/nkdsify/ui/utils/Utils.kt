@@ -16,8 +16,8 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.DriveFileMove
 import androidx.compose.material.icons.filled.ContentCopy
-import androidx.compose.material.icons.filled.DriveFileMove
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Wallpaper
 import androidx.compose.material3.AlertDialog
@@ -243,49 +243,6 @@ fun ExternalMediaErrorDialog(onDismiss: () -> Unit) {
     )
 }
 
-fun deleteMediaPermanently(context: Context, uris: List<Uri>): IntentSender? {
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-        val mediaStoreUris = uris.mapNotNull { uri ->
-            try {
-                val id = ContentUris.parseId(uri)
-                context.contentResolver.query(
-                    MediaStore.Files.getContentUri("external"),
-                    arrayOf(MediaStore.Files.FileColumns.MEDIA_TYPE),
-                    "${MediaStore.Files.FileColumns._ID} = ?",
-                    arrayOf(id.toString()),
-                    null
-                )?.use { cursor ->
-                    if (cursor.moveToFirst()) {
-                        val mediaType = cursor.getInt(cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.MEDIA_TYPE))
-                        when (mediaType) {
-                            MediaStore.Files.FileColumns.MEDIA_TYPE_IMAGE ->
-                                ContentUris.withAppendedId(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, id)
-                            MediaStore.Files.FileColumns.MEDIA_TYPE_VIDEO ->
-                                ContentUris.withAppendedId(MediaStore.Video.Media.EXTERNAL_CONTENT_URI, id)
-                            else -> null
-                        }
-                    } else null
-                }
-            } catch (e: Exception) {
-                Log.e("deleteMediaPermanently", "Error getting MediaStore URI for $uri", e)
-                null
-            }
-        }
-        if (mediaStoreUris.isNotEmpty()) {
-            return MediaStore.createDeleteRequest(context.contentResolver, mediaStoreUris).intentSender
-        }
-    } else {
-        try {
-            uris.forEach { uri ->
-                context.contentResolver.delete(uri, null, null)
-            }
-        } catch (e: RecoverableSecurityException) {
-            return e.userAction.actionIntent.intentSender
-        }
-    }
-    return null
-}
-
 @Composable
 fun MediaDetailsDialog(
     details: MediaDetails,
@@ -329,7 +286,7 @@ fun MediaDetailsDialog(
                     if (isVibrationEnabled) performVibration(context)
                     onMove()
                 }) {
-                    Icon(Icons.Default.DriveFileMove, contentDescription = stringResource(id = R.string.move_content_description))
+                    Icon(Icons.AutoMirrored.Filled.DriveFileMove, contentDescription = stringResource(id = R.string.move_content_description))
                 }
                 IconButton(onClick = {
                     if (isVibrationEnabled) performVibration(context)

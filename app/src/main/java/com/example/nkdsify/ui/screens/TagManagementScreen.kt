@@ -23,9 +23,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.example.nkdsify.R
+import com.example.nkdsify.ui.utils.SettingsRepository.isVibrationEnabled
+import com.example.nkdsify.ui.utils.performVibration
 
 @Composable
 fun TagManagementScreen(
@@ -33,6 +36,7 @@ fun TagManagementScreen(
     onDeleteTag: (String) -> Unit,
     onEditTag: (oldTag: String, newTag: String) -> Unit
 ) {
+    val context = LocalContext.current
     var showEditDialog by remember { mutableStateOf<String?>(null) }
 
     if (showEditDialog != null) {
@@ -52,12 +56,15 @@ fun TagManagementScreen(
                 Button(onClick = {
                     onEditTag(oldTag, newTag)
                     showEditDialog = null
+                    if (isVibrationEnabled(context)) performVibration(context)
                 }) {
                     Text(stringResource(id = R.string.save_button))
                 }
             },
             dismissButton = {
-                Button(onClick = { showEditDialog = null }) {
+                Button(onClick = { showEditDialog = null
+                    if (isVibrationEnabled(context)) performVibration(context)
+                }) {
                     Text(stringResource(id = R.string.dialog_cancel))
                 }
             }
@@ -77,10 +84,14 @@ fun TagManagementScreen(
                     ) {
                         Text(tag)
                         Row {
-                            IconButton(onClick = { showEditDialog = tag }) {
+                            IconButton(onClick = { showEditDialog = tag
+                                if (isVibrationEnabled(context)) performVibration(context)
+                            }) {
                                 Icon(Icons.Default.Edit, contentDescription = stringResource(id = R.string.edit_tag_content_description))
                             }
-                            IconButton(onClick = { onDeleteTag(tag) }) {
+                            IconButton(onClick = { 
+                                onDeleteTag(tag)
+                            }) {
                                 Icon(Icons.Default.Delete, contentDescription = stringResource(id = R.string.delete_tag_content_description))
                             }
                         }

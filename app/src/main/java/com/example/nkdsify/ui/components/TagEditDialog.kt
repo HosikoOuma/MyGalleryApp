@@ -19,9 +19,12 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.example.nkdsify.R
+import com.example.nkdsify.ui.utils.SettingsRepository.isVibrationEnabled
+import com.example.nkdsify.ui.utils.performVibration
 
 @Composable
 fun TagEditDialog(
@@ -30,6 +33,7 @@ fun TagEditDialog(
     onDismiss: () -> Unit,
     onSave: (Set<String>) -> Unit
 ) {
+    val context = LocalContext.current
     var tags by remember { mutableStateOf(initialTags.joinToString(", ")) }
     var expanded by remember { mutableStateOf(false) }
 
@@ -47,7 +51,9 @@ fun TagEditDialog(
                 )
                 Spacer(Modifier.height(16.dp))
                 Box {
-                    TextButton(onClick = { expanded = true }) {
+                    TextButton(onClick = { expanded = true
+                        if (isVibrationEnabled(context)) performVibration(context)
+                    }) {
                         Text(stringResource(id = R.string.existing_tags_button))
                     }
                     DropdownMenu(
@@ -61,6 +67,7 @@ fun TagEditDialog(
                                 onClick = {
                                     tags = if (tags.isEmpty()) tag else "$tags, $tag"
                                     expanded = false
+                                    if (isVibrationEnabled(context)) performVibration(context)
                                 }
                             )
                         }
@@ -72,12 +79,16 @@ fun TagEditDialog(
             Button(onClick = {
                 val tagSet = tags.split(",").map { it.trim() }.filter { it.isNotEmpty() }.toSet()
                 onSave(tagSet)
+                if (isVibrationEnabled(context)) performVibration(context)
             }) {
                 Text(stringResource(id = R.string.save_button))
             }
         },
         dismissButton = {
-            Button(onClick = onDismiss) {
+            Button(onClick = {
+                onDismiss()
+                if (isVibrationEnabled(context)) performVibration(context)
+            }) {
                 Text(stringResource(id = R.string.dialog_cancel))
             }
         }

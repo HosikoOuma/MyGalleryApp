@@ -13,9 +13,14 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
 import com.example.nkdsify.R
 import com.example.nkdsify.data.MediaFolder
+import com.example.nkdsify.ui.utils.SettingsRepository.isVibrationEnabled
+import com.example.nkdsify.ui.utils.performVibration
 
 @Composable
 fun HiddenFoldersDialog(
@@ -23,7 +28,10 @@ fun HiddenFoldersDialog(
     hiddenFolders: Set<String>,
     onDismiss: () -> Unit,
     onFolderHiddenChange: (String, Boolean) -> Unit
+
 ) {
+    val haptic = LocalHapticFeedback.current
+    val context = LocalContext.current
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(id = R.string.manage_hidden_folders_title)) },
@@ -43,6 +51,7 @@ fun HiddenFoldersDialog(
                                 Switch(
                                     checked = hiddenFolders.contains(folder.id.toString()),
                                     onCheckedChange = { isChecked ->
+                                        if (isVibrationEnabled(context)) performVibration(context)
                                         onFolderHiddenChange(folder.id.toString(), isChecked)
                                     }
                                 )

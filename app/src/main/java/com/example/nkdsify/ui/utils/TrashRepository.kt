@@ -14,16 +14,18 @@ import java.util.Locale
 object TrashRepository {
 
     private fun getTrashDir(context: Context): File {
-        val trashDir = File(context.filesDir, ".trash")
+        val trashDir = File(Environment.getExternalStorageDirectory(), ".trash")
         if (!trashDir.exists()) {
             trashDir.mkdirs()
+            // Create a .nomedia file to hide media from scanners
+            File(trashDir, ".nomedia").createNewFile()
         }
         return trashDir
     }
 
     fun getTrashedUris(context: Context): Set<Uri> {
         val trashDir = getTrashDir(context)
-        return trashDir.listFiles { _, name -> !name.endsWith(".path") }
+        return trashDir.listFiles { _, name -> !name.endsWith(".path") && !name.endsWith(".nomedia") }
             ?.map { it.toUri() }
             ?.toSet() ?: emptySet()
     }
@@ -193,7 +195,11 @@ object TrashRepository {
 
     fun clearTrash(context: Context) {
         val trashDir = getTrashDir(context)
-        trashDir.listFiles()?.forEach { it.delete() }
+        trashDir.listFiles()?.forEach { 
+            if (it.name != ".nomedia") {
+                it.delete()
+            }
+        }
     }
 
     fun deleteExpired(context: Context, days: Int) {

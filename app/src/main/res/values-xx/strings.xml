@@ -161,4 +161,5 @@
     <string name="main_section_title">Хуявное</string>
     <string name="media_section_title">Хуедия</string>
     <string name="select_a_folder_title">Селект папо4ку</string>
+    <string name="no_folders_found">Папо4ек нема, братик(</string>
 </resources>

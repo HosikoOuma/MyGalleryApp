@@ -161,4 +161,5 @@
     <string name="main_section_title">Главное</string>
     <string name="media_section_title">Медиа</string>
     <string name="select_a_folder_title">Выберите папку</string>
+    <string name="no_folders_found">Папок не найдено.</string>
 </resources>
