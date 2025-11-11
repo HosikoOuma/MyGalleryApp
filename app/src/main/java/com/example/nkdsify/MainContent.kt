@@ -126,45 +126,25 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
     var latestVersion by remember { mutableStateOf<String?>(null) }
     val currentVersion = remember { context.packageManager.getPackageInfo(context.packageName, 0).versionName ?: "0.0" }
 
-    fun compareVersionNames(v1: String, v2: String): Int {
-        val parts1 = v1.removePrefix("v").split('.').map { it.toIntOrNull() ?: 0 }
-        val parts2 = v2.removePrefix("v").split('.').map { it.toIntOrNull() ?: 0 }
-        val size = maxOf(parts1.size, parts2.size)
-        for (i in 0 until size) {
-            val p1 = parts1.getOrElse(i) { 0 }
-            val p2 = parts2.getOrElse(i) { 0 }
-            if (p1 < p2) return -1
-            if (p1 > p2) return 1
-        }
-        return 0
-    }
-
-    val checkForUpdates: (Boolean) -> Unit = { isTriggeredByUser ->
-        coroutineScope.launch(Dispatchers.IO) {
-            if (!isTriggeredByUser && !SettingsRepository.isCheckForUpdatesOnStartupEnabled(context)) {
-                return@launch
+    // Используем вынесенную утилиту для проверки обновлений (см. UpdateUtils.kt)
+    val checkForUpdatesAction: (Boolean) -> Unit = { isTriggeredByUser ->
+        checkForUpdates(
+            context = context,
+            coroutineScope = coroutineScope,
+            currentVersion = currentVersion,
+            isTriggeredByUser = isTriggeredByUser,
+            onNewVersion = { tagName ->
+                latestVersion = tagName
+                showUpdateDialog = true
+            },
+            onNoUpdate = {
+                Toast.makeText(context, context.getString(R.string.no_updates_available), Toast.LENGTH_SHORT).show()
             }
-
-            val release = GithubUpdateChecker.getLatestRelease("HosikoOuma", "MyGalleryApp")
-            release?.let {
-                if (compareVersionNames(it.tag_name, currentVersion) > 0) {
-                    withContext(Dispatchers.Main) {
-                        latestVersion = it.tag_name
-                        showUpdateDialog = true
-                    }
-                } else {
-                    if (isTriggeredByUser) {
-                        withContext(Dispatchers.Main) {
-                            Toast.makeText(context, context.getString(R.string.no_updates_available), Toast.LENGTH_SHORT).show()
-                        }
-                    }
-                }
-            }
-        }
+        )
     }
 
     LaunchedEffect(Unit) {
-        checkForUpdates(false)
+        checkForUpdatesAction(false)
     }
 
     LaunchedEffect(selectedLanguage) {
@@ -229,35 +209,7 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
 
         var isSettingWallpaper by remember { mutableStateOf(false) }
 
-        val manageStorageLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                hasManageStoragePermission = Environment.isExternalStorageManager()
-            }
-        }
-
-        val cropImageLauncher = rememberLauncherForActivityResult(contract = CropImageContract()) { result ->
-            if (result.isSuccessful) {
-                val croppedImageUri = result.uriContent
-
-                if (croppedImageUri != null) {
-                    if (isSettingWallpaper) {
-                        try {
-                            val wallpaperManager = WallpaperManager.getInstance(context)
-                            context.contentResolver.openInputStream(croppedImageUri)?.use { inputStream ->
-                                wallpaperManager.setStream(inputStream)
-                                Toast.makeText(context, context.getString(R.string.wallpaper_set_successfully), Toast.LENGTH_SHORT).show()
-                            }
-                        } catch (e: Exception) {
-                            Toast.makeText(context, context.getString(R.string.failed_to_set_wallpaper, e.message), Toast.LENGTH_SHORT).show()
-                        }
-                        isSettingWallpaper = false
-                        viewerState = null
-                    }
-                }
-            }
-            showDetailsDialog = null
-        }
-
+        // Favorites, tags и selection объявляем до appLaunchers, чтобы колбэки могли на них ссылаться
         val favorites = remember {
             val initialFavorites = FavoritesRepository.getFavorites(context).map { it.toUri() }
             mutableStateListOf(*initialFavorites.toTypedArray())
@@ -279,44 +231,67 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
                 .build()
         }
 
-        val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { permissions ->
-            hasPermissions = permissions.values.all { it }
-        }
-        val importFavoritesLauncher = rememberLauncherForActivityResult(contract = ActivityResultContracts.GetContent()) { uri: Uri? ->
-            uri?.let {
-                try {
-                    context.contentResolver.openInputStream(it)?.use { inputStream ->
-                        val json = BufferedReader(InputStreamReader(inputStream)).readText()
-                        val type = object : TypeToken<Set<String>>() {}.type
-                        val importedFavorites: Set<String> = Gson().fromJson(json, type)
-                        favorites.clear()
-                        favorites.addAll(importedFavorites.map { uriString -> uriString.toUri() })
-                        refreshTrigger++
-                        Toast.makeText(context, context.getString(R.string.favorites_imported_successfully), Toast.LENGTH_SHORT).show()
-                    }
-                } catch (_: Exception) {
-                    Toast.makeText(context, context.getString(R.string.failed_to_import_favorites), Toast.LENGTH_SHORT).show()
-                }
-            }
-        }
+        // Название "Все избранные" заранее
+        val allFavoritesAlbumName = stringResource(id = R.string.album_name_all_favorites)
 
-        val importTagsLauncher = rememberLauncherForActivityResult(contract = ActivityResultContracts.GetContent()) { uri: Uri? ->
-            uri?.let {
-                try {
-                    context.contentResolver.openInputStream(it)?.use { inputStream ->
-                        val json = BufferedReader(InputStreamReader(inputStream)).readText()
-                        val type = object : TypeToken<Map<String, Set<String>>>() {}.type
-                        val importedTags: Map<String, Set<String>> = Gson().fromJson(json, type)
-                        tags = importedTags
-                        TagsRepository.saveTags(context, tags)
-                        refreshTrigger++
-                        Toast.makeText(context, context.getString(R.string.tags_imported_successfully), Toast.LENGTH_SHORT).show()
-                    }
-                } catch (_: Exception) {
-                    Toast.makeText(context, context.getString(R.string.failed_to_import_tags), Toast.LENGTH_SHORT).show()
-                }
-            }
-        }
+        // Все launchers вынесены в вспомогательную структуру
+        val appLaunchers = rememberAppLaunchers(
+             onPermissionsResult = { permissions -> hasPermissions = permissions.values.all { it } },
+             onManageStorageResult = { if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) hasManageStoragePermission = Environment.isExternalStorageManager() },
+             onCropResult = { result ->
+                 if (result.isSuccessful) {
+                     val croppedImageUri = result.uriContent
+                     if (croppedImageUri != null && isSettingWallpaper) {
+                         try {
+                             val wallpaperManager = WallpaperManager.getInstance(context)
+                             context.contentResolver.openInputStream(croppedImageUri)?.use { inputStream ->
+                                 wallpaperManager.setStream(inputStream)
+                                 Toast.makeText(context, context.getString(R.string.wallpaper_set_successfully), Toast.LENGTH_SHORT).show()
+                             }
+                         } catch (e: Exception) {
+                             Toast.makeText(context, context.getString(R.string.failed_to_set_wallpaper, e.message), Toast.LENGTH_SHORT).show()
+                         }
+                         isSettingWallpaper = false
+                         viewerState = null
+                     }
+                 }
+                 showDetailsDialog = null
+             },
+             onImportFavoritesResult = { uri ->
+                 uri?.let {
+                     try {
+                         context.contentResolver.openInputStream(it)?.use { inputStream ->
+                             val json = BufferedReader(InputStreamReader(inputStream)).readText()
+                             val type = object : TypeToken<Set<String>>() {}.type
+                             val importedFavorites: Set<String> = Gson().fromJson(json, type)
+                             favorites.clear()
+                             favorites.addAll(importedFavorites.map { uriString -> uriString.toUri() })
+                             refreshTrigger++
+                             Toast.makeText(context, context.getString(R.string.favorites_imported_successfully), Toast.LENGTH_SHORT).show()
+                         }
+                     } catch (_: Exception) {
+                         Toast.makeText(context, context.getString(R.string.failed_to_import_favorites), Toast.LENGTH_SHORT).show()
+                     }
+                 }
+             },
+             onImportTagsResult = { uri ->
+                 uri?.let {
+                     try {
+                         context.contentResolver.openInputStream(it)?.use { inputStream ->
+                             val json = BufferedReader(InputStreamReader(inputStream)).readText()
+                             val type = object : TypeToken<Map<String, Set<String>>>() {}.type
+                             val importedTags: Map<String, Set<String>> = Gson().fromJson(json, type)
+                             tags = importedTags
+                             TagsRepository.saveTags(context, tags)
+                             refreshTrigger++
+                             Toast.makeText(context, context.getString(R.string.tags_imported_successfully), Toast.LENGTH_SHORT).show()
+                         }
+                     } catch (_: Exception) {
+                         Toast.makeText(context, context.getString(R.string.failed_to_import_tags), Toast.LENGTH_SHORT).show()
+                     }
+                 }
+             }
+         )
 
         val pullToRefreshEnabled = currentScreen !is Screen.Settings && currentScreen !is Screen.TagManagement
         val pullRefreshState = rememberPullToRefreshState()
@@ -394,13 +369,13 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
 
         LaunchedEffect(Unit) {
             if (!hasPermissions) {
-                permissionLauncher.launch(permissionsToRequest)
+                appLaunchers.requestPermissions(permissionsToRequest)
             }
             if (!hasManageStoragePermission) {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
                     val intent = Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION)
                     intent.data = "package:${context.packageName}".toUri()
-                    manageStorageLauncher.launch(intent)
+                    appLaunchers.launchManageStorage(intent)
                 }
             }
         }
@@ -446,225 +421,133 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
         val datePickerState = rememberDatePickerState()
         var showDatePicker by remember { mutableStateOf(false) }
 
-        if (showUpdateDialog && latestVersion != null) {
-            UpdateDialog(
-                onDismiss = { showUpdateDialog = false },
-                onConfirm = {
-                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/HosikoOuma/MyGalleryApp/releases/latest"))
-                    context.startActivity(intent)
-                    showUpdateDialog = false
-                },
-                onDoNotShowAgain = {
-                    SettingsRepository.setCheckForUpdatesOnStartup(context, false)
-                    showUpdateDialog = false
-                },
-                latestVersion = latestVersion!!
-            )
-        }
-
-        if (showTagDialog != null) {
-            val uri = showTagDialog!!
-            TagEditDialog(
-                initialTags = TagsRepository.getTagsForItem(context, uri),
-                allTags = tags.values.flatten().toSet(),
-                onDismiss = { showTagDialog = null },
-                onSave = { tagSet ->
-                    TagsRepository.setTagsForItem(context, uri, tagSet)
-                    tags = TagsRepository.getTags(context)
-                    showTagDialog = null
-                })
-        }
-
-        if (showBulkTagDialog) {
-            val uris = selectedItems.toList()
-            val commonTags = if (uris.isNotEmpty()) {
-                uris.map { TagsRepository.getTagsForItem(context, it) }.reduce { acc, set -> acc.intersect(set) }
-            } else emptySet()
-
-            TagEditDialog(
-                initialTags = commonTags,
-                allTags = tags.values.flatten().toSet(),
-                onDismiss = { showBulkTagDialog = false },
-                onSave = { newTags ->
-                    val tagsToAdd = newTags - commonTags
-                    val tagsToRemove = commonTags - newTags
-                    uris.forEach { uri ->
-                        val currentTags = TagsRepository.getTagsForItem(context, uri).toMutableSet()
-                        currentTags.addAll(tagsToAdd)
-                        currentTags.removeAll(tagsToRemove)
-                        TagsRepository.setTagsForItem(context, uri, currentTags)
-                    }
-                    tags = TagsRepository.getTags(context)
-                    showBulkTagDialog = false
-                    selectedItems.clear()
+        // Диалоги вынесены в хост DialogsHost
+        DialogsHost(
+            context = context,
+            coroutineScope = coroutineScope,
+            showUpdateDialog = showUpdateDialog,
+            latestVersion = latestVersion,
+            onDismissUpdate = { showUpdateDialog = false },
+            onOpenReleasePage = { _ ->
+                // открываем страницу релиза
+                val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/HosikoOuma/MyGalleryApp/releases/latest"))
+                context.startActivity(intent)
+                showUpdateDialog = false
+            },
+            onDoNotShowUpdateAgain = {
+                SettingsRepository.setCheckForUpdatesOnStartup(context, false)
+                showUpdateDialog = false
+            },
+            showTagDialog = showTagDialog,
+            onDismissTagDialog = { showTagDialog = null },
+            onSaveTagsForItem = { uri, tagSet -> TagsRepository.setTagsForItem(context, uri, tagSet); tags = TagsRepository.getTags(context) },
+            tagsMap = tags,
+            showBulkTagDialog = showBulkTagDialog,
+            onDismissBulkTagDialog = { showBulkTagDialog = false },
+            onSaveBulkTags = { uris, newTags ->
+                val commonTags = if (uris.isNotEmpty()) uris.map { TagsRepository.getTagsForItem(context, it) }.reduce { acc, set -> acc.intersect(set) } else emptySet()
+                val tagsToAdd = newTags - commonTags
+                val tagsToRemove = commonTags - newTags
+                uris.forEach { uri ->
+                    val currentTags = TagsRepository.getTagsForItem(context, uri).toMutableSet()
+                    currentTags.addAll(tagsToAdd)
+                    currentTags.removeAll(tagsToRemove)
+                    TagsRepository.setTagsForItem(context, uri, currentTags)
                 }
-            )
-        }
-
-        if (showDetailsDialog != null) {
-            val uri = showDetailsDialog!!
-            val details = getMediaDetails(context, uri)
-            if (details != null) {
-                MediaDetailsDialog(
-                    details = details,
-                    onDismiss = { showDetailsDialog = null },
-                    onSetAsWallpaper = {
-                        isSettingWallpaper = true
-                        val cropOptions = CropImageContractOptions(uri, CropImageOptions(
-                            guidelines = CropImageView.Guidelines.ON,
-                            fixAspectRatio = true,
-                            aspectRatioX = screenWidth,
-                            aspectRatioY = screenHeight,
-                            outputRequestWidth = screenWidth,
-                            outputRequestHeight = screenHeight,
-                            outputRequestSizeOptions = CropImageView.RequestSizeOptions.RESIZE_EXACT
-                        ))
-                        cropImageLauncher.launch(cropOptions)
-                    },
-                    onCopy = {
-                        filesToProcess = listOf(uri)
-                        currentFileOperation = FileOperation.COPY
-                        showFolderSelectionDialog = true
-                        showDetailsDialog = null
-                    },
-                    onMove = {
-                        filesToProcess = listOf(uri)
-                        currentFileOperation = FileOperation.MOVE
-                        showFolderSelectionDialog = true
-                        showDetailsDialog = null
-                    },
-                    onRename = {
-                        showRenameDialog = uri
-                        showDetailsDialog = null
-                    }
-                )
-            }
-        }
-
-        if (showRenameDialog != null) {
-            val uri = showRenameDialog!!
-            val currentName = getMediaDetails(context, uri)?.name ?: ""
-            RenameDialog(
-                currentName = currentName,
-                onDismiss = { showRenameDialog = null },
-                onRename = { newName ->
-                    renameMedia(context, uri, newName)
-                    showRenameDialog = null
-                    refreshTrigger++
+                tags = TagsRepository.getTags(context)
+            },
+            selectedItemsForBulk = selectedItems.toList(),
+            showDetailsDialog = showDetailsDialog,
+            onDismissDetailsDialog = { showDetailsDialog = null },
+            launchCropForWallpaper = { options -> appLaunchers.launchCropImage(options) },
+            onCopyFromDetails = { uri -> filesToProcess = listOf(uri); currentFileOperation = FileOperation.COPY; showFolderSelectionDialog = true; showDetailsDialog = null },
+            onMoveFromDetails = { uri -> filesToProcess = listOf(uri); currentFileOperation = FileOperation.MOVE; showFolderSelectionDialog = true; showDetailsDialog = null },
+            onRenameFromDetails = { uri -> showRenameDialog = uri; showDetailsDialog = null },
+            showRenameDialog = showRenameDialog,
+            onDismissRenameDialog = { showRenameDialog = null },
+            onRenameItem = { uri, newName -> renameMedia(context, uri, newName); refreshTrigger++ },
+            showAlbumDetailsDialog = showAlbumDetailsDialog,
+            albumDetailsProvider = {
+                val screen = currentScreen
+                if (screen is Screen.FolderContent) {
+                    val folder = screen.folder
+                    val path = getMediaDetails(context, folder.items.first().uri)?.path?.substringBeforeLast('/') ?: ""
+                    AlbumDetails(path, folder.totalSize, folder.dateRange, folder.itemCount)
+                } else if (screen is Screen.Favorites && screen.openAlbumName != null) {
+                    val taggedAlbums = favoriteItems
+                        .flatMap { item -> (tags[item.uri.toString()] ?: emptySet()).map { tag -> tag to item } }
+                        .groupBy({ it.first }, { it.second })
+                    val albumItems = if (screen.openAlbumName == allFavoritesAlbumName) favoriteItems else taggedAlbums[screen.openAlbumName] ?: emptySet()
+                    if (albumItems.isNotEmpty()) {
+                        val totalSize = albumItems.sumOf { it.size }
+                        AlbumDetails(totalSize = totalSize, itemCount = albumItems.size)
+                    } else null
+                } else null
+            },
+            onDismissAlbumDetails = { showAlbumDetailsDialog = false },
+            showEasterEggDialog = showEasterEggDialog,
+            onDismissEasterEgg = { showEasterEggDialog = false },
+            showHiddenFoldersDialog = showHiddenFoldersDialog,
+            allFolders = allFolders,
+            hiddenFolders = hiddenFolders,
+            onDismissHiddenFolders = { showHiddenFoldersDialog = false },
+            onFolderHiddenChange = { folderId, isHidden ->
+                val newHiddenFolders = if (isHidden) hiddenFolders + folderId else hiddenFolders - folderId
+                hiddenFolders = newHiddenFolders
+                SettingsRepository.setHiddenFolders(context, newHiddenFolders)
+            },
+            showBackupAndRestoreDialog = showBackupAndRestoreDialog,
+            onDismissBackupAndRestore = { showBackupAndRestoreDialog = false },
+            onExportFavorites = {
+                val json = Gson().toJson(favorites.map { it.toString() })
+                val values = ContentValues().apply {
+                    put(MediaStore.MediaColumns.DISPLAY_NAME, "favorites_backup.json")
+                    put(MediaStore.MediaColumns.MIME_TYPE, "application/json")
+                    put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS)
                 }
-            )
-        }
-
-        if (showAlbumDetailsDialog) {
-            val screen = currentScreen
-            if (screen is Screen.FolderContent) {
-                val folder = screen.folder
-                val path = getMediaDetails(context, folder.items.first().uri)?.path?.substringBeforeLast('/') ?: ""
-                AlbumDetailsDialog(
-                    details = AlbumDetails(path, folder.totalSize, folder.dateRange, folder.itemCount),
-                    onDismiss = { showAlbumDetailsDialog = false })
-            } else if (screen is Screen.Favorites && screen.openAlbumName != null) {
-                val taggedAlbums = favoriteItems
-                    .flatMap { item -> (tags[item.uri.toString()] ?: emptySet()).map { tag -> tag to item } }
-                    .groupBy({ it.first }, { it.second })
-                val albumItems = if (screen.openAlbumName == stringResource(id = R.string.album_name_all_favorites)) favoriteItems else taggedAlbums[screen.openAlbumName] ?: emptySet()
-
-                if (albumItems.isNotEmpty()) {
-                    val totalSize = albumItems.sumOf { it.size }
-                    AlbumDetailsDialog(
-                        details = AlbumDetails(totalSize = totalSize, itemCount = albumItems.size),
-                        onDismiss = { showAlbumDetailsDialog = false })
-                }
-            }
-        }
-
-        if (showEasterEggDialog) {
-            EasterEggDialog(onDismiss = { showEasterEggDialog = false })
-        }
-
-        if (showHiddenFoldersDialog) {
-            HiddenFoldersDialog(
-                allFolders = allFolders,
-                hiddenFolders = hiddenFolders,
-                onDismiss = { showHiddenFoldersDialog = false },
-                onFolderHiddenChange = { folderId, isHidden ->
-                    val newHiddenFolders = if (isHidden) {
-                        hiddenFolders + folderId
-                    } else {
-                        hiddenFolders - folderId
-                    }
-                    hiddenFolders = newHiddenFolders
-                    SettingsRepository.setHiddenFolders(context, newHiddenFolders)
-                }
-            )
-        }
-
-        if (showBackupAndRestoreDialog) {
-            BackupAndRestoreDialog(
-                onDismiss = { showBackupAndRestoreDialog = false },
-                onExportFavorites = {
-                    val json = Gson().toJson(favorites.map { it.toString() })
-                    val values = ContentValues().apply {
-                        put(MediaStore.MediaColumns.DISPLAY_NAME, "favorites_backup.json")
-                        put(MediaStore.MediaColumns.MIME_TYPE, "application/json")
-                        put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS)
-                    }
-                    val uri = context.contentResolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values)
-                    if (uri != null) {
-                        try {
-                            context.contentResolver.openOutputStream(uri)?.use {
-                                it.write(json.toByteArray())
-                            }
-                            Toast.makeText(context, context.getString(R.string.favorites_exported_successfully), Toast.LENGTH_SHORT).show()
-                        } catch (_: Exception) {
-                            Toast.makeText(context, context.getString(R.string.failed_to_export_favorites), Toast.LENGTH_SHORT).show()
+                val uri = context.contentResolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values)
+                if (uri != null) {
+                    try {
+                        context.contentResolver.openOutputStream(uri)?.use {
+                            it.write(json.toByteArray())
                         }
-                    } else {
-                        Toast.makeText(context, context.getString(R.string.failed_to_create_backup_file), Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, context.getString(R.string.favorites_exported_successfully), Toast.LENGTH_SHORT).show()
+                    } catch (_: Exception) {
+                        Toast.makeText(context, context.getString(R.string.failed_to_export_favorites), Toast.LENGTH_SHORT).show()
                     }
-                },
-                onImportFavorites = { importFavoritesLauncher.launch("application/json") },
-                onExportTags = {
-                    val json = Gson().toJson(tags)
-                    val values = ContentValues().apply {
-                        put(MediaStore.MediaColumns.DISPLAY_NAME, "tags_backup.json")
-                        put(MediaStore.MediaColumns.MIME_TYPE, "application/json")
-                        put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS)
-                    }
-                    val uri = context.contentResolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values)
-                    if (uri != null) {
-                        try {
-                            context.contentResolver.openOutputStream(uri)?.use {
-                                it.write(json.toByteArray())
-                            }
-                            Toast.makeText(context, context.getString(R.string.tags_exported_successfully), Toast.LENGTH_SHORT).show()
-                        } catch (_: Exception) {
-                            Toast.makeText(context, context.getString(R.string.failed_to_export_tags), Toast.LENGTH_SHORT).show()
+                } else {
+                    Toast.makeText(context, context.getString(R.string.failed_to_create_backup_file), Toast.LENGTH_SHORT).show()
+                }
+            },
+            onImportFavorites = { appLaunchers.launchImportFavorites() },
+            onExportTags = {
+                val json = Gson().toJson(tags)
+                val values = ContentValues().apply {
+                    put(MediaStore.MediaColumns.DISPLAY_NAME, "tags_backup.json")
+                    put(MediaStore.MediaColumns.MIME_TYPE, "application/json")
+                    put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS)
+                }
+                val uri = context.contentResolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values)
+                if (uri != null) {
+                    try {
+                        context.contentResolver.openOutputStream(uri)?.use {
+                            it.write(json.toByteArray())
                         }
-                    } else {
-                        Toast.makeText(context, context.getString(R.string.failed_to_create_backup_file), Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, context.getString(R.string.tags_exported_successfully), Toast.LENGTH_SHORT).show()
+                    } catch (_: Exception) {
+                        Toast.makeText(context, context.getString(R.string.failed_to_export_tags), Toast.LENGTH_SHORT).show()
                     }
-                },
-                onImportTags = { importTagsLauncher.launch("application/json") }
-            )
-        }
-
-        if (showDatePicker) {
-            DatePickerDialog(onDismissRequest = { showDatePicker = false }, confirmButton = {
-                TextButton(onClick = { selectedDate = datePickerState.selectedDateMillis; showDatePicker = false }) {
-                    Text(stringResource(id = R.string.dialog_ok))
+                } else {
+                    Toast.makeText(context, context.getString(R.string.failed_to_create_backup_file), Toast.LENGTH_SHORT).show()
                 }
-            }, dismissButton = {
-                TextButton(onClick = { showDatePicker = false }) {
-                    Text(stringResource(id = R.string.dialog_cancel))
-                }
-            }) {
-                DatePicker(state = datePickerState)
-            }
-        }
-
-        if (showConfirmDeleteDialog) {
-            ConfirmDeleteDialog(onConfirm = {
+            },
+            onImportTags = { appLaunchers.launchImportTags() },
+            showDatePicker = showDatePicker,
+            datePickerStateProvider = { datePickerState },
+            onDateSelected = { selectedDate = it },
+            onDatePickerDismiss = { showDatePicker = false },
+            showConfirmDeleteDialog = showConfirmDeleteDialog,
+            onConfirmDelete = {
                 if (isClearingTrash) {
                     TrashRepository.clearTrash(context)
                     isClearingTrash = false
@@ -676,101 +559,61 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
                 selectedItems.clear()
                 viewerState = null
                 showConfirmDeleteDialog = false
-            }, onDismiss = { showConfirmDeleteDialog = false
+            },
+            onDismissConfirmDelete = { showConfirmDeleteDialog = false },
+            showConfirmTrashDialog = showConfirmTrashDialog,
+            onConfirmTrash = {
+                val urisToTrash = itemsToTrash
+                coroutineScope.launch(Dispatchers.IO) {
+                    val copiedUris = TrashRepository.copyToTrash(context, urisToTrash)
+                    if (copiedUris.isNotEmpty()) {
+                        var itemsDeleted = false
+                        copiedUris.forEach { uri ->
+                            try {
+                                if (context.contentResolver.delete(uri, null, null) > 0) {
+                                    itemsDeleted = true
+                                }
+                            } catch (_: Exception) {}
+                        }
+                        if (itemsDeleted) withContext(Dispatchers.Main) { refreshTrigger++ }
+                    }
+                }
                 if (isVibrationEnabled) performVibration(context)
-            })
-        }
-
-        if (showConfirmTrashDialog) {
-            ConfirmTrashDialog(
-                onConfirm = {
-                    val urisToTrash = itemsToTrash
-                    coroutineScope.launch(Dispatchers.IO) {
-                        val copiedUris = TrashRepository.copyToTrash(context, urisToTrash)
-                        if (copiedUris.isNotEmpty()) {
-                            var itemsDeleted = false
-                            copiedUris.forEach { uri ->
-                                try {
-                                    // Удаляем каждый файл индивидуально
-                                    if (context.contentResolver.delete(uri, null, null) > 0) {
-                                        itemsDeleted = true
-                                    }
-                                } catch (e: Exception) {
-                                    // Можно добавить обработку ошибок для каждого файла
-                                }
-                            }
-                            if (itemsDeleted) {
-                                withContext(Dispatchers.Main) {
-                                    refreshTrigger++
-                                }
-                            }
-                        }
+                selectedItems.clear()
+                itemsToTrash = emptyList()
+                showConfirmTrashDialog = false
+                viewerState = null
+            },
+            onDismissConfirmTrash = { showConfirmTrashDialog = false },
+            showConfirmRestoreDialog = showConfirmRestoreDialog,
+            onConfirmRestore = {
+                TrashRepository.restoreFromTrash(context, itemsToRestore)
+                selectedItems.clear()
+                refreshTrigger++
+                showConfirmRestoreDialog = false
+                if (isVibrationEnabled) performVibration(context)
+            },
+            onDismissConfirmRestore = { showConfirmRestoreDialog = false },
+            showFolderSelectionDialog = showFolderSelectionDialog,
+            onDismissFolderSelection = { showFolderSelectionDialog = false },
+            onFolderSelected = { destinationFolder ->
+                coroutineScope.launch {
+                    val folderPath = destinationFolder.items.firstOrNull()?.let { getFolderPathFromUri(context, it.uri) } ?: destinationFolder.name
+                    when (currentFileOperation) {
+                        FileOperation.COPY -> filesToProcess.forEach { copyMediaToFolder(context, it, folderPath) }
+                        FileOperation.MOVE -> filesToProcess.forEach { moveMediaToFolder(context, it, folderPath); viewerState = null }
+                        null -> {}
                     }
-                    if (isVibrationEnabled) performVibration(context)
-                    selectedItems.clear()
-                    itemsToTrash = emptyList()
-                    showConfirmTrashDialog = false
-                    viewerState = null
-                },
-                onDismiss = { showConfirmTrashDialog = false
-                    if (isVibrationEnabled) performVibration(context)
-                }
-            )
-        }
-
-        if (showConfirmRestoreDialog) {
-            ConfirmRestoreDialog(
-                onConfirm = {
-                    TrashRepository.restoreFromTrash(context, itemsToRestore)
-                    selectedItems.clear()
                     refreshTrigger++
-                    showConfirmRestoreDialog = false
-                    if (isVibrationEnabled) performVibration(context)
-                },
-                onDismiss = { showConfirmRestoreDialog = false
-                    if (isVibrationEnabled) performVibration(context)
+                    showFolderSelectionDialog = false
+                    filesToProcess = emptyList()
+                    currentFileOperation = null
                 }
-            )
-        }
-
-        if (showFolderSelectionDialog) {
-            FolderSelectionDialog(
-                folders = allFolders,
-                onDismiss = { showFolderSelectionDialog = false },
-                onFolderSelected = { destinationFolder: MediaFolder ->
-                    coroutineScope.launch {
-                        val folderPath = destinationFolder.items.firstOrNull()?.let {
-                            getFolderPathFromUri(context, it.uri)
-                        } ?: destinationFolder.name
-
-                        when (currentFileOperation) {
-                            FileOperation.COPY -> {
-                                filesToProcess.forEach { uri ->
-                                    copyMediaToFolder(context, uri, folderPath)
-                                }
-                                withContext(Dispatchers.Main) {
-                                    Toast.makeText(context, context.getString(R.string.copied_to_folder, destinationFolder.name), Toast.LENGTH_SHORT).show()
-                                }
-                            }
-                            FileOperation.MOVE -> {
-                                filesToProcess.forEach { uri ->
-                                    moveMediaToFolder(context, uri, folderPath)
-                                }
-                                withContext(Dispatchers.Main) {
-                                    Toast.makeText(context, context.getString(R.string.moved_to_folder, destinationFolder.name), Toast.LENGTH_SHORT).show()
-                                }
-                                viewerState = null
-                            }
-                            null -> {}
-                        }
-                        refreshTrigger++
-                        showFolderSelectionDialog = false
-                        filesToProcess = emptyList()
-                        currentFileOperation = null
-                    }
-                }
-            )
-        }
+            },
+            favorites = favorites,
+            favoriteItems = favoriteItems,
+            tags = tags
+        )
 
         Box(Modifier.fillMaxSize()) {
             BackHandler(enabled = isSelectionMode) {
@@ -1099,7 +942,7 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
                                 SettingsRepository.setAutoDeleteTrashDays(context, it)
                             },
                             onCheckForUpdates = {
-                                checkForUpdates(true)
+                                checkForUpdatesAction(true)
                             },
                             currentVersion = currentVersion
                         )
@@ -1110,7 +953,7 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
                                 Spacer(Modifier.height(8.dp))
                                 Button(onClick = {
                                     if (isVibrationEnabled) performVibration(context)
-                                    permissionLauncher.launch(permissionsToRequest)
+                                    appLaunchers.requestPermissions(permissionsToRequest)
                                 }) {
                                     Text(stringResource(id = R.string.grant_permission_button))
                                 }
