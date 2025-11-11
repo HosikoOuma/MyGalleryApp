@@ -191,3 +191,4 @@ class MainActivity : ComponentActivity() {
         sensorManager?.unregisterListener(shakeDetector)
     }
 }
+//
