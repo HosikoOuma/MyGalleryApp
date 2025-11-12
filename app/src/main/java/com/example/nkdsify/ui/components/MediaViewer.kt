@@ -669,6 +669,7 @@ fun VideoPlayerPage(
                             .padding(bottom = 16.dp)
                             .size(64.dp)
                             .clip(RoundedCornerShape(16.dp))
+                            .border(1.dp, Color.White.copy(alpha = 0.1f), shape = RoundedCornerShape(16.dp))
                             .background(Color.Black.copy(alpha = 0.5f))
                     ) {
                         val icon = if (isPlaying && playbackState != Player.STATE_ENDED) Icons.Filled.Pause else Icons.Filled.PlayArrow
