@@ -10,6 +10,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.calculatePan
 import androidx.compose.foundation.gestures.calculateZoom
@@ -178,6 +179,7 @@ fun MediaViewer(
                     .statusBarsPadding()
                     .padding(vertical = 8.dp, horizontal = 16.dp)
                     .background(Color.Black.copy(alpha = 0.5f), shape = CircleShape)
+                    .border(1.dp, Color.White.copy(alpha = 0.1f), shape = CircleShape)
                     .padding(horizontal = 8.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween

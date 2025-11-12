@@ -4,6 +4,8 @@ import android.content.Intent
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -50,7 +52,7 @@ import com.example.nkdsify.ui.utils.SettingsRepository
 import com.example.nkdsify.ui.utils.performVibration
 
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun SettingsScreen(
     isBlurEnabled: Boolean,
@@ -184,11 +186,11 @@ fun SettingsScreen(
             Icon(Icons.Default.Build, contentDescription = null, modifier = Modifier.padding(end = 8.dp))
             Text(stringResource(id = R.string.main_section_title), style = MaterialTheme.typography.titleLarge)
         }
-        Row(
+        FlowRow(
             modifier = Modifier
                 .fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+            verticalArrangement = Arrangement.Center
         ) {
             Text(stringResource(id = R.string.language_label))
             Box {
@@ -226,11 +228,11 @@ fun SettingsScreen(
                 }
             }
         }
-        Row(
+        FlowRow(
             modifier = Modifier
                 .fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+            verticalArrangement = Arrangement.Center
         ) {
             Text(stringResource(id = R.string.theme_label))
             Box {
@@ -257,11 +259,11 @@ fun SettingsScreen(
                 }
             }
         }
-        Row(
+        FlowRow(
             modifier = Modifier
                 .fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+            verticalArrangement = Arrangement.Center
         ) {
             Text(stringResource(id = R.string.auto_delete_trash_label))
             Switch(
@@ -273,11 +275,11 @@ fun SettingsScreen(
             )
         }
         if (autoDeleteTrashEnabled) {
-            Row(
+            FlowRow(
                 modifier = Modifier
                     .fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                verticalArrangement = Arrangement.Center
             ) {
                 Text(stringResource(id = R.string.auto_delete_trash_days_label))
                 TextField(
@@ -292,11 +294,11 @@ fun SettingsScreen(
                 )
             }
         }
-        Row(
+        FlowRow(
             modifier = Modifier
                 .fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+            verticalArrangement = Arrangement.Center
         ) {
             Text(stringResource(id = R.string.show_shuffle_button_label))
             Switch(
@@ -307,11 +309,11 @@ fun SettingsScreen(
                 }
             )
         }
-        Row(
+        FlowRow(
             modifier = Modifier
                 .fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+            verticalArrangement = Arrangement.Center
         ) {
             Text(stringResource(id = R.string.use_large_shuffle_button_label))
             Switch(
@@ -322,11 +324,11 @@ fun SettingsScreen(
                 }
             )
         }
-        Row(
+        FlowRow(
             modifier = Modifier
                 .fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+            verticalArrangement = Arrangement.Center
         ) {
             Text(stringResource(id = R.string.vibration_label))
             Switch(
@@ -337,11 +339,11 @@ fun SettingsScreen(
                 }
             )
         }
-        Row(
+        FlowRow(
             modifier = Modifier
                 .fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+            verticalArrangement = Arrangement.Center
         ) {
             Text(stringResource(id = R.string.show_file_count_in_folders_label))
             Switch(
@@ -356,11 +358,11 @@ fun SettingsScreen(
             Icon(Icons.Default.PrivacyTip, contentDescription = null, modifier = Modifier.padding(end = 8.dp))
             Text(stringResource(id = R.string.privacy_section_title), style = MaterialTheme.typography.titleLarge)
         }
-        Row(
+        FlowRow(
             modifier = Modifier
                 .fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+            verticalArrangement = Arrangement.Center
         ) {
             Text(stringResource(id = R.string.blur_folder_previews_label))
             Switch(
@@ -371,11 +373,11 @@ fun SettingsScreen(
                 }
             )
         }
-        Row(
+        FlowRow(
             modifier = Modifier
                 .fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+            verticalArrangement = Arrangement.Center
         ) {
             Text(stringResource(id = R.string.blur_in_folders_label))
             Switch(
@@ -386,11 +388,11 @@ fun SettingsScreen(
                 }
             )
         }
-        Row(
+        FlowRow(
             modifier = Modifier
                 .fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+            verticalArrangement = Arrangement.Center
         ) {
             Text(stringResource(id = R.string.blur_media_in_trash_label))
             Switch(
@@ -401,11 +403,11 @@ fun SettingsScreen(
                 }
             )
         }
-        Row(
+        FlowRow(
             modifier = Modifier
                 .fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+            verticalArrangement = Arrangement.Center
         ) {
             Text(stringResource(id = R.string.blur_all_media_label))
             Switch(
@@ -416,11 +418,11 @@ fun SettingsScreen(
                 }
             )
         }
-        Row(
+        FlowRow(
             modifier = Modifier
                 .fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+            verticalArrangement = Arrangement.Center
         ) {
             Text(stringResource(id = R.string.shake_to_blur_label))
             Switch(
@@ -431,11 +433,11 @@ fun SettingsScreen(
                 }
             )
         }
-        Row(
+        FlowRow(
             modifier = Modifier
                 .fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+            verticalArrangement = Arrangement.Center
         ) {
             Text(stringResource(id = R.string.blur_type_label))
             Box {
@@ -466,11 +468,11 @@ fun SettingsScreen(
             Icon(Icons.Default.Photo, contentDescription = null, modifier = Modifier.padding(end = 8.dp))
             Text(stringResource(id = R.string.media_section_title), style = MaterialTheme.typography.titleLarge)
         }
-        Row(
+        FlowRow(
             modifier = Modifier
                 .fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+            verticalArrangement = Arrangement.Center
         ) {
             Text(stringResource(id = R.string.mute_video_by_default_label))
             Switch(
@@ -481,11 +483,11 @@ fun SettingsScreen(
                 }
             )
         }
-        Row(
+        FlowRow(
             modifier = Modifier
                 .fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+            verticalArrangement = Arrangement.Center
         ) {
             Text(stringResource(id = R.string.loop_video_label))
             Switch(
@@ -496,11 +498,11 @@ fun SettingsScreen(
                 }
             )
         }
-        Row(
+        FlowRow(
             modifier = Modifier
                 .fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+            verticalArrangement = Arrangement.Center
         ) {
             Text(stringResource(id = R.string.swipe_to_dismiss_label))
             Switch(
@@ -511,11 +513,11 @@ fun SettingsScreen(
                 }
             )
         }
-        Row(
+        FlowRow(
             modifier = Modifier
                 .fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+            verticalArrangement = Arrangement.Center
         ) {
             Text(stringResource(id = R.string.zoom_gesture_label))
             Box {
