@@ -4,80 +4,134 @@ import android.content.ContentValues
 import android.content.Context
 import android.net.Uri
 import android.os.Build
-import android.os.Environment
 import android.provider.MediaStore
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
-import java.io.FileOutputStream
 
 suspend fun copyMediaToFolder(context: Context, uri: Uri, targetRelativePath: String) {
     withContext(Dispatchers.IO) {
-        val fileName = getFileName(context, uri) ?: return@withContext
+        val projection = arrayOf(
+            MediaStore.MediaColumns.DISPLAY_NAME,
+            MediaStore.MediaColumns.MIME_TYPE,
+            MediaStore.MediaColumns.DATE_ADDED,
+            MediaStore.MediaColumns.DATE_MODIFIED,
+            MediaStore.MediaColumns.DATE_TAKEN,
+            MediaStore.MediaColumns.SIZE
+        )
 
-        // Construct the full, absolute path
-        val destinationDir = File(Environment.getExternalStorageDirectory(), targetRelativePath)
-        if (!destinationDir.exists()) {
-            destinationDir.mkdirs()
-        }
-        val destinationFile = File(destinationDir, fileName)
+        context.contentResolver.query(uri, projection, null, null, null)?.use { cursor ->
+            if (cursor.moveToFirst()) {
+                val name = cursor.getString(cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.DISPLAY_NAME))
+                val mimeType = cursor.getString(cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.MIME_TYPE))
+                val dateAdded = cursor.getLong(cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.DATE_ADDED))
+                val dateModified = cursor.getLong(cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.DATE_MODIFIED))
+                val dateTaken = cursor.getLong(cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.DATE_TAKEN))
+                val size = cursor.getLong(cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.SIZE))
 
-        try {
-            context.contentResolver.openInputStream(uri)?.use { inputStream ->
-                FileOutputStream(destinationFile).use { outputStream ->
-                    inputStream.copyTo(outputStream)
+                val availableName = findAvailableName(context, targetRelativePath, name)
+
+                val contentValues = ContentValues().apply {
+                    put(MediaStore.MediaColumns.DISPLAY_NAME, availableName)
+                    put(MediaStore.MediaColumns.MIME_TYPE, mimeType)
+                    put(MediaStore.MediaColumns.DATE_ADDED, dateAdded)
+                    put(MediaStore.MediaColumns.DATE_MODIFIED, dateModified)
+                    put(MediaStore.MediaColumns.DATE_TAKEN, dateTaken)
+                    put(MediaStore.MediaColumns.SIZE, size)
+
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                        put(MediaStore.MediaColumns.RELATIVE_PATH, targetRelativePath)
+                        put(MediaStore.MediaColumns.IS_PENDING, 1)
+                    }
+                }
+
+                val collection = if (mimeType.startsWith("image/")) {
+                    MediaStore.Images.Media.getContentUri("external")
+                } else {
+                    MediaStore.Video.Media.getContentUri("external")
+                }
+
+                val newUri = context.contentResolver.insert(collection, contentValues)
+
+                if (newUri != null) {
+                    try {
+                        context.contentResolver.openOutputStream(newUri)?.use { outputStream ->
+                            context.contentResolver.openInputStream(uri)?.use { inputStream ->
+                                inputStream.copyTo(outputStream)
+                            }
+                        }
+
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                            contentValues.clear()
+                            contentValues.put(MediaStore.MediaColumns.IS_PENDING, 0)
+                            context.contentResolver.update(newUri, contentValues, null, null)
+                        }
+                    } catch (e: Exception) {
+                        context.contentResolver.delete(newUri, null, null)
+                        e.printStackTrace()
+                    }
                 }
             }
-
-            // Notify MediaStore about the new file
-            val contentValues = ContentValues().apply {
-                put(MediaStore.MediaColumns.DISPLAY_NAME, fileName)
-                put(MediaStore.MediaColumns.MIME_TYPE, context.contentResolver.getType(uri))
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                    put(MediaStore.MediaColumns.RELATIVE_PATH, targetRelativePath)
-                }
-                put(MediaStore.MediaColumns.DATA, destinationFile.absolutePath)
-            }
-
-            val collection = if (isImage(context, uri)) {
-                MediaStore.Images.Media.EXTERNAL_CONTENT_URI
-            } else {
-                MediaStore.Video.Media.EXTERNAL_CONTENT_URI
-            }
-            context.contentResolver.insert(collection, contentValues)
-
-        } catch (e: Exception) {
-            e.printStackTrace()
         }
     }
 }
 
 suspend fun moveMediaToFolder(context: Context, uri: Uri, targetRelativePath: String) {
     withContext(Dispatchers.IO) {
-        // In the context of MANAGE_EXTERNAL_STORAGE, move is copy + delete
-        copyMediaToFolder(context, uri, targetRelativePath)
-        try {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) { // Android 11+ supports reliable move
+            val originalName = getFileName(context, uri) ?: return@withContext
+            val finalName = findAvailableName(context, targetRelativePath, originalName)
+
+            val contentValues = ContentValues().apply {
+                put(MediaStore.MediaColumns.DISPLAY_NAME, finalName)
+                put(MediaStore.MediaColumns.RELATIVE_PATH, targetRelativePath)
+            }
+            try {
+                context.contentResolver.update(uri, contentValues, null, null)
+            } catch (e: Exception) {
+                // Fallback to copy-then-delete for edge cases
+                copyMediaToFolder(context, uri, targetRelativePath)
+                context.contentResolver.delete(uri, null, null)
+            }
+        } else { // Fallback for Android 10
+            copyMediaToFolder(context, uri, targetRelativePath)
             context.contentResolver.delete(uri, null, null)
-        } catch (e: Exception) {
-            e.printStackTrace()
-            // If deletion fails, the original file might remain, but the copy is complete.
         }
     }
 }
 
-private fun isImage(context: Context, uri: Uri): Boolean {
-    val mimeType = context.contentResolver.getType(uri)
-    return mimeType?.startsWith("image/") ?: false
+private fun findAvailableName(context: Context, relativePath: String, originalName: String): String {
+    var newName = originalName
+    var counter = 1
+    val projection = arrayOf(MediaStore.Files.FileColumns._ID)
+    val selection = "${MediaStore.Files.FileColumns.RELATIVE_PATH} = ? AND ${MediaStore.Files.FileColumns.DISPLAY_NAME} = ?"
+    val collection = MediaStore.Files.getContentUri("external")
+
+    while (true) {
+        val selectionArgs = arrayOf("$relativePath/", newName)
+        val cursor = context.contentResolver.query(collection, projection, selection, selectionArgs, null)
+        val fileExists = cursor?.use { it.count > 0 } ?: false
+        if (!fileExists) {
+            return newName
+        }
+
+        val nameWithoutExtension = originalName.substringBeforeLast('.')
+        val extension = originalName.substringAfterLast('.', "")
+        newName = if (extension.isNotEmpty()) {
+            "$nameWithoutExtension($counter).$extension"
+        } else {
+            "$originalName($counter)"
+        }
+        counter++
+    }
 }
 
 private fun getFileName(context: Context, uri: Uri): String? {
     var fileName: String? = null
     context.contentResolver.query(uri, arrayOf(MediaStore.MediaColumns.DISPLAY_NAME), null, null, null)?.use { cursor ->
         if (cursor.moveToFirst()) {
-            val nameIndex = cursor.getColumnIndex(MediaStore.MediaColumns.DISPLAY_NAME)
-            if (nameIndex != -1) {
-                fileName = cursor.getString(nameIndex)
-            }
+            val nameIndex = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.DISPLAY_NAME)
+            fileName = cursor.getString(nameIndex)
         }
     }
     return fileName
@@ -85,21 +139,14 @@ private fun getFileName(context: Context, uri: Uri): String? {
 
 fun getFolderPathFromUri(context: Context, uri: Uri): String? {
     if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
-        // Fallback for older Android versions if needed
         return File(uri.path ?: "").parent
     }
     var relativePath: String? = null
     try {
-        context.contentResolver.query(
-            uri,
-            arrayOf(MediaStore.MediaColumns.RELATIVE_PATH),
-            null, null, null
-        )?.use { cursor ->
+        context.contentResolver.query(uri, arrayOf(MediaStore.MediaColumns.RELATIVE_PATH), null, null, null)?.use { cursor ->
             if (cursor.moveToFirst()) {
-                val pathIndex = cursor.getColumnIndex(MediaStore.MediaColumns.RELATIVE_PATH)
-                if (pathIndex != -1) {
-                    relativePath = cursor.getString(pathIndex)
-                }
+                val pathIndex = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.RELATIVE_PATH)
+                relativePath = cursor.getString(pathIndex)
             }
         }
     } catch (e: Exception) {

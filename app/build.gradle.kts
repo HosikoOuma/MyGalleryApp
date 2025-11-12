@@ -12,8 +12,8 @@ android {
         applicationId = "com.example.nkdsify"
         minSdk = 29
         targetSdk = 36
-        versionCode = 12
-        versionName = "1.11"
+        versionCode = 16
+        versionName = "1.15"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }

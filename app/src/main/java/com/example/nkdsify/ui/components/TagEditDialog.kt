@@ -79,6 +79,7 @@ fun TagEditDialog(
             Button(onClick = {
                 val tagSet = tags.split(",").map { it.trim() }.filter { it.isNotEmpty() }.toSet()
                 onSave(tagSet)
+                onDismiss()
                 if (isVibrationEnabled(context)) performVibration(context)
             }) {
                 Text(stringResource(id = R.string.save_button))

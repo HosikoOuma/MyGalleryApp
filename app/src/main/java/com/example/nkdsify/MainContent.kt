@@ -125,6 +125,14 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
     val tags by vm.tags
     val favorites = vm.favorites
 
+    // --- Sanitization: filter out phantom/placeholder items that have 0 size and 0 dateModified ---
+    // We compute a sanitized copy of `allFolders` for UI presentation only (do not modify VM data).
+    val sanitizedFoldersState = remember { mutableStateOf<List<MediaFolder>>(allFolders) }
+
+    LaunchedEffect(allFolders) {
+        sanitizedFoldersState.value = sanitizeFolders(allFolders, context)
+    }
+
     var selectedTheme by remember { mutableStateOf(SettingsRepository.getTheme(context)) }
     var selectedZoomType by remember { mutableStateOf(SettingsRepository.getZoomType(context)) }
     var selectedBlurType by remember { mutableStateOf(SettingsRepository.getBlurType(context)) }
@@ -450,7 +458,7 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
             showEasterEggDialog = showEasterEggDialog,
             onDismissEasterEgg = { showEasterEggDialog = false },
             showHiddenFoldersDialog = showHiddenFoldersDialog,
-            allFolders = allFolders,
+            allFolders = sanitizedFoldersState.value,
             hiddenFolders = hiddenFolders,
             onDismissHiddenFolders = { showHiddenFoldersDialog = false },
             onFolderHiddenChange = { folderId, isHidden ->
@@ -703,7 +711,7 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
                     if (hasPermissions) {
                         AppNavigation(
                             currentScreen = currentScreen,
-                            allFolders = allFolders,
+                            allFolders = sanitizedFoldersState.value,
                             hiddenFolders = hiddenFolders,
                             searchQuery = searchQuery,
                             isSearchActive = isSearchActive,
