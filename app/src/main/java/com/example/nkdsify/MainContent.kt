@@ -93,6 +93,7 @@ import androidx.compose.material3.LargeFloatingActionButton
 import androidx.compose.ui.res.stringResource
 import com.example.nkdsify.ui.components.FolderSelectionDialog
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.nkdsify.showUpdateNotification
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalComposeUiApi::class)
 @Composable
@@ -154,6 +155,7 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
             onNewVersion = { tagName ->
                 latestVersion = tagName
                 showUpdateDialog = true
+                showUpdateNotification(context, tagName)
             },
             onNoUpdate = {
                 Toast.makeText(context, context.getString(R.string.no_updates_available), Toast.LENGTH_SHORT).show()

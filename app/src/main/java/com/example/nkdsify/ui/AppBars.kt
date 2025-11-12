@@ -272,7 +272,11 @@ fun BottomBar(
 ) {
     var lastTap by rememberSaveable { mutableLongStateOf(0L) }
     var tapCount by rememberSaveable { mutableIntStateOf(0) }
-    
+
+    LaunchedEffect(currentScreen) {
+        tapCount = 0
+    }
+
     NavigationBar {
         NavigationBarItem(
             icon = { Icon(Icons.Filled.Settings, contentDescription = stringResource(id = R.string.settings_content_description)) },
