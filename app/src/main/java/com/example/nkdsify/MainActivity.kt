@@ -379,6 +379,7 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
         val imageLoader = remember(context) {
             ImageLoader.Builder(context)
                 .components {
+                    add(EncryptedImageDecoder.Factory(context))
                     add(ImageDecoderDecoder.Factory())
                     add(GifDecoder.Factory())
                     add(VideoFrameDecoder.Factory())
@@ -807,35 +808,47 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
         if (showConfirmDeleteFromSecretDialog) {
             ConfirmDeleteFromSecretDialog(
                 onConfirm = {
-                    coroutineScope.launch {
-                        SecretRepository.deleteFromSecret(context, itemsToDeleteFromSecret)
-                        // Обновляем список секретных файлов напрямую
-                        secretItems = withContext(Dispatchers.IO) { SecretRepository.getSecretMediaItems(context) }
+                    BiometricUtils.authenticate(
+                        activity = context as AppCompatActivity,
+                        onSuccess = {
+                            coroutineScope.launch {
+                                SecretRepository.deleteFromSecret(context, itemsToDeleteFromSecret)
+                                // Обновляем список секретных файлов напрямую
+                                secretItems = withContext(Dispatchers.IO) { SecretRepository.getSecretMediaItems(context) }
 
-                        // Сбрасываем состояния
-                        showConfirmDeleteFromSecretDialog = false
-                        itemsToDeleteFromSecret = emptyList()
-                        secretViewerState = null
-                        selectedItems.clear()
-                    }
+                                // Сбрасываем состояния
+                                showConfirmDeleteFromSecretDialog = false
+                                itemsToDeleteFromSecret = emptyList()
+                                secretViewerState = null
+                                selectedItems.clear()
+                            }
+                        },
+                        onError = { _, _ -> /* Do nothing on error */ },
+                        onFailed = { /* Do nothing on failure */ }
+                    )
                 },
-
                 onDismiss = { showConfirmDeleteFromSecretDialog = false }
             )
         }
         if (showConfirmMoveToSecretDialog) {
             ConfirmMoveToSecretDialog(
                 onConfirm = {
-                    coroutineScope.launch {
-                        val  itemsToMove = if (isSelectionMode) selectedItems.toList() else listOfNotNull(showDetailsDialog)
-                        SecretRepository.moveToSecret(context, itemsToMove)
-                        showConfirmMoveToSecretDialog = false
-                        showDetailsDialog = null
-                        selectedItems.clear()
-                        viewerState = null // <-- ДОБАВЬТЕ ЭТУ СТРОКУ
-                        //delay(1000)
-                        refreshTrigger++
-                    }
+                    BiometricUtils.authenticate(
+                        activity = context as AppCompatActivity,
+                        onSuccess = {
+                            coroutineScope.launch {
+                                val itemsToMove = if (isSelectionMode) selectedItems.toList() else listOfNotNull(showDetailsDialog)
+                                SecretRepository.moveToSecret(context, itemsToMove)
+                                showConfirmMoveToSecretDialog = false
+                                showDetailsDialog = null
+                                selectedItems.clear()
+                                viewerState = null
+                                refreshTrigger++
+                            }
+                        },
+                        onError = { _, _ -> /* Do nothing on error */ },
+                        onFailed = { /* Do nothing on failure */ }
+                    )
                 },
                 onDismiss = { showConfirmMoveToSecretDialog = false }
             )
@@ -843,17 +856,24 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
         if (showConfirmRestoreFromSecretDialog) {
             ConfirmRestoreFromSecretDialog(
                 onConfirm = {
-                    coroutineScope.launch {
-                        SecretRepository.restoreFromSecret(context, itemsToRestoreFromSecret)
-                        // Обновляем список секретных файлов напрямую
-                        secretItems = withContext(Dispatchers.IO) { SecretRepository.getSecretMediaItems(context) }
+                    BiometricUtils.authenticate(
+                        activity = context as AppCompatActivity,
+                        onSuccess = {
+                            coroutineScope.launch {
+                                SecretRepository.restoreFromSecret(context, itemsToRestoreFromSecret)
+                                // Обновляем список секретных файлов напрямую
+                                secretItems = withContext(Dispatchers.IO) { SecretRepository.getSecretMediaItems(context) }
 
-                        // Сбрасываем состояния
-                        showConfirmRestoreFromSecretDialog = false
-                        itemsToRestoreFromSecret = emptyList()
-                        secretViewerState = null
-                        selectedItems.clear()
-                    }
+                                // Сбрасываем состояния
+                                showConfirmRestoreFromSecretDialog = false
+                                itemsToRestoreFromSecret = emptyList()
+                                secretViewerState = null
+                                selectedItems.clear()
+                            }
+                        },
+                        onError = { _, _ -> /* Do nothing on error */ },
+                        onFailed = { /* Do nothing on failure */ }
+                    )
                 },
                 onDismiss = { showConfirmRestoreFromSecretDialog = false }
             )

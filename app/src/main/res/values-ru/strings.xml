@@ -175,8 +175,8 @@
     <string name="add_new_tag_content_description">Добавить новый тег</string>
     <string name="secret_storage">Секретное хранилище</string>
     <string name="no_secret_items">Нет секретных элементов</string>
-    <string name="biometric_prompt_subtitle">1</string>
-    <string name="biometric_prompt_title">1</string>
+    <string name="biometric_prompt_subtitle">Ауторизуйтесь, чтобы продолжить</string>
+    <string name="biometric_prompt_title">Пожалуйста, авторизуйтесь</string>
     <string name="move_to_secret_storage_content_description">Переместить в секретное хранилище</string>
     <string name="restore_from_secret_storage_content_description">Восстановить из секретного хранилища</string>
     <string name="decrypting_file">Расшифровка...</string>

@@ -175,8 +175,8 @@
     <string name="add_new_tag_content_description">Add new tag</string>
     <string name="secret_storage">Secret Storage</string>
     <string name="no_secret_items">No secret items</string>
-    <string name="biometric_prompt_subtitle">1</string>
-    <string name="biometric_prompt_title">1</string>
+    <string name="biometric_prompt_subtitle">Authenticate to use secret storage</string>
+    <string name="biometric_prompt_title">Please authenticate</string>
     <string name="move_to_secret_storage_content_description">Move to secret storage</string>
     <string name="restore_from_secret_storage_content_description">Restore from secret storage</string>
     <string name="decrypting_file">Decrypting file...</string>

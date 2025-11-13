@@ -14,8 +14,9 @@ import kotlin.coroutines.resume
 
 object SecretRepository {
     private const val SECRET_FOLDER_NAME = ".secret"
+    private const val THUMBNAIL_SUFFIX = ".thumb"
 
-    private fun getSecretFolder(context: Context): File {
+    internal fun getSecretFolder(context: Context): File {
         return File(context.filesDir, SECRET_FOLDER_NAME).apply {
             if (!exists()) mkdirs()
         }
@@ -29,11 +30,25 @@ object SecretRepository {
                 val (originalFileName, _) = getFileInfo(context, uri)
                 if (originalFileName != null) {
                     val encryptedFile = File(secretFolder, originalFileName)
+                    val encryptedThumbFile = File(secretFolder, originalFileName + THUMBNAIL_SUFFIX)
+
+                    // Encrypt original file
                     context.contentResolver.openInputStream(uri)?.use { input ->
                         encryptedFile.outputStream().use { output ->
                             CryptoUtils.encrypt(input, output)
                         }
                     }
+
+                    // Create and encrypt thumbnail
+                    createThumbnail(context, uri)?.let { thumbFile ->
+                        thumbFile.inputStream().use { input ->
+                            encryptedThumbFile.outputStream().use { output ->
+                                CryptoUtils.encrypt(input, output)
+                            }
+                        }
+                        thumbFile.delete() // Delete temporary thumbnail
+                    }
+
                     isSuccess = true
                 }
             } catch (e: Exception) {
@@ -57,6 +72,7 @@ object SecretRepository {
         uris.forEach { uri ->
             try {
                 val encryptedFile = File(uri.path!!)
+                val encryptedThumbFile = File(uri.path!! + THUMBNAIL_SUFFIX)
                 val restoredFile = File(picturesFolder, encryptedFile.name)
 
                 encryptedFile.inputStream().use { input ->
@@ -65,7 +81,6 @@ object SecretRepository {
                     }
                 }
 
-                // Wait for the media scanner to complete before proceeding
                 suspendCancellableCoroutine<Unit> { continuation ->
                     MediaScannerConnection.scanFile(context, arrayOf(restoredFile.absolutePath), null) { _, _ ->
                         if (continuation.isActive) {
@@ -75,6 +90,7 @@ object SecretRepository {
                 }
 
                 encryptedFile.delete()
+                if (encryptedThumbFile.exists()) encryptedThumbFile.delete()
 
             } catch (e: Exception) {
                 Log.e("SecretRepository", "Failed to restore from secret storage: ${e.message}", e)
@@ -86,9 +102,9 @@ object SecretRepository {
         uris.forEach { uri ->
             try {
                 val file = File(uri.path!!)
-                if (file.exists()) {
-                    file.delete()
-                }
+                val thumbFile = File(uri.path!! + THUMBNAIL_SUFFIX)
+                if (file.exists()) file.delete()
+                if (thumbFile.exists()) thumbFile.delete()
             } catch (e: Exception) {
                 Log.e("SecretRepository", "Failed to delete from secret storage: ${e.message}", e)
             }
@@ -97,11 +113,12 @@ object SecretRepository {
 
     suspend fun getSecretMediaItems(context: Context): List<MediaItem> = withContext(Dispatchers.IO) {
         val secretFolder = getSecretFolder(context)
-        secretFolder.listFiles()?.mapNotNull { file ->
+        secretFolder.listFiles { _, name -> !name.endsWith(THUMBNAIL_SUFFIX) }?.mapNotNull { file ->
             try {
                 val uri = Uri.fromFile(file)
                 val name = file.name
-                val isVideo = name.endsWith(".mp4", true) || name.endsWith(".webm", true) // Simple check
+                val isVideo = name.endsWith(".mp4", true) || name.endsWith(".webm", true) 
+                // The URI for MediaItem should point to the full file, not the thumbnail
                 MediaItem(uri, name, isVideo, 0, 0, 0)
             } catch (e: Exception) {
                 null

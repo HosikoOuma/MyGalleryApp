@@ -2,13 +2,17 @@ package com.example.nkdsify.ui.utils
 
 import android.content.ContentValues
 import android.content.Context
+import android.graphics.Bitmap
+import android.media.ThumbnailUtils
 import android.net.Uri
 import android.os.Build
 import android.os.Environment
 import android.provider.MediaStore
+import android.util.Size
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
+import java.io.FileOutputStream
 
 suspend fun copyMediaToFolder(context: Context, uri: Uri, targetRelativePath: String) {
     withContext(Dispatchers.IO) {
@@ -181,6 +185,24 @@ internal fun getFileInfo(context: Context, uri: Uri): Pair<String?, String?> {
     val path = uri.path
     return Pair(path?.substringAfterLast('/'), path?.substringBeforeLast('/'))
 }
+
+suspend fun createThumbnail(context: Context, uri: Uri, quality: Int = 50): File? = withContext(Dispatchers.IO) {
+    return@withContext try {
+        // Используем современный и надежный способ ContentResolver.loadThumbnail (требует API 29+, наша minSdk = 29)
+        val bitmap = context.contentResolver.loadThumbnail(uri, Size(256, 256), null)
+
+        bitmap?.let {
+            val tempFile = File.createTempFile("thumb", ".jpg", context.cacheDir)
+            FileOutputStream(tempFile).use { out ->
+                it.compress(Bitmap.CompressFormat.JPEG, quality, out)
+            }
+            tempFile
+        }
+    } catch (e: Exception) {
+        null // Если создание превью не удалось, просто возвращаем null
+    }
+}
+
 
 fun getFolderPathFromUri(context: Context, uri: Uri): String? {
     if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
