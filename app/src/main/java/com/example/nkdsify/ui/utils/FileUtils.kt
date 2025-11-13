@@ -4,6 +4,7 @@ import android.content.ContentValues
 import android.content.Context
 import android.net.Uri
 import android.os.Build
+import android.os.Environment
 import android.provider.MediaStore
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -126,15 +127,59 @@ private fun findAvailableName(context: Context, relativePath: String, originalNa
     }
 }
 
-private fun getFileName(context: Context, uri: Uri): String? {
+internal fun getFileName(context: Context, uri: Uri): String? {
     var fileName: String? = null
-    context.contentResolver.query(uri, arrayOf(MediaStore.MediaColumns.DISPLAY_NAME), null, null, null)?.use { cursor ->
-        if (cursor.moveToFirst()) {
-            val nameIndex = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.DISPLAY_NAME)
-            fileName = cursor.getString(nameIndex)
+    if (uri.scheme == "content") {
+        val projection = arrayOf(MediaStore.MediaColumns.DISPLAY_NAME)
+        context.contentResolver.query(uri, projection, null, null, null)?.use { cursor ->
+            if (cursor.moveToFirst()) {
+                val nameIndex = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.DISPLAY_NAME)
+                fileName = cursor.getString(nameIndex)
+            }
         }
+    } else {
+        fileName = uri.path?.substringAfterLast('/')
     }
     return fileName
+}
+
+internal fun getFileInfo(context: Context, uri: Uri): Pair<String?, String?> {
+    if (uri.scheme == "content") {
+        val projection = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            arrayOf(MediaStore.MediaColumns.DISPLAY_NAME, MediaStore.MediaColumns.RELATIVE_PATH)
+        } else {
+            arrayOf(MediaStore.MediaColumns.DISPLAY_NAME, MediaStore.MediaColumns.DATA)
+        }
+        context.contentResolver.query(uri, projection, null, null, null)?.use { cursor ->
+            if (cursor.moveToFirst()) {
+                val nameIndex = cursor.getColumnIndex(MediaStore.MediaColumns.DISPLAY_NAME)
+                val name = if (nameIndex != -1) cursor.getString(nameIndex) else null
+
+                var path: String? = null
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    val pathIndex = cursor.getColumnIndex(MediaStore.MediaColumns.RELATIVE_PATH)
+                    if (pathIndex != -1) {
+                        path = cursor.getString(pathIndex)
+                    }
+                } else {
+                    val dataIndex = cursor.getColumnIndex(MediaStore.MediaColumns.DATA)
+                    if (dataIndex != -1) {
+                        val data = cursor.getString(dataIndex)
+                        val file = File(data)
+                        val externalStoragePath = Environment.getExternalStorageDirectory().path
+                        file.parent?.let { parentPath ->
+                            if (parentPath.startsWith(externalStoragePath)) {
+                                path = parentPath.substring(externalStoragePath.length).removePrefix("/")
+                            }
+                        }
+                    }
+                }
+                return Pair(name, path)
+            }
+        }
+    }
+    val path = uri.path
+    return Pair(path?.substringAfterLast('/'), path?.substringBeforeLast('/'))
 }
 
 fun getFolderPathFromUri(context: Context, uri: Uri): String? {

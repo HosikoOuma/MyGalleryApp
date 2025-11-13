@@ -173,4 +173,22 @@
     <string name="add_tag_content_description">Add new tag</string>
     <string name="tag_already_exists">Tag already exists</string>
     <string name="add_new_tag_content_description">Add new tag</string>
+    <string name="secret_storage">Secret Storage</string>
+    <string name="no_secret_items">No secret items</string>
+    <string name="biometric_prompt_subtitle">1</string>
+    <string name="biometric_prompt_title">1</string>
+    <string name="move_to_secret_storage_content_description">Move to secret storage</string>
+    <string name="restore_from_secret_storage_content_description">Restore from secret storage</string>
+    <string name="decrypting_file">Decrypting file...</string>
+    <string name="confirm_move_to_secret_title">Confirm Move to Secret Storage?</string>
+    <string name="confirm_move_to_secret_message">Are you sure you want to move these items to the secret storage?
+    </string>
+    <string name="confirm_move_to_secret_button">Move</string>
+    <string name="confirm_restore_from_secret_message">Are you sure you want to restore these items from the secret storage?
+    </string>
+    <string name="confirm_restore_from_secret_title">Confirm Restore from Secret Storage?</string>
+    <string name="confirm_delete_from_secret_message">Are you sure you want to delete these items from the secret storage? They will be permanently deleted.
+    </string>
+    <string name="confirm_delete_from_secret_title">Confirm Delete from Secret Storage?</string>
+    <string name="move_to_secret_storage_button">Secret</string>
 </resources>

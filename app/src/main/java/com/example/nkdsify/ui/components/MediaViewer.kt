@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -29,6 +30,7 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Label
@@ -66,6 +68,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -83,11 +86,15 @@ import coil.size.Size
 import com.example.nkdsify.R
 import com.example.nkdsify.data.MediaItem
 import com.example.nkdsify.data.ZoomType
+import com.example.nkdsify.ui.utils.CryptoUtils
 import com.example.nkdsify.ui.utils.ExternalMediaErrorDialog
 import com.example.nkdsify.ui.utils.SettingsRepository
 import com.example.nkdsify.ui.utils.performVibration
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.io.File
 import java.util.concurrent.TimeUnit
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -105,6 +112,7 @@ fun MediaViewer(
     onShowDetails: (Uri) -> Unit,
     isExternal: Boolean = false,
     isTrashMode: Boolean,
+    isSecretMode: Boolean = false, // <-- ДОБАВЬТЕ ЭТО
     isMuteVideoByDefault: Boolean,
     zoomType: ZoomType,
     isLoopVideoEnabled: Boolean,
@@ -112,6 +120,46 @@ fun MediaViewer(
 ) {
     val pagerState = rememberPagerState(initialPage = startIndex, pageCount = { items.size })
     val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
+    var tempFileUri by remember { mutableStateOf<Uri?>(null) }
+    if (isSecretMode) {
+        DisposableEffect(Unit) {
+            onDispose {
+                tempFileUri?.path?.let {
+                    try {
+                        File(it).delete()
+                    } catch (e: Exception) {
+                        // ignore
+                    }
+                }
+            }
+        }
+
+        LaunchedEffect(pagerState.currentPage) {
+            // Clean up previous temp file
+            tempFileUri?.path?.let { File(it).delete() }
+            tempFileUri = null
+
+            // Decrypt new item
+            val item = items[pagerState.currentPage]
+            withContext(Dispatchers.IO) {
+                val tempFile = File.createTempFile("decrypted_", item.name.substringAfterLast('.'), context.cacheDir)
+                try {
+                    File(item.uri.path!!).inputStream().use { input ->
+                        tempFile.outputStream().use { output ->
+                            CryptoUtils.decrypt(input, output)
+                        }
+                    }
+                    withContext(Dispatchers.Main) {
+                        tempFileUri = Uri.fromFile(tempFile)
+                    }
+                } catch (e: Exception) {
+                    tempFile.delete()
+                    // Handle error, maybe show a toast
+                }
+            }
+        }
+    }
     val isVibrationEnabled = remember { SettingsRepository.isVibrationEnabled(context) }
     var showExternalMediaError by remember { mutableStateOf(false) }
     var isMuted by remember(pagerState.currentPage) { mutableStateOf(isMuteVideoByDefault) }
@@ -141,28 +189,60 @@ fun MediaViewer(
             state = pagerState,
             modifier = Modifier.fillMaxSize(),
             key = { items[it].uri },
-            userScrollEnabled = isSwipeToDismissEnabled
-        ) { page ->
+            userScrollEnabled = isSwipeToDismissEnabled        ) { page ->
             val item = items[page]
             val isVisible by remember { derivedStateOf { pagerState.currentPage == page } }
-            if (item.isVideo) {
-                VideoPlayerPage(
-                    uri = item.uri,
-                    isVisible = isVisible,
-                    isMuted = isMuted,
-                    controlsVisible = controlsVisible,
-                    onToggleControls = toggleControls,
-                    onMuteClick = { isMuted = !isMuted },
-                    isLoopVideoEnabled = isLoopVideoEnabled
-                )
-            } else {
-                ZoomableImage(
-                    uri = item.uri,
-                    imageLoader = imageLoader,
-                    zoomType = zoomType,
-                    isVibrationEnabled = isVibrationEnabled,
-                    onToggleControls = toggleControls
-                )
+
+            if (isSecretMode) {
+                if (isVisible && tempFileUri != null) {
+                    if (item.isVideo) {
+                        VideoPlayerPage(
+                            uri = tempFileUri!!,
+                            isVisible = isVisible,
+                            isMuted = isMuted,
+                            controlsVisible = controlsVisible,
+                            onToggleControls = toggleControls,
+                            onMuteClick = { isMuted = !isMuted },
+                            isLoopVideoEnabled = isLoopVideoEnabled
+                        )
+                    } else {
+                        ZoomableImage(
+                            uri = tempFileUri!!,
+                            imageLoader = imageLoader,
+                            zoomType = zoomType,
+                            isVibrationEnabled = isVibrationEnabled,
+                            onToggleControls = toggleControls
+                        )
+                    }
+                } else {
+                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            CircularProgressIndicator()
+                            Spacer(Modifier.height(8.dp))
+                            Text(stringResource(id = R.string.decrypting_file), color = Color.White)
+                        }
+                    }
+                }
+            } else { // Original logic for non-secret items
+                if (item.isVideo) {
+                    VideoPlayerPage(
+                        uri = item.uri,
+                        isVisible = isVisible,
+                        isMuted = isMuted,
+                        controlsVisible = controlsVisible,
+                        onToggleControls = toggleControls,
+                        onMuteClick = { isMuted = !isMuted },
+                        isLoopVideoEnabled = isLoopVideoEnabled
+                    )
+                } else {
+                    ZoomableImage(
+                        uri = item.uri,
+                        imageLoader = imageLoader,
+                        zoomType = zoomType,
+                        isVibrationEnabled = isVibrationEnabled,
+                        onToggleControls = toggleControls
+                    )
+                }
             }
         }
 
@@ -196,72 +276,93 @@ fun MediaViewer(
                 Spacer(Modifier.weight(1f))
 
                 if (currentItem != null) {
-                    if (isTrashMode) {
-                        IconButton(onClick = {
-                            if (isVibrationEnabled) performVibration(context)
-                            onRestore(listOf(currentItem.uri))
-                            onDismiss()
-                        }) {
-                            Icon(Icons.Filled.RestoreFromTrash, contentDescription = "Restore", tint = Color.White)
-                        }
-                    }
-
-                    if (!isTrashMode) {
-                        IconButton(onClick = {
-                            if (isVibrationEnabled) performVibration(context)
-                            if (isExternal) {
-                                showExternalMediaError = true
-                            } else {
-                                onShowTagDialog(currentItem.uri)
+                    when {
+                        isSecretMode -> {
+                            IconButton(onClick = {
+                                if (isVibrationEnabled) performVibration(context)
+                                onRestore(listOf(currentItem.uri))
+                                //onDismiss()
+                            }) {
+                                Icon(Icons.Default.Restore, contentDescription = "Restore", tint = Color.White)
                             }
-                        }) {
-                            Icon(Icons.AutoMirrored.Filled.Label, contentDescription = "Tags", tint = Color.White)
-                        }
-
-                        IconButton(onClick = {
-                            if (isVibrationEnabled) performVibration(context)
-                            val shareIntent = Intent().apply {
-                                action = Intent.ACTION_SEND
-                                putExtra(Intent.EXTRA_STREAM, currentItem.uri)
-                                type = if (currentItem.isVideo) "video/*" else "image/*"
+                            IconButton(onClick = {
+                                if (isVibrationEnabled) performVibration(context)
+                                onDelete(listOf(currentItem.uri))
+                                //onDismiss()
+                            }) {
+                                Icon(Icons.Default.Delete, contentDescription = "Delete", tint = Color.White)
                             }
-                            context.startActivity(Intent.createChooser(shareIntent, null))
-                        }) {
-                            Icon(Icons.Filled.Share, contentDescription = "Share", tint = Color.White)
                         }
-                    }
-                    IconButton(onClick = {
-                        if (isVibrationEnabled) performVibration(context)
-                        if (isExternal) {
-                            showExternalMediaError = true
-                        } else {
-                            onDelete(listOf(currentItem.uri))
-                            onDismiss()
-                        }
-                    }) {
-                        Icon(Icons.Filled.Delete, contentDescription = "Delete", tint = Color.White)
-                    }
-                    if (!isTrashMode) {
-                        IconButton(onClick = {
-                            if (isVibrationEnabled) performVibration(context)
-                            if (isExternal) {
-                                showExternalMediaError = true
-                            } else {
-                                onToggleFavorite(currentItem.uri)
+                        isTrashMode -> {
+                            IconButton(onClick = {
+                                if (isVibrationEnabled) performVibration(context)
+                                onRestore(listOf(currentItem.uri))
+                                onDismiss()
+                            }) {
+                                Icon(Icons.Filled.RestoreFromTrash, contentDescription = "Restore", tint = Color.White)
                             }
-                        }) {
-                            Icon(
-                                imageVector = if (favorites.contains(currentItem.uri)) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
-                                contentDescription = "Favorite",
-                                tint = if (favorites.contains(currentItem.uri)) Color.Red else Color.White
-                            )
+                            IconButton(onClick = {
+                                if (isVibrationEnabled) performVibration(context)
+                                onDelete(listOf(currentItem.uri))
+                                onDismiss()
+                            }) {
+                                Icon(Icons.Filled.Delete, contentDescription = "Delete", tint = Color.White)
+                            }
                         }
+                        else -> { // Normal mode
+                            IconButton(onClick = {
+                                if (isVibrationEnabled) performVibration(context)
+                                if (isExternal) {
+                                    showExternalMediaError = true
+                                } else {
+                                    onShowTagDialog(currentItem.uri)
+                                }
+                            }) {
+                                Icon(Icons.AutoMirrored.Filled.Label, contentDescription = "Tags", tint = Color.White)
+                            }
 
-                        IconButton(onClick = {
-                            if (isVibrationEnabled) performVibration(context)
-                            onShowDetails(currentItem.uri)
-                        }) {
-                            Icon(Icons.Filled.Info, contentDescription = "Info", tint = Color.White)
+                            IconButton(onClick = {
+                                if (isVibrationEnabled) performVibration(context)
+                                val shareIntent = Intent().apply {
+                                    action = Intent.ACTION_SEND
+                                    putExtra(Intent.EXTRA_STREAM, currentItem.uri)
+                                    type = if (currentItem.isVideo) "video/*" else "image/*"
+                                }
+                                context.startActivity(Intent.createChooser(shareIntent, null))
+                            }) {
+                                Icon(Icons.Filled.Share, contentDescription = "Share", tint = Color.White)
+                            }
+                            IconButton(onClick = {
+                                if (isVibrationEnabled) performVibration(context)
+                                if (isExternal) {
+                                    showExternalMediaError = true
+                                } else {
+                                    onDelete(listOf(currentItem.uri))
+                                    onDismiss()
+                                }
+                            }) {
+                                Icon(Icons.Filled.Delete, contentDescription = "Delete", tint = Color.White)
+                            }
+                            IconButton(onClick = {
+                                if (isVibrationEnabled) performVibration(context)
+                                if (isExternal) {
+                                    showExternalMediaError = true
+                                } else {
+                                    onToggleFavorite(currentItem.uri)
+                                }
+                            }) {
+                                Icon(
+                                    imageVector = if (favorites.contains(currentItem.uri)) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
+                                    contentDescription = "Favorite",
+                                    tint = if (favorites.contains(currentItem.uri)) Color.Red else Color.White
+                                )
+                            }
+                            IconButton(onClick = {
+                                if (isVibrationEnabled) performVibration(context)
+                                onShowDetails(currentItem.uri)
+                            }) {
+                                Icon(Icons.Filled.Info, contentDescription = "Info", tint = Color.White)
+                            }
                         }
                     }
                 }
@@ -366,8 +467,10 @@ fun ZoomableImage(
                             offsetY = 0f
                             scale = 1f
                         } else {
-                            val newOffsetX = offsetX + pan.x + (centroid.x - size.width / 2) * (1 - zoom)
-                            val newOffsetY = offsetY + pan.y + (centroid.y - size.height / 2) * (1 - zoom)
+                            val newOffsetX =
+                                offsetX + pan.x + (centroid.x - size.width / 2) * (1 - zoom)
+                            val newOffsetY =
+                                offsetY + pan.y + (centroid.y - size.height / 2) * (1 - zoom)
 
                             val maxOffsetX = (size.width * (newScale - 1)) / 2f
                             val maxOffsetY = (size.height * (newScale - 1)) / 2f
@@ -550,7 +653,11 @@ fun VideoPlayerPage(
                     onTap = { onToggleControls() },
                     onDoubleTap = { offset ->
                         seekDirection = if (offset.x > size.width / 2) {
-                            exoPlayer.seekTo((exoPlayer.currentPosition + 10000).coerceAtMost(totalDuration))
+                            exoPlayer.seekTo(
+                                (exoPlayer.currentPosition + 10000).coerceAtMost(
+                                    totalDuration
+                                )
+                            )
                             SeekDirection.FORWARD
                         } else {
                             exoPlayer.seekTo((exoPlayer.currentPosition - 10000).coerceAtLeast(0))
@@ -574,8 +681,10 @@ fun VideoPlayerPage(
                             offsetY = 0f
                             scale = 1f
                         } else {
-                            val newOffsetX = offsetX + pan.x + (centroid.x - size.width / 2) * (1 - zoom)
-                            val newOffsetY = offsetY + pan.y + (centroid.y - size.height / 2) * (1 - zoom)
+                            val newOffsetX =
+                                offsetX + pan.x + (centroid.x - size.width / 2) * (1 - zoom)
+                            val newOffsetY =
+                                offsetY + pan.y + (centroid.y - size.height / 2) * (1 - zoom)
 
                             val maxOffsetX = (size.width * (newScale - 1)) / 2f
                             val maxOffsetY = (size.height * (newScale - 1)) / 2f
@@ -668,7 +777,11 @@ fun VideoPlayerPage(
                             .padding(bottom = 16.dp)
                             .size(64.dp)
                             .clip(RoundedCornerShape(16.dp))
-                            .border(1.dp, Color.White.copy(alpha = 0.1f), shape = RoundedCornerShape(16.dp))
+                            .border(
+                                1.dp,
+                                Color.White.copy(alpha = 0.1f),
+                                shape = RoundedCornerShape(16.dp)
+                            )
                             .background(Color.Black.copy(alpha = 0.5f))
                     ) {
                         val icon = if (isPlaying && playbackState != Player.STATE_ENDED) Icons.Filled.Pause else Icons.Filled.PlayArrow

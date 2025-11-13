@@ -173,5 +173,24 @@
     <string name="add_tag_content_description">Заебенить нью тег</string>
     <string name="tag_already_exists">Тег уже существует, братик)</string>
     <string name="add_new_tag_content_description">Заебенить нью тег</string>
+    <string name="secret_storage">Фото твоего хуя и голых лолей</string>
+    <string name="no_secret_items">Нихуя нет(</string>
+    <string name="biometric_prompt_subtitle">1</string>
+    <string name="biometric_prompt_title">1</string>
+    <string name="move_to_secret_storage_content_description">Спрятать твой хуй или голую лолю</string>
+    <string name="restore_from_secret_storage_content_description">Вернуть твой хуй или голую лолю</string>
+    <string name="decrypting_file">Жди блять...</string>
+    <string name="confirm_move_to_secret_title">Спрятать твой хуй и голую лолю?</string>
+    <string name="confirm_move_to_secret_message">Братик, ты точно хочешь спрятать свои (или не свовсем) писички сисички попочки?
+    </string>
+    <string name="confirm_move_to_secret_button">ТРАХАТЬ</string>
+    <string name="confirm_restore_from_secret_message">Ты точно хочешь вернуть свою нюдсы? Есль чо, то они будут в папке /Pictures.
+    </string>
+    <string name="confirm_restore_from_secret_title">Рестор твоих нюдсов?</string>
+    <string name="confirm_delete_from_secret_message">Ты точно хочешь ёбнуть свои нюдсы? Они пропадут нахуй, ты их больше не вернёшь</string>
+    <string name="confirm_delete_from_secret_title">Ёбнуть нюдсы?</string>
+    <string name="move_to_secret_storage_button">Тсссс...</string>
+
+
 
 </resources>

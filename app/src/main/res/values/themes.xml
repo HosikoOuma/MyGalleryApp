@@ -3,4 +3,5 @@
 
     <style name="Theme.Mygalleryapp" parent="android:Theme.Material.Light.NoActionBar" />
     <style name="Base.Theme.AppCompat" parent="Theme.AppCompat.DayNight.DarkActionBar"/>
+
 </resources>

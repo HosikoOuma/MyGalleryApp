@@ -91,16 +91,18 @@ import java.io.BufferedReader
 import java.io.InputStreamReader
 import android.content.ContentUris
 import androidx.annotation.OptIn
+import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.material3.LargeFloatingActionButton
 import androidx.compose.ui.res.stringResource
 import com.example.nkdsify.ui.components.FolderSelectionDialog
+
 
 enum class FileOperation {
     COPY, MOVE
 }
 
 @OptIn(UnstableApi::class, ExperimentalMaterial3Api::class)
-class MainActivity : ComponentActivity() {
+class MainActivity : AppCompatActivity() {
     private var sensorManager: SensorManager? = null
     private var accelerometer: Sensor? = null
     private var shakeDetector: ShakeDetector? = null
@@ -304,6 +306,8 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
         var showDetailsDialog by remember { mutableStateOf<Uri?>(null) }
         var showAlbumDetailsDialog by remember { mutableStateOf(false) }
         var showConfirmDeleteDialog by remember { mutableStateOf(false) }
+        var itemsToDeleteFromSecret by remember { mutableStateOf<List<Uri>>(emptyList()) }
+        var showConfirmDeleteFromSecretDialog by remember { mutableStateOf(false) }
         var showConfirmTrashDialog by remember { mutableStateOf(false) }
         var showConfirmRestoreDialog by remember { mutableStateOf(false) }
         var showEasterEggDialog by remember { mutableStateOf(false) }
@@ -321,8 +325,14 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
         var itemsToDelete by remember { mutableStateOf<List<Uri>>(emptyList()) }
         var isClearingTrash by remember { mutableStateOf(false) }
         var itemsToTrash by remember { mutableStateOf<List<Uri>>(emptyList()) }
+
+        var secretItems by remember { mutableStateOf<List<MediaItem>>(emptyList()) }
+        var secretViewerState by remember { mutableStateOf<MediaViewerState?>(null) }
         var itemsToRestore by remember { mutableStateOf<List<Uri>>(emptyList()) }
 
+        var itemsToRestoreFromSecret by remember { mutableStateOf<List<Uri>>(emptyList()) }
+        var showConfirmRestoreFromSecretDialog by remember { mutableStateOf(false) }
+        var showConfirmMoveToSecretDialog by remember { mutableStateOf(false) }
         var isSettingWallpaper by remember { mutableStateOf(false) }
 
         val manageStorageLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {
@@ -436,6 +446,11 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
                 }
             }
         }
+        LaunchedEffect(currentScreen, refreshTrigger) {
+            if (currentScreen is Screen.SecretStorage) {
+                secretItems = SecretRepository.getSecretMediaItems(context)
+            }
+        }
 
         LaunchedEffect(initialUri, hasPermissions) {
             if (initialUri != null && hasPermissions) {
@@ -542,6 +557,7 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
             is Screen.Trash -> stringResource(id = R.string.screen_title_trash)
             is Screen.AllMedia -> stringResource(id = R.string.screen_title_all_media)
             is Screen.MediaByTag -> screen.tag
+            is Screen.SecretStorage -> stringResource(id = R.string.secret_storage) // <-- ДОБАВЬТЕ ЭТУ СТРОКУ
         }
 
 
@@ -640,7 +656,10 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
                     onRename = {
                         showRenameDialog = uri
                         showDetailsDialog = null
-                    }
+                    },
+                    onMoveToSecret = {
+                        showConfirmMoveToSecretDialog = true
+                    },
                 )
             }
         }
@@ -785,6 +804,61 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
             })
         }
 
+        if (showConfirmDeleteFromSecretDialog) {
+            ConfirmDeleteFromSecretDialog(
+                onConfirm = {
+                    coroutineScope.launch {
+                        SecretRepository.deleteFromSecret(context, itemsToDeleteFromSecret)
+                        // Обновляем список секретных файлов напрямую
+                        secretItems = withContext(Dispatchers.IO) { SecretRepository.getSecretMediaItems(context) }
+
+                        // Сбрасываем состояния
+                        showConfirmDeleteFromSecretDialog = false
+                        itemsToDeleteFromSecret = emptyList()
+                        secretViewerState = null
+                        selectedItems.clear()
+                    }
+                },
+
+                onDismiss = { showConfirmDeleteFromSecretDialog = false }
+            )
+        }
+        if (showConfirmMoveToSecretDialog) {
+            ConfirmMoveToSecretDialog(
+                onConfirm = {
+                    coroutineScope.launch {
+                        val  itemsToMove = if (isSelectionMode) selectedItems.toList() else listOfNotNull(showDetailsDialog)
+                        SecretRepository.moveToSecret(context, itemsToMove)
+                        showConfirmMoveToSecretDialog = false
+                        showDetailsDialog = null
+                        selectedItems.clear()
+                        viewerState = null // <-- ДОБАВЬТЕ ЭТУ СТРОКУ
+                        //delay(1000)
+                        refreshTrigger++
+                    }
+                },
+                onDismiss = { showConfirmMoveToSecretDialog = false }
+            )
+        }
+        if (showConfirmRestoreFromSecretDialog) {
+            ConfirmRestoreFromSecretDialog(
+                onConfirm = {
+                    coroutineScope.launch {
+                        SecretRepository.restoreFromSecret(context, itemsToRestoreFromSecret)
+                        // Обновляем список секретных файлов напрямую
+                        secretItems = withContext(Dispatchers.IO) { SecretRepository.getSecretMediaItems(context) }
+
+                        // Сбрасываем состояния
+                        showConfirmRestoreFromSecretDialog = false
+                        itemsToRestoreFromSecret = emptyList()
+                        secretViewerState = null
+                        selectedItems.clear()
+                    }
+                },
+                onDismiss = { showConfirmRestoreFromSecretDialog = false }
+            )
+        }
+
         if (showConfirmTrashDialog) {
             ConfirmTrashDialog(
                 onConfirm = {
@@ -902,6 +976,9 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
             BackHandler(enabled = currentScreen is Screen.MediaByTag) {
                 currentScreen = Screen.TagManagement
             }
+            BackHandler(enabled = currentScreen is Screen.SecretStorage) { // <-- ДОБАВЬТЕ ЭТОТ БЛОК
+                currentScreen = Screen.Settings
+            }
 
             Scaffold(
                 topBar = {
@@ -989,7 +1066,18 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
                             currentFileOperation = FileOperation.MOVE
                             showFolderSelectionDialog = true
                             selectedItems.clear()
-                        }
+                        },
+                        onMoveToSecret = {
+                            showConfirmMoveToSecretDialog = true
+                        },
+                        onRestoreFromSecret = {
+                            itemsToRestoreFromSecret = selectedItems.toList()
+                            showConfirmRestoreFromSecretDialog = true
+                        },
+                        onDeleteFromSecret = {
+                            itemsToDeleteFromSecret = selectedItems.toList()
+                            showConfirmDeleteFromSecretDialog = true
+                        },
                     )
                 },
                 bottomBar = {
@@ -1004,7 +1092,7 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
                     )
                 },
                 floatingActionButton = {
-                    if (isShuffleButtonVisible && currentScreen !is Screen.Trash && currentScreen !is Screen.Settings && currentScreen !is Screen.TagManagement && currentScreen !is Screen.MediaByTag) {
+                    if (isShuffleButtonVisible && currentScreen !is Screen.Trash && currentScreen !is Screen.Settings && currentScreen !is Screen.TagManagement && currentScreen !is Screen.MediaByTag && currentScreen !is Screen.SecretStorage) {
                         val allFavoritesAlbumName = stringResource(id = R.string.album_name_all_favorites)
                         val onClick = {
                             if (isVibrationEnabled) performVibration(context)
@@ -1057,6 +1145,17 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
                 Box(modifier = boxModifier) {
                     if (hasPermissions) {
                         AppNavigation(
+
+                            onGoToSecretStorage = {
+                                BiometricUtils.authenticate(
+                                    activity = context as AppCompatActivity,
+                                    onSuccess = {
+                                        currentScreen = Screen.SecretStorage
+                                    },
+                                    onError = { _, _ -> /* Намеренно пусто */ },
+                                    onFailed = { /* Намеренно пусто */ }
+                                )
+                            },
                             currentScreen = currentScreen,
                             allFolders = sanitizedFoldersState.value,
                             hiddenFolders = hiddenFolders,
@@ -1221,7 +1320,10 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
                             onTagClick = { tag ->
                                 currentScreen = Screen.MediaByTag(tag)
                             },
-                            currentVersion = currentVersion
+                            currentVersion = currentVersion,
+                            setSecretViewerState = { secretViewerState = it }, // <-- ДОБАВЬТЕ ЭТО
+                            secretViewerState = secretViewerState,
+                            secretItems = secretItems,
                         )
                     } else {
                         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -1279,6 +1381,35 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
                             favorites.add(uri)
                         }
                     },
+                    isMuteVideoByDefault = isMuteVideoByDefault,
+                    zoomType = selectedZoomType,
+                    isLoopVideoEnabled = isLoopVideoEnabled,
+                    isSwipeToDismissEnabled = isSwipeToDismissEnabled
+                )
+            }
+            if (secretViewerState != null) {
+                BackHandler { secretViewerState = null }
+                MediaViewer(
+                    items = secretViewerState!!.items,
+                    startIndex = secretViewerState!!.startIndex,
+                    favorites = emptyList(), // No favorites in secret mode
+                    onDismiss = { secretViewerState = null },
+                    imageLoader = imageLoader,
+                    isSecretMode = true,
+                    onRestore = { uris ->
+                        itemsToRestoreFromSecret = uris
+                        showConfirmRestoreFromSecretDialog = true
+                    },
+                    onDelete = { uris ->
+                        itemsToDeleteFromSecret = uris
+                        showConfirmDeleteFromSecretDialog = true
+                    },
+
+                    // Dummy parameters not used in secret mode
+                    onShowTagDialog = {},
+                    onToggleFavorite = {},
+                    onShowDetails = {},
+                    isTrashMode = false,
                     isMuteVideoByDefault = isMuteVideoByDefault,
                     zoomType = selectedZoomType,
                     isLoopVideoEnabled = isLoopVideoEnabled,

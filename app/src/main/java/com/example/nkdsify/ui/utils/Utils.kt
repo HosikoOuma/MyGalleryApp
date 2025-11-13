@@ -19,6 +19,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.DriveFileMove
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Wallpaper
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -206,6 +207,80 @@ fun ConfirmTrashDialog(
 }
 
 @Composable
+fun ConfirmMoveToSecretDialog(
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(id = R.string.confirm_move_to_secret_title)) },
+        text = { Text(stringResource(id = R.string.confirm_move_to_secret_message)) },
+        confirmButton = {
+            Button(
+                onClick = onConfirm,
+            ) {
+                Text(stringResource(id = R.string.confirm_move_to_secret_button))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(id = R.string.dialog_cancel))
+            }
+        }
+    )
+}
+
+@Composable
+fun ConfirmRestoreFromSecretDialog(
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(id = R.string.confirm_restore_from_secret_title)) },
+        text = { Text(stringResource(id = R.string.confirm_restore_from_secret_message)) },
+        confirmButton = {
+            Button(
+                onClick = onConfirm,
+
+            ) {
+                Text(stringResource(id = R.string.restore_button))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(id = R.string.dialog_cancel))
+            }
+        }
+    )
+}
+@Composable
+fun ConfirmDeleteFromSecretDialog(
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(id = R.string.confirm_delete_from_secret_title)) },
+        text = { Text(stringResource(id = R.string.confirm_delete_from_secret_message)) },
+        confirmButton = {
+            Button(
+                onClick = onConfirm,
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+
+            ) {
+                Text(stringResource(id = R.string.delete_button))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(id = R.string.dialog_cancel))
+            }
+        }
+    )
+}
+
+@Composable
 fun ConfirmRestoreDialog(
     onConfirm: () -> Unit,
     onDismiss: () -> Unit
@@ -229,6 +304,8 @@ fun ConfirmRestoreDialog(
     )
 }
 
+
+
 @Composable
 fun ExternalMediaErrorDialog(onDismiss: () -> Unit) {
     AlertDialog(
@@ -250,7 +327,8 @@ fun MediaDetailsDialog(
     onSetAsWallpaper: () -> Unit,
     onCopy: () -> Unit,
     onMove: () -> Unit,
-    onRename: () -> Unit
+    onRename: () -> Unit,
+    onMoveToSecret: () -> Unit
 ) {
     val context = LocalContext.current
     val isVibrationEnabled by remember { mutableStateOf(SettingsRepository.isVibrationEnabled(context)) }
@@ -293,6 +371,12 @@ fun MediaDetailsDialog(
                     onRename()
                 }) {
                     Icon(Icons.Default.Edit, contentDescription = stringResource(id = R.string.rename_content_description))
+                }
+                IconButton(onClick = {
+                    if (isVibrationEnabled) performVibration(context)
+                    onMoveToSecret()
+                }) {
+                    Icon(Icons.Default.Lock, contentDescription = stringResource(id = R.string.move_to_secret_storage_content_description))
                 }
             }
         },

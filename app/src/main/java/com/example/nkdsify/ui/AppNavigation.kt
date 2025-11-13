@@ -24,6 +24,7 @@ import com.example.nkdsify.data.ZoomType
 import com.example.nkdsify.ui.components.MediaGrid
 import com.example.nkdsify.ui.screens.FavoritesScreen
 import com.example.nkdsify.ui.screens.FoldersGrid
+import com.example.nkdsify.ui.screens.SecretStorageScreen
 import com.example.nkdsify.ui.screens.SettingsScreen
 import com.example.nkdsify.ui.screens.TagManagementScreen
 import com.example.nkdsify.ui.screens.TrashScreen
@@ -32,6 +33,7 @@ import com.example.nkdsify.ui.screens.TrashScreen
 @Composable
 fun AppNavigation(
     currentScreen: Screen,
+    secretItems: List<MediaItem>,
     allFolders: List<MediaFolder>,
     hiddenFolders: Set<String>,
     searchQuery: String,
@@ -64,6 +66,7 @@ fun AppNavigation(
     onManageTagsClick: () -> Unit,
     onTagClick: (String) -> Unit,
     onBackupAndRestoreClick: () -> Unit,
+    onGoToSecretStorage: () -> Unit,
     onDeleteTag: (String) -> Unit,
     onEditTag: (String, String) -> Unit,
     trashedItems: List<MediaItem>,
@@ -73,6 +76,8 @@ fun AppNavigation(
     onBlurAllMediaEnabledChange: (Boolean) -> Unit,
     isVibrationEnabled: Boolean,
     onVibrationEnabledChange: (Boolean) -> Unit,
+    secretViewerState: MediaViewerState?,
+    setSecretViewerState: (MediaViewerState) -> Unit,
     onOpenAlbum: (String) -> Unit,
     isShowFileCountEnabled: Boolean,
     onShowFileCountChange: (Boolean) -> Unit,
@@ -138,6 +143,7 @@ fun AppNavigation(
             is Screen.Favorites -> if (screen.openAlbumName == null) 2 else 12
             is Screen.Trash -> 3
             is Screen.Settings -> 4
+            is Screen.SecretStorage -> 5
             is Screen.FolderContent -> 10
             is Screen.TagManagement -> 14
             is Screen.MediaByTag -> 15
@@ -246,6 +252,7 @@ fun AppNavigation(
                     onZoomTypeChange = onZoomTypeChange,
                     onManageTagsClick = onManageTagsClick,
                     onBackupAndRestoreClick = onBackupAndRestoreClick,
+                    onGoToSecretStorage = onGoToSecretStorage,
                     isVibrationEnabled = isVibrationEnabled,
                     onVibrationEnabledChange = onVibrationEnabledChange,
                     isShowFileCountEnabled = isShowFileCountEnabled,
@@ -350,6 +357,27 @@ fun AppNavigation(
                         }
                     },
                     onClearSelection = onClearSelection,
+                    blurType = selectedBlurType
+                )
+            }
+            is Screen.SecretStorage -> {
+                SecretStorageScreen(
+                    items = secretItems, // <-- ДОБАВЬТЕ ЭТУ СТРОКУ
+                    imageLoader = imageLoader,
+                    selectedItems = selectedItems,
+                    onToggleSelection = { item ->
+                        if (selectedItems.contains(item.uri)) {
+                            selectedItems.remove(item.uri)
+                        } else {
+                            selectedItems.add(item.uri)
+                        }
+                    },
+                    onClearSelection = onClearSelection,
+                    onItemClick = { items, item ->
+                        keyboardController?.hide()
+                        setSecretViewerState(MediaViewerState(items = items, startIndex = items.indexOf(item)))
+                    },
+                    isBlurEnabled = isBlurEnabled,
                     blurType = selectedBlurType
                 )
             }

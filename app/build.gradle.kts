@@ -12,8 +12,8 @@ android {
         applicationId = "com.example.nkdsify"
         minSdk = 29
         targetSdk = 36
-        versionCode = 17
-        versionName = "1.16"
+        versionCode = 18
+        versionName = "1.17"
         //1.16
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
@@ -74,6 +74,7 @@ dependencies {
     debugImplementation(libs.androidx.ui.tooling)
     // Lifecycle ViewModel for Compose
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.6.1")
+    implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.0")
 
     // Coil for image loading (versions are not in Compose BOM)
     implementation("io.coil-kt:coil-compose:2.7.0")
@@ -86,6 +87,7 @@ dependencies {
     implementation("androidx.media3:media3-exoplayer:1.8.0")
     implementation("androidx.media3:media3-ui:1.8.0")
     implementation("androidx.media3:media3-transformer:1.8.0")
+    implementation("androidx.biometric:biometric:1.1.0")
 
     implementation("com.google.code.gson:gson:2.10.1")
     implementation(libs.retrofit)

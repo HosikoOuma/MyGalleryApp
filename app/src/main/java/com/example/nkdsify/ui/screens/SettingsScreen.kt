@@ -1,6 +1,7 @@
 package com.example.nkdsify.ui.screens
 
 import android.content.Intent
+import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -48,6 +49,7 @@ import com.example.nkdsify.data.BlurType
 import com.example.nkdsify.data.Language
 import com.example.nkdsify.data.Theme
 import com.example.nkdsify.data.ZoomType
+import com.example.nkdsify.ui.utils.BiometricUtils
 import com.example.nkdsify.ui.utils.SettingsRepository
 import com.example.nkdsify.ui.utils.performVibration
 
@@ -73,6 +75,7 @@ fun SettingsScreen(
     onZoomTypeChange: (ZoomType) -> Unit,
     onManageTagsClick: () -> Unit,
     onBackupAndRestoreClick: () -> Unit,
+    onGoToSecretStorage: () -> Unit,
     isVibrationEnabled: Boolean,
     onVibrationEnabledChange: (Boolean) -> Unit,
     isShowFileCountEnabled: Boolean,
@@ -106,6 +109,7 @@ fun SettingsScreen(
     var showSpecialLanguageDialog by remember { mutableStateOf(false) }
     val scrollState = rememberScrollState()
     var specialLanguageUnlocked by remember { mutableStateOf(SettingsRepository.isSpecialLanguageUnlocked(context)) }
+    val isBiometricAvailable = remember { BiometricUtils.isBiometricAvailable(context) }
 
     @Composable
     fun getThemeName(theme: Theme): String {
@@ -462,6 +466,17 @@ fun SettingsScreen(
                         )
                     }
                 }
+            }
+        }
+        if (isBiometricAvailable) {
+            Button(
+                onClick = {
+                    if (isVibrationEnabled) performVibration(context)
+                    onGoToSecretStorage()
+                },
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Text(stringResource(id = R.string.secret_storage))
             }
         }
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 16.dp, bottom = 8.dp)) {

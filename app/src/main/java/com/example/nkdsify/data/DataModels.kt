@@ -11,6 +11,7 @@ sealed class Screen {
     data object Trash : Screen()
     data object AllMedia : Screen()
     data class MediaByTag(val tag: String) : Screen()
+    data object SecretStorage : Screen()
 }
 
 
