@@ -10,7 +10,6 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.hardware.Sensor
-import com.example.nkdsify.showUpdateNotification
 import android.hardware.SensorManager
 import android.media.MediaPlayer
 import android.net.Uri
@@ -1279,16 +1278,6 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
                         } else {
                             favorites.add(uri)
                         }
-                    },
-                    onCopy = {
-                        filesToProcess = listOf(it)
-                        currentFileOperation = FileOperation.COPY
-                        showFolderSelectionDialog = true
-                    },
-                    onMove = {
-                        filesToProcess = listOf(it)
-                        currentFileOperation = FileOperation.MOVE
-                        showFolderSelectionDialog = true
                     },
                     isMuteVideoByDefault = isMuteVideoByDefault,
                     zoomType = selectedZoomType,

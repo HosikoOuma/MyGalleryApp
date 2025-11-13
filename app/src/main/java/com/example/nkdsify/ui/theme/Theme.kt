@@ -28,6 +28,7 @@ private val DarkColors = darkColorScheme(
     tertiary = androidx.compose.ui.graphics.Color(0xFFEFB8C8)
 )
 
+@Suppress("DEPRECATION")
 @Composable
 fun NkdsifyAppTheme(theme: Theme = Theme.SYSTEM, content: @Composable () -> Unit) {
     val context = LocalContext.current

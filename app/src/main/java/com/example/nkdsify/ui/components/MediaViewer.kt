@@ -71,6 +71,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.media3.common.MediaItem as Media3Item
 import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
@@ -102,8 +103,6 @@ fun MediaViewer(
     onShowTagDialog: (Uri) -> Unit,
     onToggleFavorite: (Uri) -> Unit,
     onShowDetails: (Uri) -> Unit,
-    onMove: (Uri) -> Unit,
-    onCopy: (Uri) -> Unit,
     isExternal: Boolean = false,
     isTrashMode: Boolean,
     isMuteVideoByDefault: Boolean,
@@ -441,7 +440,7 @@ fun VideoPlayerPage(
     var size by remember { mutableStateOf(IntSize.Zero) }
 
     // --- Lifecycle State ---
-    val lifecycleOwner = LocalLifecycleOwner.current
+    val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
     var wasPlayingBeforePause by rememberSaveable { mutableStateOf(false) }
 
 

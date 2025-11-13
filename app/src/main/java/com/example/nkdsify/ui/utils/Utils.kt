@@ -156,23 +156,6 @@ fun formatDateRange(startMillis: Long, endMillis: Long): String {
         "${formatter.format(startDate)} - ${formatter.format(endDate)}"
     }
 }
-
-fun deleteMedia(context: Context, uris: List<Uri>) {
-    uris.forEach { uri ->
-        try {
-            context.contentResolver.delete(uri, null, null)
-        } catch (e: SecurityException) {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                val rse = e as? RecoverableSecurityException
-                if (rse != null) {
-                    val intentSender = rse.userAction.actionIntent.intentSender
-                    // Handle IntentSender as needed, e.g., launch it for user confirmation
-                }
-            }
-        }
-    }
-}
-
 @Composable
 fun ConfirmDeleteDialog(
     onConfirm: () -> Unit,

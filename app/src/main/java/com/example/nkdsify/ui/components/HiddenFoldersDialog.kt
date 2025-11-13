@@ -13,9 +13,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
 import com.example.nkdsify.R
 import com.example.nkdsify.data.MediaFolder
@@ -30,7 +28,6 @@ fun HiddenFoldersDialog(
     onFolderHiddenChange: (String, Boolean) -> Unit
 
 ) {
-    val haptic = LocalHapticFeedback.current
     val context = LocalContext.current
     AlertDialog(
         onDismissRequest = onDismiss,
