@@ -1,7 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-    <style name="Theme.Mygalleryapp" parent="android:Theme.Material.Light.NoActionBar" />
-    <style name="Base.Theme.AppCompat" parent="Theme.AppCompat.DayNight.DarkActionBar"/>
+    <style name="Theme.Mygalleryapp" parent="Theme.AppCompat.DayNight.NoActionBar" />
 
+    <!-- Тема для всплывающего экрана (Splash Screen) -->
+    <style name="Theme.App.Starting" parent="Theme.SplashScreen">
+        <!-- Цвет фона экрана -->
+        <item name="windowSplashScreenBackground">#CBB8F8</item>
+        <!-- Иконка в центре -->
+        <item name="windowSplashScreenAnimatedIcon">@mipmap/ic_launcher</item>
+        <!-- Тема, которая будет применена после всплывающего экрана -->
+        <item name="postSplashScreenTheme">@style/Theme.Mygalleryapp</item>
+    </style>
 </resources>

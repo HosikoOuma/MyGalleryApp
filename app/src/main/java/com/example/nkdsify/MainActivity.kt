@@ -7,6 +7,7 @@ import android.app.Activity
 import android.app.WallpaperManager
 import android.content.ContentValues
 import android.content.Context
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.hardware.Sensor
@@ -123,6 +124,7 @@ class MainActivity : AppCompatActivity() {
 //            LocaleListCompat.forLanguageTags(language.code)
 //        }
 //        AppCompatDelegate.setApplicationLocales(locale)
+        installSplashScreen()
         super.onCreate(savedInstanceState)
         sensorManager = getSystemService(SENSOR_SERVICE) as SensorManager
         accelerometer = sensorManager?.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)

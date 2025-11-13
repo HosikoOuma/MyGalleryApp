@@ -62,6 +62,7 @@ dependencies {
     // AndroidX Core and Activity
     implementation(libs.androidx.core.ktx.v1131)
     implementation(libs.androidx.activity.compose.v192)
+    implementation("androidx.core:core-splashscreen:1.0.1")
 
     // Compose UI Components. These are now managed by the BOM.
     // No need to specify foundation separately, it's included transitively.
