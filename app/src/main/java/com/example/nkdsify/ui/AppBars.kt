@@ -49,6 +49,8 @@ fun TopBar(
     onSearchQueryChange: (String) -> Unit,
     title: String,
     onBackClick: () -> Unit,
+    onBackClickS: () -> Unit,
+    onBackClickTM: () -> Unit,
     onCloseSearch: () -> Unit,
     onSearchClick: () -> Unit,
     onFilterByDateClick: () -> Unit,
@@ -176,10 +178,29 @@ fun TopBar(
             },
             modifier = Modifier.statusBarsPadding(),
             navigationIcon = {
-                if (currentScreen is Screen.FolderContent || currentScreen is Screen.TagManagement || (currentScreen is Screen.Favorites && currentScreen.openAlbumName != null)) {
+                if (currentScreen is Screen.FolderContent || (currentScreen is Screen.Favorites && currentScreen.openAlbumName != null)) {
                     IconButton(onClick = {
                         if (isVibrationEnabled) performVibration(context)
                         onBackClick()
+                    }) {
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = stringResource(id = R.string.back_content_description)
+                        )
+                    }
+                }
+                if (currentScreen is Screen.TagManagement) {
+                    IconButton(onClick = {
+                        if (isVibrationEnabled) performVibration(context)
+                        onBackClickS()
+                    }) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(id = R.string.back_content_description))
+                    }
+                }
+                if (currentScreen is Screen.MediaByTag) {
+                    IconButton(onClick = {
+                        if (isVibrationEnabled) performVibration(context)
+                        onBackClickTM()
                     }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(id = R.string.back_content_description))
                     }

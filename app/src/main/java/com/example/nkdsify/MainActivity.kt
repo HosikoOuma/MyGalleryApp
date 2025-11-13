@@ -362,6 +362,7 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
         var favoriteItems by remember { mutableStateOf<List<MediaItem>>(emptyList()) }
         var trashedItems by remember { mutableStateOf<List<MediaItem>>(emptyList()) }
         var tags by remember { mutableStateOf(TagsRepository.getTags(context)) }
+        var allTags by remember { mutableStateOf(TagsRepository.getAllTags(context)) }
 
         val selectedItems = remember { mutableStateListOf<Uri>() }
         val isSelectionMode = selectedItems.isNotEmpty()
@@ -541,7 +542,9 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
             is Screen.TagManagement -> stringResource(id = R.string.screen_title_manage_tags)
             is Screen.Trash -> stringResource(id = R.string.screen_title_trash)
             is Screen.AllMedia -> stringResource(id = R.string.screen_title_all_media)
+            is Screen.MediaByTag -> screen.tag
         }
+
 
         val datePickerState = rememberDatePickerState()
         var showDatePicker by remember { mutableStateOf(false) }
@@ -566,11 +569,12 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
             val uri = showTagDialog!!
             TagEditDialog(
                 initialTags = TagsRepository.getTagsForItem(context, uri),
-                allTags = tags.values.flatten().toSet(),
+                allTags = allTags, 
                 onDismiss = { showTagDialog = null },
                 onSave = { tagSet ->
                     TagsRepository.setTagsForItem(context, uri, tagSet)
                     tags = TagsRepository.getTags(context)
+                    allTags = TagsRepository.getAllTags(context) 
                     showTagDialog = null
                 })
         }
@@ -583,7 +587,7 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
 
             TagEditDialog(
                 initialTags = commonTags,
-                allTags = tags.values.flatten().toSet(),
+                allTags = allTags, 
                 onDismiss = { showBulkTagDialog = false },
                 onSave = { newTags ->
                     val tagsToAdd = newTags - commonTags
@@ -595,6 +599,7 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
                         TagsRepository.setTagsForItem(context, uri, currentTags)
                     }
                     tags = TagsRepository.getTags(context)
+                    allTags = TagsRepository.getAllTags(context)
                     showBulkTagDialog = false
                     selectedItems.clear()
                 }
@@ -879,6 +884,9 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
             BackHandler(enabled = currentScreen is Screen.FolderContent) {
                 currentScreen = Screen.Folders
             }
+            BackHandler(enabled = currentScreen is Screen.Favorites && (currentScreen as Screen.Favorites).openAlbumName == null) {
+                currentScreen = Screen.Folders
+            }
             BackHandler(enabled = currentScreen is Screen.Favorites && (currentScreen as Screen.Favorites).openAlbumName != null) {
                 currentScreen = Screen.Favorites()
             }
@@ -892,6 +900,10 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
             BackHandler(enabled = currentScreen is Screen.AllMedia) {
                 currentScreen = Screen.Folders
             }
+            BackHandler(enabled = currentScreen is Screen.MediaByTag) {
+                currentScreen = Screen.TagManagement
+            }
+
             Scaffold(
                 topBar = {
                     TopBar(
@@ -952,6 +964,8 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
                         onSearchQueryChange = { searchQuery = it },
                         title = title,
                         onBackClick = { currentScreen = Screen.Folders },
+                        onBackClickS = { currentScreen = Screen.Settings },
+                        onBackClickTM = { currentScreen = Screen.TagManagement },
                         onCloseSearch = {
                             isSearchActive = false
                             searchQuery = ""
@@ -991,7 +1005,7 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
                     )
                 },
                 floatingActionButton = {
-                    if (isShuffleButtonVisible && currentScreen !is Screen.Trash && currentScreen !is Screen.Settings && currentScreen !is Screen.TagManagement) {
+                    if (isShuffleButtonVisible && currentScreen !is Screen.Trash && currentScreen !is Screen.Settings && currentScreen !is Screen.TagManagement && currentScreen !is Screen.MediaByTag) {
                         val allFavoritesAlbumName = stringResource(id = R.string.album_name_all_favorites)
                         val onClick = {
                             if (isVibrationEnabled) performVibration(context)
@@ -1065,12 +1079,9 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
                             setViewerState = { viewerState = it },
                             keyboardController = keyboardController,
                             tags = tags,
+                            allTags = allTags,
                             favoritesGridState = favoritesGridState,
                             onClearSelection = { selectedItems.clear() },
-                            onClearSearch = {
-                                searchQuery = ""
-                                isSearchActive = false
-                            },
                             isTrashBlurEnabled = isTrashBlurEnabled,
                             onTrashBlurEnabledChange = {
                                 onTrashBlurEnabledChange(it)
@@ -1122,11 +1133,18 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
                                 if (isVibrationEnabled) performVibration(context)
                                 TagsRepository.removeTagFromAllItems(context, it)
                                 tags = TagsRepository.getTags(context)
+                                allTags = TagsRepository.getAllTags(context)
                             },
                             onEditTag = { oldTag, newTag ->
                                 if (isVibrationEnabled) performVibration(context)
                                 TagsRepository.renameTag(context, oldTag, newTag)
                                 tags = TagsRepository.getTags(context)
+                                allTags = TagsRepository.getAllTags(context)
+                            },
+                            onAddNewTag = { newTag ->
+                                if (isVibrationEnabled) performVibration(context)
+                                TagsRepository.addNewTag(context, newTag)
+                                allTags = TagsRepository.getAllTags(context)
                             },
                             trashedItems = trashedItems,
                             onClearTrash = {
@@ -1200,6 +1218,9 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
                             },
                             onCheckForUpdates = {
                                 checkForUpdates(true)
+                            },
+                            onTagClick = { tag ->
+                                currentScreen = Screen.MediaByTag(tag)
                             },
                             currentVersion = currentVersion
                         )

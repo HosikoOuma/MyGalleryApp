@@ -162,7 +162,16 @@
     <string name="media_section_title">Хуедия</string>
     <string name="select_a_folder_title">Селект папо4ку</string>
     <string name="no_folders_found">Папо4ек нема, братик(</string>
-    <string name="failed_to_remove_from_trash">Failed to remove from trash!</string>
-    <string name="operation_successful">Operation successful!</string>
-    <string name="operation_failed">Operation failed!</string>
+    <string name="failed_to_remove_from_trash">Не смог ёбнуть трещ</string>
+    <string name="operation_successful">Заебись)</string>
+    <string name="operation_failed">Бля(</string>
+    <string name="delete_tag_dialog_title">Ёбнуть тег</string>
+    <string name="delete_tag_confirmation_text">Ты точно хочешб ёбнуть тег «%1$s»?</string>
+    <string name="add_tag_dialog_title">Заебенить тег</string>
+    <string name="tag_name_label">Нейм тега</string>
+    <string name="add_button">Заебенить</string>
+    <string name="add_tag_content_description">Заебенить нью тег</string>
+    <string name="tag_already_exists">Тег уже существует, братик)</string>
+    <string name="add_new_tag_content_description">Заебенить нью тег</string>
+
 </resources>

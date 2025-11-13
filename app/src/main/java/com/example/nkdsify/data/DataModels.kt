@@ -10,6 +10,7 @@ sealed class Screen {
     data object TagManagement : Screen()
     data object Trash : Screen()
     data object AllMedia : Screen()
+    data class MediaByTag(val tag: String) : Screen()
 }
 
 

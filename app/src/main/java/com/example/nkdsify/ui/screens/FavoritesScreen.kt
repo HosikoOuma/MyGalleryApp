@@ -51,6 +51,7 @@ fun FavoritesScreen(
     onItemClick: (List<MediaItem>, MediaItem) -> Unit,
     onToggleSelection: (MediaItem) -> Unit,
     isBlurEnabled: Boolean,
+    isBlurInFolderEnabled: Boolean,
     gridState: LazyGridState,
     openAlbumName: String?,
     onOpenAlbum: (String) -> Unit,
@@ -81,7 +82,7 @@ fun FavoritesScreen(
             onToggleSelection = onToggleSelection,
             onClearSelection = onClearSelection,
             blurType = blurType,
-            isBlurEnabled = isBlurEnabled
+            isBlurEnabled = isBlurInFolderEnabled
         )
     } else {
         if (displayAlbums.isEmpty()) {

@@ -2,8 +2,6 @@ package com.example.nkdsify.ui
 
 import android.net.Uri
 import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.ExperimentalAnimationApi
-import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
@@ -30,10 +28,7 @@ import com.example.nkdsify.ui.screens.SettingsScreen
 import com.example.nkdsify.ui.screens.TagManagementScreen
 import com.example.nkdsify.ui.screens.TrashScreen
 
-@OptIn(
-    ExperimentalAnimationApi::class, ExperimentalComposeUiApi::class,
-    ExperimentalSharedTransitionApi::class
-)
+@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 fun AppNavigation(
     currentScreen: Screen,
@@ -56,11 +51,10 @@ fun AppNavigation(
     tags: Map<String, Set<String>>,
     favoritesGridState: LazyGridState,
     onClearSelection: () -> Unit,
-    onClearSearch: () -> Unit,
-    onTrashBlurEnabledChange: (Boolean) -> Unit,
     isTrashBlurEnabled: Boolean,
-    onMuteVideoByDefaultChange: (Boolean) -> Unit,
+    onTrashBlurEnabledChange: (Boolean) -> Unit,
     isMuteVideoByDefault: Boolean,
+    onMuteVideoByDefaultChange: (Boolean) -> Unit,
     onEasterEggClick: () -> Unit,
     selectedTheme: Theme,
     onThemeChange: (Theme) -> Unit,
@@ -68,6 +62,7 @@ fun AppNavigation(
     selectedZoomType: ZoomType,
     onZoomTypeChange: (ZoomType) -> Unit,
     onManageTagsClick: () -> Unit,
+    onTagClick: (String) -> Unit,
     onBackupAndRestoreClick: () -> Unit,
     onDeleteTag: (String) -> Unit,
     onEditTag: (String, String) -> Unit,
@@ -89,6 +84,8 @@ fun AppNavigation(
     onLoopVideoEnabledChange: (Boolean) -> Unit,
     selectedBlurType: BlurType,
     onBlurTypeChange: (BlurType) -> Unit,
+    allTags: Set<String>,
+    onAddNewTag: (String) -> Unit,
     isSwipeToDismissEnabled: Boolean,
     onSwipeToDismissEnabledChange: (Boolean) -> Unit,
     useLargeFab: Boolean,
@@ -143,6 +140,7 @@ fun AppNavigation(
             is Screen.Settings -> 4
             is Screen.FolderContent -> 10
             is Screen.TagManagement -> 14
+            is Screen.MediaByTag -> 15
         }
 
         val initialOrder = getScreenOrder(initialState)
@@ -218,6 +216,7 @@ fun AppNavigation(
                         }
                     },
                     isBlurEnabled = isBlurEnabled,
+                    isBlurInFolderEnabled = isBlurInFolderEnabled,
                     gridState = favoritesGridState,
                     openAlbumName = screen.openAlbumName,
                     onOpenAlbum = onOpenAlbum,
@@ -276,9 +275,11 @@ fun AppNavigation(
 
             is Screen.TagManagement -> {
                 TagManagementScreen(
-                    allTags = tags.values.flatten().toSet(),
                     onDeleteTag = onDeleteTag,
-                    onEditTag = onEditTag
+                    onEditTag = onEditTag,
+                    onTagClick = onTagClick,
+                    allTags = allTags,
+                    onAddNewTag = onAddNewTag
                 )
             }
 
@@ -314,6 +315,32 @@ fun AppNavigation(
                     onItemClick = { item ->
                         keyboardController?.hide()
                         setViewerState(MediaViewerState(items = filteredAllMedia, startIndex = filteredAllMedia.indexOf(item)))
+                    },
+                    onToggleSelection = { item ->
+                        if (selectedItems.contains(item.uri)) {
+                            selectedItems.remove(item.uri)
+                        } else {
+                            selectedItems.add(item.uri)
+                        }
+                    },
+                    onClearSelection = onClearSelection,
+                    blurType = selectedBlurType
+                )
+            }
+            is Screen.MediaByTag -> {
+                val mediaWithTag = remember(allMedia, tags, screen.tag) {
+                    val urisWithTag = tags.filter { it.value.contains(screen.tag) }.keys.asSequence().map { Uri.parse(it) }.toSet()
+                    allMedia.filter { it.uri in urisWithTag }
+                }
+                MediaGrid(
+                    items = mediaWithTag,
+                    favorites = favorites,
+                    selectedItems = selectedItems,
+                    imageLoader = imageLoader,
+                    isBlurEnabled = isBlurInFolderEnabled,
+                    onItemClick = { item ->
+                        keyboardController?.hide()
+                        setViewerState(MediaViewerState(items = mediaWithTag, startIndex = mediaWithTag.indexOf(item)))
                     },
                     onToggleSelection = { item ->
                         if (selectedItems.contains(item.uri)) {
