@@ -93,6 +93,7 @@ import java.io.InputStreamReader
 import android.content.ContentUris
 import androidx.annotation.OptIn
 import androidx.appcompat.app.AppCompatActivity
+import androidx.compose.material.icons.filled.Camera
 import androidx.compose.material3.LargeFloatingActionButton
 import androidx.compose.ui.res.stringResource
 import com.example.nkdsify.ui.components.FolderSelectionDialog
@@ -131,7 +132,7 @@ class MainActivity : AppCompatActivity() {
         shakeDetector = ShakeDetector()
 
         setContent {
-            val initialUri = if (intent?.action == Intent.ACTION_VIEW) intent.data else null
+            val initialUri = if (intent?.action == Intent.ACTION_VIEW || intent?.action == Intent.ACTION_EDIT || intent?.action == "com.android.camera.action.REVIEW") intent.data else null
             val displayMetrics = resources.displayMetrics
             val screenWidth = displayMetrics.widthPixels
             val screenHeight = displayMetrics.heightPixels
@@ -222,6 +223,7 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
     val keyboardController = LocalSoftwareKeyboardController.current
     var showUpdateDialog by remember { mutableStateOf(false) }
     var latestVersion by remember { mutableStateOf<String?>(null) }
+    var selectedFabAction by remember { mutableStateOf(SettingsRepository.getFabAction(context)) }
     val currentVersion = remember { context.packageManager.getPackageInfo(context.packageName, 0).versionName ?: "0.0" }
 
     fun compareVersionNames(v1: String, v2: String): Int {
@@ -437,6 +439,7 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
                 pullRefreshState.endRefresh()
             }
         }
+
         LaunchedEffect(allFolders) {
             sanitizedFoldersState.value = sanitizeFolders(allFolders, context)
         }
@@ -1116,42 +1119,59 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
                 floatingActionButton = {
                     if (isShuffleButtonVisible && currentScreen !is Screen.Trash && currentScreen !is Screen.Settings && currentScreen !is Screen.TagManagement && currentScreen !is Screen.MediaByTag && currentScreen !is Screen.SecretStorage) {
                         val allFavoritesAlbumName = stringResource(id = R.string.album_name_all_favorites)
-                        val onClick = {
+                        val onClick: () -> Unit = {
                             if (isVibrationEnabled) performVibration(context)
-                            val itemsToShuffle = when (val screen = currentScreen) {
-                                is Screen.FolderContent -> screen.folder.items
-                                is Screen.AllMedia -> allMedia
-                                is Screen.Favorites -> {
-                                    if (screen.openAlbumName != null) {
-                                        val taggedAlbums = favoriteItems
-                                            .flatMap { item -> (tags[item.uri.toString()] ?: emptySet()).map { tag -> tag to item } }
-                                            .groupBy({ it.first }, { it.second })
-                                        if (screen.openAlbumName == allFavoritesAlbumName) favoriteItems else taggedAlbums[screen.openAlbumName]
-                                            ?: emptyList()
-                                    } else {
-                                        favoriteItems
+
+                            when (selectedFabAction) {
+                                FabAction.SHUFFLE -> {
+                                    val itemsToShuffle = when (val screen = currentScreen) {
+                                        is Screen.FolderContent -> screen.folder.items
+                                        is Screen.AllMedia -> allMedia
+                                        is Screen.Favorites -> {
+                                            if (screen.openAlbumName != null) {
+                                                val taggedAlbums = favoriteItems
+                                                    .flatMap { item -> (tags[item.uri.toString()] ?: emptySet()).map { tag -> tag to item } }
+                                                    .groupBy({ it.first }, { it.second })
+                                                if (screen.openAlbumName == allFavoritesAlbumName) favoriteItems else taggedAlbums[screen.openAlbumName]
+                                                    ?: emptyList()
+                                            } else {
+                                                favoriteItems
+                                            }
+                                        }
+                                        is Screen.Folders -> allMedia
+                                        else -> emptyList()
+                                    }
+
+                                    if (itemsToShuffle.isNotEmpty()) {
+                                        val shuffledItems = itemsToShuffle.shuffled()
+                                        viewerState = MediaViewerState(items = shuffledItems, startIndex = 0)
                                     }
                                 }
-                                is Screen.Folders -> allMedia
-                                else -> emptyList()
-                            }
-
-                            if (itemsToShuffle.isNotEmpty()) {
-                                val shuffledItems = itemsToShuffle.shuffled()
-                                viewerState = MediaViewerState(items = shuffledItems, startIndex = 0)
+                                FabAction.CAMERA -> {
+                                    // ПРАВИЛЬНЫЙ СПОСОБ: Просто открыть приложение камеры
+                                    val intent = Intent(MediaStore.INTENT_ACTION_STILL_IMAGE_CAMERA)
+                                    if (intent.resolveActivity(context.packageManager) != null) {
+                                        context.startActivity(intent)
+                                    } else {
+                                        Toast.makeText(context, "No camera app found", Toast.LENGTH_SHORT).show()
+                                    }
+                                }
                             }
                         }
+
                         if (useLargeFab) {
-                            LargeFloatingActionButton(
-                                onClick = onClick
-                            ) {
-                                Icon(Icons.Filled.Photo, contentDescription = stringResource(id = R.string.content_description_shuffle_play), modifier = Modifier.size(40.dp))
+                            LargeFloatingActionButton(onClick = onClick) {
+                                when (selectedFabAction) {
+                                    FabAction.SHUFFLE -> Icon(Icons.Filled.Photo, contentDescription = stringResource(id = R.string.content_description_shuffle_play), modifier = Modifier.size(40.dp))
+                                    FabAction.CAMERA -> Icon(Icons.Filled.Camera, contentDescription = "Open Camera", modifier = Modifier.size(40.dp))
+                                }
                             }
                         } else {
-                            FloatingActionButton(
-                                onClick = onClick
-                            ) {
-                                Icon(Icons.Filled.Photo, contentDescription = stringResource(id = R.string.content_description_shuffle_play), modifier = Modifier.size(24.dp))
+                            FloatingActionButton(onClick = onClick) {
+                                when (selectedFabAction) {
+                                    FabAction.SHUFFLE -> Icon(Icons.Filled.Photo, contentDescription = stringResource(id = R.string.content_description_shuffle_play), modifier = Modifier.size(24.dp))
+                                    FabAction.CAMERA -> Icon(Icons.Filled.Camera, contentDescription = "Open Camera", modifier = Modifier.size(24.dp))
+                                }
                             }
                         }
                     }
@@ -1346,6 +1366,11 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
                             setSecretViewerState = { secretViewerState = it }, // <-- ДОБАВЬТЕ ЭТО
                             secretViewerState = secretViewerState,
                             secretItems = secretItems,
+                            selectedFabAction = selectedFabAction,
+                            onFabActionChange = {
+                                selectedFabAction = it
+                                SettingsRepository.setFabAction(context, it)
+                            },
                         )
                     } else {
                         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {

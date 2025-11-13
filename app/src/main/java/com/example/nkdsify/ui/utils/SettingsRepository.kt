@@ -3,6 +3,7 @@ package com.example.nkdsify.ui.utils
 import android.content.Context
 import androidx.core.content.edit
 import com.example.nkdsify.data.BlurType
+import com.example.nkdsify.data.FabAction
 import com.example.nkdsify.data.Language
 import com.example.nkdsify.data.Theme
 import com.example.nkdsify.data.ZoomType
@@ -30,6 +31,20 @@ object SettingsRepository {
     private const val LANGUAGE_KEY = "language"
     private const val CHECK_FOR_UPDATES_ON_STARTUP_KEY = "check_for_updates_on_startup"
     private const val SPECIAL_LANGUAGE_UNLOCKED_KEY = "special_language_unlocked"
+    private const val FAB_ACTION_KEY = "fab_action"
+
+    fun setFabAction(context: Context, fabAction: FabAction) {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit {
+            putString(FAB_ACTION_KEY, fabAction.name)
+        }
+    }
+
+    fun getFabAction(context: Context): FabAction {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val fabActionName = prefs.getString(FAB_ACTION_KEY, FabAction.SHUFFLE.name) ?: FabAction.SHUFFLE.name
+        return FabAction.valueOf(fabActionName)
+    }
 
     fun setSpecialLanguageUnlocked(context: Context, unlocked: Boolean) {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)

@@ -14,6 +14,7 @@ import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.platform.SoftwareKeyboardController
 import coil.ImageLoader
 import com.example.nkdsify.data.BlurType
+import com.example.nkdsify.data.FabAction
 import com.example.nkdsify.data.Language
 import com.example.nkdsify.data.MediaFolder
 import com.example.nkdsify.data.MediaItem
@@ -66,6 +67,8 @@ fun AppNavigation(
     onManageTagsClick: () -> Unit,
     onTagClick: (String) -> Unit,
     onBackupAndRestoreClick: () -> Unit,
+    selectedFabAction: FabAction,
+    onFabActionChange: (FabAction) -> Unit,
     onGoToSecretStorage: () -> Unit,
     onDeleteTag: (String) -> Unit,
     onEditTag: (String, String) -> Unit,
@@ -276,7 +279,9 @@ fun AppNavigation(
                     selectedLanguage = selectedLanguage,
                     onLanguageChange = onLanguageChange,
                     onCheckForUpdates = onCheckForUpdates,
-                    currentVersion = currentVersion
+                    currentVersion = currentVersion,
+                    selectedFabAction = selectedFabAction,
+                    onFabActionChange = onFabActionChange
                 )
             }
 

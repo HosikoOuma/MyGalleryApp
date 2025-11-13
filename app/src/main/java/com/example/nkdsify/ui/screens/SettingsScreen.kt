@@ -46,6 +46,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import com.example.nkdsify.R
 import com.example.nkdsify.data.BlurType
+import com.example.nkdsify.data.FabAction
 import com.example.nkdsify.data.Language
 import com.example.nkdsify.data.Theme
 import com.example.nkdsify.data.ZoomType
@@ -99,13 +100,16 @@ fun SettingsScreen(
     selectedLanguage: Language,
     onLanguageChange: (Language) -> Unit,
     onCheckForUpdates: () -> Unit,
-    currentVersion: String
+    currentVersion: String,
+    selectedFabAction: FabAction,
+    onFabActionChange: (FabAction) -> Unit
 ) {
     val context = LocalContext.current
     var themeMenuExpanded by remember { mutableStateOf(false) }
     var zoomTypeMenuExpanded by remember { mutableStateOf(false) }
     var blurTypeMenuExpanded by remember { mutableStateOf(false) }
     var languageMenuExpanded by remember { mutableStateOf(false) }
+    var fabActionMenuExpanded by remember { mutableStateOf(false) }
     var showSpecialLanguageDialog by remember { mutableStateOf(false) }
     val scrollState = rememberScrollState()
     var specialLanguageUnlocked by remember { mutableStateOf(SettingsRepository.isSpecialLanguageUnlocked(context)) }
@@ -117,6 +121,14 @@ fun SettingsScreen(
             Theme.SYSTEM -> stringResource(id = R.string.theme_system)
             Theme.LIGHT -> stringResource(id = R.string.theme_light)
             Theme.DARK -> stringResource(id = R.string.theme_dark)
+        }
+    }
+
+    @Composable
+    fun getFabActionName(fabAction: FabAction): String {
+        return when (fabAction) {
+            FabAction.SHUFFLE -> stringResource(id = R.string.fab_action_shuffle)
+            FabAction.CAMERA -> stringResource(id = R.string.fab_action_camera)
         }
     }
 
@@ -257,6 +269,37 @@ fun SettingsScreen(
                                 if (isVibrationEnabled) performVibration(context)
                                 onThemeChange(theme)
                                 themeMenuExpanded = false
+                            }
+                        )
+                    }
+                }
+            }
+        }
+        FlowRow(
+            modifier = Modifier
+                .fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Text(stringResource(id = R.string.fab_action_title))
+            Box {
+                TextButton(onClick = {
+                    if (isVibrationEnabled) performVibration(context)
+                    fabActionMenuExpanded = true
+                }) {
+                    Text(getFabActionName(selectedFabAction))
+                }
+                DropdownMenu(
+                    expanded = fabActionMenuExpanded,
+                    onDismissRequest = { fabActionMenuExpanded = false }
+                ) {
+                    FabAction.entries.forEach { fabAction ->
+                        DropdownMenuItem(
+                            text = { Text(getFabActionName(fabAction)) },
+                            onClick = {
+                                if (isVibrationEnabled) performVibration(context)
+                                onFabActionChange(fabAction)
+                                fabActionMenuExpanded = false
                             }
                         )
                     }

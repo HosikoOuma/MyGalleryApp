@@ -190,7 +190,10 @@
     <string name="confirm_delete_from_secret_message">Ты точно хочешь ёбнуть свои нюдсы? Они пропадут нахуй, ты их больше не вернёшь</string>
     <string name="confirm_delete_from_secret_title">Ёбнуть нюдсы?</string>
     <string name="move_to_secret_storage_button">Тсссс...</string>
-
+    <string name="fab_action_title">ФАБ кнопо4ка</string>
+    <string name="fab_action_description">Выбери чё она будет делать)</string>
+    <string name="fab_action_shuffle">Шафл порна</string>
+    <string name="fab_action_camera">Кам ера</string>
 
 
 </resources>

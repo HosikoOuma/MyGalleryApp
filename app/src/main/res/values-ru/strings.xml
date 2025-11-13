@@ -193,4 +193,10 @@
         файлы? Они будут удалены навсегда</string>
     <string name="confirm_delete_from_secret_title">Удалить из хранилища?</string>
     <string name="move_to_secret_storage_button">Спрятать</string>
+
+    <!-- FAB Action -->
+    <string name="fab_action_title">Плавающая кнопка</string>
+    <string name="fab_action_description">Выберите действие для плавающей кнопки</string>
+    <string name="fab_action_shuffle">Перемешивание</string>
+    <string name="fab_action_camera">Камера</string>
 </resources>

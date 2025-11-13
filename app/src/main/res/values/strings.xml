@@ -191,4 +191,11 @@
     </string>
     <string name="confirm_delete_from_secret_title">Confirm Delete from Secret Storage?</string>
     <string name="move_to_secret_storage_button">Secret</string>
+
+    <!-- FAB Action -->
+    <string name="fab_action_title">Floating Action Button</string>
+    <string name="fab_action_description">Choose what the floating action button does</string>
+    <string name="fab_action_shuffle">Shuffle</string>
+    <string name="fab_action_camera">Camera</string>
+
 </resources>
