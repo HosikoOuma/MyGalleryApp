@@ -198,4 +198,16 @@
     <string name="trash_description">Не ёбни самую сасную пАрнушку, братик)</string>
     <string name="welcome_title">1</string>
     <string name="welcome_description">1</string>
+    <string name="filter_media_type">Фильтр порна</string>
+    <string name="show_all_media">Шоу алл</string>
+    <string name="show_only_photos">Онли фото4ки</string>
+    <string name="show_only_videos">Онли видики</string>
+    <string name="tags_string">Теги)</string>
+    <string name="download_button">Даунлод</string>
+    <string name="downloading_update_title">Заебенить обнову</string>
+    <string name="downloading_update_description">Версия %1$s</string>
+    <string name="download_started">Братик, я начинаю качать. Смотри в увед за прогрессом</string>
+    <string name="install_permission_denied">У тебя нет разрешения на установку, потому я не могу скачать тебе вирусы(</string>
+    <string name="install_permission_needed">Нужно разрешение, чтоб хуйнуть вирус</string>
+    <string name="install_permission_message">Для обновы те надо выдать разрешение. Я открою нужный скрин и тыкни своею писей куда надо</string>
 </resources>

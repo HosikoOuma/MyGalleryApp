@@ -13,6 +13,11 @@ sealed class Screen {
     data class MediaByTag(val tag: String) : Screen()
     data object SecretStorage : Screen()
 }
+enum class MediaTypeFilter {
+    ALL,
+    PHOTOS,
+    VIDEOS
+}
 
 
 data class MediaFolder(

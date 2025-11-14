@@ -5,8 +5,14 @@ import retrofit2.converter.gson.GsonConverterFactory
 import retrofit2.http.GET
 import retrofit2.http.Path
 
+data class GithubAsset(
+    val name: String,
+    val browser_download_url: String
+)
+
 data class GithubRelease(
-    val tag_name: String
+    val tag_name: String,
+    val assets: List<GithubAsset>
 )
 
 interface GithubApiService {

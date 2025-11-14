@@ -201,4 +201,17 @@
     <string name="trash_description">Don\'t delete materials that are important to you!</string>
     <string name="welcome_title">Welcome!</string>
     <string name="welcome_description">This application requires permission to access media on your device. Please grant permission to continue.</string>
+    <string name="filter_media_type">Filter of type</string>
+    <string name="show_all_media">Show all</string>
+    <string name="show_only_photos">Only photo</string>
+    <string name="show_only_videos">Only video</string>
+    <string name="tags_string">Tags</string>
+    <string name="download_button">Download</string>
+    <string name="downloading_update_title">Downloading Update</string>
+    <string name="downloading_update_description">Version %1$s</string>
+    <string name="download_started">Download started. Check your notifications for progress.</string>
+    <string name="install_permission_denied">Install permission denied. Please grant permission in settings to update the app.</string>
+    <string name="install_permission_needed">Installation Permission Needed</string>
+    <string name="install_permission_message">To update the app, you need to allow installing from this source. Please grant the permission in the next screen.</string>
+
 </resources>

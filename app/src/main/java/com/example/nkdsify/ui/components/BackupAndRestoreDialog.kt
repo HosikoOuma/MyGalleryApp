@@ -12,9 +12,11 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.example.nkdsify.R
+import com.example.nkdsify.ui.utils.performVibration
 
 @Composable
 fun BackupAndRestoreDialog(
@@ -22,8 +24,16 @@ fun BackupAndRestoreDialog(
     onExportFavorites: () -> Unit,
     onImportFavorites: () -> Unit,
     onExportTags: () -> Unit,
-    onImportTags: () -> Unit
+    onImportTags: () -> Unit,
+    isVibrationEnabled: Boolean
 ) {
+    val context = LocalContext.current
+    val vibrate = {
+        if (isVibrationEnabled) {
+            performVibration(context)
+        }
+    }
+
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
@@ -44,14 +54,22 @@ fun BackupAndRestoreDialog(
                     horizontalArrangement = Arrangement.SpaceEvenly
                 ) {
                     Button(
-                        onClick = { onImportFavorites(); onDismiss() },
+                        onClick = {
+                            vibrate()
+                            onImportFavorites()
+                            onDismiss()
+                        },
                         shape = RoundedCornerShape(16.dp),
                         modifier = Modifier.size(120.dp)
                     ) {
                         Text(stringResource(id = R.string.import_button))
                     }
                     Button(
-                        onClick = { onExportFavorites(); onDismiss() },
+                        onClick = {
+                            vibrate()
+                            onExportFavorites()
+                            onDismiss()
+                        },
                         shape = RoundedCornerShape(16.dp),
                         modifier = Modifier.size(120.dp)
                     ) {
@@ -64,14 +82,22 @@ fun BackupAndRestoreDialog(
                     horizontalArrangement = Arrangement.SpaceEvenly
                 ) {
                     Button(
-                        onClick = { onImportTags(); onDismiss() },
+                        onClick = {
+                            vibrate()
+                            onImportTags()
+                            onDismiss()
+                        },
                         shape = RoundedCornerShape(16.dp),
                         modifier = Modifier.size(120.dp)
                     ) {
                         Text(stringResource(id = R.string.import_button))
                     }
                     Button(
-                        onClick = { onExportTags(); onDismiss() },
+                        onClick = {
+                            vibrate()
+                            onExportTags()
+                            onDismiss()
+                        },
                         shape = RoundedCornerShape(16.dp),
                         modifier = Modifier.size(120.dp)
                     ) {
@@ -85,7 +111,10 @@ fun BackupAndRestoreDialog(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.Center
             ) {
-                Button(onClick = onDismiss) {
+                Button(onClick = {
+                    vibrate()
+                    onDismiss()
+                }) {
                     Text(stringResource(id = R.string.close_button))
                 }
             }

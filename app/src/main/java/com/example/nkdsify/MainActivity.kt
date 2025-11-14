@@ -12,6 +12,10 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.hardware.Sensor
 import android.hardware.SensorManager
+import android.app.DownloadManager
+import android.content.BroadcastReceiver
+import android.content.IntentFilter
+import androidx.core.content.FileProvider
 import android.media.MediaPlayer
 import android.net.Uri
 import android.os.Build
@@ -94,15 +98,32 @@ import android.content.ContentUris
 import androidx.annotation.OptIn
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.material.icons.filled.Camera
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.LargeFloatingActionButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.TextField
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.ui.res.stringResource
 import com.example.nkdsify.ui.components.FolderSelectionDialog
 import com.example.nkdsify.ui.screens.WelcomeScreen
+import com.example.nkdsify.ui.utils.SettingsRepository.isVibrationEnabled
 
 
 enum class FileOperation {
     COPY, MOVE
 }
+fun downloadAndUpdate(context: Context, downloadUrl: String, version: String) {
+    val request = DownloadManager.Request(Uri.parse(downloadUrl))
+        .setTitle(context.getString(R.string.downloading_update_title))
+        .setDescription(context.getString(R.string.downloading_update_description, version))
+        .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
+        .setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, "app-release.apk")
+
+    val downloadManager = context.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
+    downloadManager.enqueue(request)
+    Toast.makeText(context, context.getString(R.string.download_started), Toast.LENGTH_SHORT).show()
+}
+
 
 @OptIn(UnstableApi::class, ExperimentalMaterial3Api::class)
 class MainActivity : AppCompatActivity() {
@@ -266,6 +287,7 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
     var latestVersion by remember { mutableStateOf<String?>(null) }
     var selectedFabAction by remember { mutableStateOf(SettingsRepository.getFabAction(context)) }
     val currentVersion = remember { context.packageManager.getPackageInfo(context.packageName, 0).versionName ?: "0.0" }
+    var mediaTypeFilter by remember { mutableStateOf(MediaTypeFilter.ALL) }
     var selectedTheme by remember { mutableStateOf(SettingsRepository.getTheme(context)) }
     fun compareVersionNames(v1: String, v2: String): Int {
         val parts1 = v1.removePrefix("v").split('.').map { it.toIntOrNull() ?: 0 }
@@ -279,6 +301,7 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
         }
         return 0
     }
+    var downloadUrl by remember { mutableStateOf<String?>(null) }
 
     val checkForUpdates: (Boolean) -> Unit = { isTriggeredByUser ->
         coroutineScope.launch(Dispatchers.IO) {
@@ -289,10 +312,14 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
             val release = GithubUpdateChecker.getLatestRelease("HosikoOuma", "MyGalleryApp")
             release?.let {
                 if (compareVersionNames(it.tag_name, currentVersion) > 0) {
-                    withContext(Dispatchers.Main) {
-                        latestVersion = it.tag_name
-                        showUpdateDialog = true
-                        showUpdateNotification(context, it.tag_name)
+                    val apkAsset = it.assets.find { asset -> asset.name.endsWith(".apk") }
+                    if (apkAsset != null) {
+                        withContext(Dispatchers.Main) {
+                            latestVersion = it.tag_name
+                            downloadUrl = apkAsset.browser_download_url
+                            showUpdateDialog = true
+                            showUpdateNotification(context, it.tag_name)
+                        }
                     }
                 } else {
                     if (isTriggeredByUser) {
@@ -304,6 +331,7 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
             }
         }
     }
+
 
     LaunchedEffect(Unit) {
         checkForUpdates(false)
@@ -379,6 +407,8 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
         var showConfirmRestoreFromSecretDialog by remember { mutableStateOf(false) }
         var showConfirmMoveToSecretDialog by remember { mutableStateOf(false) }
         var isSettingWallpaper by remember { mutableStateOf(false) }
+        var showAddDialog by remember { mutableStateOf(false) }
+
 
         val manageStorageLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
@@ -420,7 +450,11 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
 
         val selectedItems = remember { mutableStateListOf<Uri>() }
         val isSelectionMode = selectedItems.isNotEmpty()
-
+        val onAddNewTag: (String) -> Unit = { newTag ->
+            if (isVibrationEnabled) performVibration(context)
+            TagsRepository.addNewTag(context, newTag)
+            allTags = TagsRepository.getAllTags(context)
+        }
         val imageLoader = remember(context) {
             ImageLoader.Builder(context)
                 .components {
@@ -594,6 +628,40 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
                 favoriteItems = withContext(Dispatchers.IO) { loadFavoriteMediaItems(context, favorites.toSet(), sortType, sortAscending, selectedDate) }
             }
         }
+        DisposableEffect(Unit) {
+            val receiver = object : BroadcastReceiver() {
+                override fun onReceive(context: Context, intent: Intent) {
+                    val id = intent.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, -1)
+                    if (id != -1L) {
+                        val downloadManager = context.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
+                        val uri = downloadManager.getUriForDownloadedFile(id)
+                        if (uri != null) {
+                            val installIntent = Intent(Intent.ACTION_VIEW).apply {
+                                setDataAndType(uri, "application/vnd.android.package-archive")
+                                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            }
+                            context.startActivity(installIntent)
+                        }
+                    }
+                }
+            }
+
+            val intentFilter = IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                context.registerReceiver(
+                    receiver,
+                    intentFilter,
+                    Context.RECEIVER_NOT_EXPORTED
+                )
+            } else {
+                context.registerReceiver(receiver, intentFilter)
+            }
+
+            onDispose {
+                context.unregisterReceiver(receiver)
+            }
+        }
 
         val title = when (val screen = currentScreen) {
             is Screen.Folders -> stringResource(id = R.string.screen_title_folders)
@@ -623,9 +691,16 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
                     SettingsRepository.setCheckForUpdatesOnStartup(context, false)
                     showUpdateDialog = false
                 },
+                onDownload = {
+                    downloadUrl?.let { url ->
+                        downloadAndUpdate(context, url, latestVersion!!)
+                    }
+                    showUpdateDialog = false
+                },
                 latestVersion = latestVersion!!
             )
         }
+
 
         if (showTagDialog != null) {
             val uri = showTagDialog!!
@@ -815,7 +890,8 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
                         Toast.makeText(context, context.getString(R.string.failed_to_create_backup_file), Toast.LENGTH_SHORT).show()
                     }
                 },
-                onImportTags = { importTagsLauncher.launch("application/json") }
+                onImportTags = { importTagsLauncher.launch("application/json") },
+                isVibrationEnabled = true,
             )
         }
 
@@ -976,6 +1052,46 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
                 }
             )
         }
+        if (showAddDialog) {
+            var newTag by remember { mutableStateOf("") }
+            val isError = newTag.isNotBlank() && newTag in allTags
+
+            AlertDialog(onDismissRequest = { showAddDialog = false },
+                title = { Text(stringResource(id = R.string.add_tag_dialog_title)) },
+                text = {
+                    Column {
+                        TextField(
+                            value = newTag,
+                            onValueChange = { newTag = it },
+                            label = { Text(stringResource(id = R.string.tag_name_label)) },
+                            isError = isError
+                        )
+                        if (isError) {
+                            Text(stringResource(R.string.tag_already_exists), color = MaterialTheme.colorScheme.error)
+                        }
+                    }
+                },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            onAddNewTag(newTag)
+                            showAddDialog = false
+                        },
+                        enabled = newTag.isNotBlank() && newTag !in allTags
+                    ) {
+                        Text(stringResource(id = R.string.add_button))
+                    }
+                },
+                dismissButton = {
+                    Button(onClick = {
+                        showAddDialog = false
+                        if (isVibrationEnabled) performVibration(context)
+                    }) {
+                        Text(stringResource(id = R.string.dialog_cancel))
+                    }
+                }
+            )
+        }
 
         if (showFolderSelectionDialog) {
             FolderSelectionDialog(
@@ -1049,6 +1165,8 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
             Scaffold(
                 topBar = {
                     TopBar(
+                        onMediaTypeFilterChange = { mediaTypeFilter = it },
+                        mediaTypeFilter = mediaTypeFilter,
                         isSelectionMode = isSelectionMode,
                         selectedItems = selectedItems,
                         onCloseSelection = { selectedItems.clear() },
@@ -1144,6 +1262,9 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
                             itemsToDeleteFromSecret = selectedItems.toList()
                             showConfirmDeleteFromSecretDialog = true
                         },
+                        onAddNewTag = {
+                            showAddDialog = true
+                        }
                     )
                 },
                 bottomBar = {
@@ -1228,7 +1349,6 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
                 Box(modifier = boxModifier) {
                     if (hasPermissions) {
                         AppNavigation(
-
                             onGoToSecretStorage = {
                                 BiometricUtils.authenticate(
                                     activity = context as AppCompatActivity,
@@ -1245,7 +1365,13 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
                             searchQuery = searchQuery,
                             isSearchActive = isSearchActive,
                             favoriteItems = favoriteItems,
-                            allMedia = allMedia,
+                            allMedia = remember(allMedia, mediaTypeFilter) {
+                                when (mediaTypeFilter) {
+                                    MediaTypeFilter.PHOTOS -> allMedia.filter { !it.isVideo }
+                                    MediaTypeFilter.VIDEOS -> allMedia.filter { it.isVideo }
+                                    else -> allMedia
+                                }
+                            },
                             imageLoader = imageLoader,
                             onFolderClick = { currentScreen = Screen.FolderContent(it) },
                             isBlurEnabled = isBlurEnabled,
@@ -1322,11 +1448,7 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
                                 tags = TagsRepository.getTags(context)
                                 allTags = TagsRepository.getAllTags(context)
                             },
-                            onAddNewTag = { newTag ->
-                                if (isVibrationEnabled) performVibration(context)
-                                TagsRepository.addNewTag(context, newTag)
-                                allTags = TagsRepository.getAllTags(context)
-                            },
+                            onAddNewTag = onAddNewTag,
                             trashedItems = trashedItems,
                             onClearTrash = {
                                 if (isVibrationEnabled) performVibration(context)

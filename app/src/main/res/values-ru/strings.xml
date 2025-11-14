@@ -203,4 +203,17 @@
     <string name="trash_description">Не удалите важные для вас материалы!</string>
     <string name="welcome_title">Добро пожаловать!</string>
     <string name="welcome_description">Этому приложению требуется разрешение на доступ к медиафайлам на вашем устройстве. Пожалуйста, предоставьте разрешение, чтобы продолжить.</string>
+    <string name="filter_media_type">Фильтр по типу медиа</string>
+    <string name="show_all_media">Показать все</string>
+    <string name="show_only_photos">Только фото</string>
+    <string name="show_only_videos">Только видео</string>
+    <string name="tags_string">Теги</string>
+    <string name="download_button">Скачать</string>
+    <string name="downloading_update_title">Скачать обновление</string>
+    <string name="downloading_update_description">Версия %1$s</string>
+    <string name="download_started">Скачивание началось. Проверить прогресс можно в уведомлении.</string>
+    <string name="install_permission_denied">
+    Установка запрещена. Пожалуйста, выдайте разрешение на установку для обновления</string>
+    <string name="install_permission_needed">Необходимо разрешение на установку</string>
+    <string name="install_permission_message">Чтобы обновить приложение, вам необходимо разрешить установку из этого источника. Пожалуйста, предоставьте разрешение на следующем экране.</string>
 </resources>
