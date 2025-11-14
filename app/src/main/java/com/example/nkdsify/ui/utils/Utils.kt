@@ -1,15 +1,11 @@
 package com.example.nkdsify.ui.utils
 
-import android.app.RecoverableSecurityException
-import android.content.ContentUris
 import android.content.ContentValues
 import android.content.Context
-import android.content.IntentSender
 import android.content.SharedPreferences
 import android.graphics.BitmapFactory
 import android.media.MediaMetadataRetriever
 import android.net.Uri
-import android.os.Build
 import android.provider.MediaStore
 import android.util.Log
 import androidx.compose.foundation.layout.Arrangement
@@ -35,7 +31,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -162,20 +157,28 @@ fun ConfirmDeleteDialog(
     onConfirm: () -> Unit,
     onDismiss: () -> Unit
 ) {
+    val context = LocalContext.current
+    val isVibrationEnabled by remember { mutableStateOf(SettingsRepository.isVibrationEnabled(context)) }
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(id = R.string.confirm_deletion_title)) },
         text = { Text(stringResource(id = R.string.confirm_deletion_message)) },
         confirmButton = {
             Button(
-                onClick = onConfirm,
+                onClick = {
+                    if (isVibrationEnabled) performVibration(context)
+                    onConfirm()
+                },
                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
             ) {
                 Text(stringResource(id = R.string.delete_button))
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
+            TextButton(onClick = {
+                if (isVibrationEnabled) performVibration(context)
+                onDismiss()
+            }) {
                 Text(stringResource(id = R.string.dialog_cancel))
             }
         }
@@ -187,19 +190,27 @@ fun ConfirmTrashDialog(
     onConfirm: () -> Unit,
     onDismiss: () -> Unit
 ) {
+    val context = LocalContext.current
+    val isVibrationEnabled by remember { mutableStateOf(SettingsRepository.isVibrationEnabled(context)) }
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(id = R.string.confirm_move_to_trash_title)) },
         text = { Text(stringResource(id = R.string.confirm_move_to_trash_message)) },
         confirmButton = {
             Button(
-                onClick = onConfirm,
+                onClick = {
+                    if (isVibrationEnabled) performVibration(context)
+                    onConfirm()
+                },
             ) {
                 Text(stringResource(id = R.string.move_to_trash_button))
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
+            TextButton(onClick = {
+                if (isVibrationEnabled) performVibration(context)
+                onDismiss()
+            }) {
                 Text(stringResource(id = R.string.dialog_cancel))
             }
         }
@@ -211,19 +222,27 @@ fun ConfirmMoveToSecretDialog(
     onConfirm: () -> Unit,
     onDismiss: () -> Unit
 ) {
+    val context = LocalContext.current
+    val isVibrationEnabled by remember { mutableStateOf(SettingsRepository.isVibrationEnabled(context)) }
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(id = R.string.confirm_move_to_secret_title)) },
         text = { Text(stringResource(id = R.string.confirm_move_to_secret_message)) },
         confirmButton = {
             Button(
-                onClick = onConfirm,
+                onClick = {
+                    if (isVibrationEnabled) performVibration(context)
+                    onConfirm()
+                },
             ) {
                 Text(stringResource(id = R.string.confirm_move_to_secret_button))
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
+            TextButton(onClick = {
+                if (isVibrationEnabled) performVibration(context)
+                onDismiss()
+            }) {
                 Text(stringResource(id = R.string.dialog_cancel))
             }
         }
@@ -235,20 +254,28 @@ fun ConfirmRestoreFromSecretDialog(
     onConfirm: () -> Unit,
     onDismiss: () -> Unit
 ) {
+    val context = LocalContext.current
+    val isVibrationEnabled by remember { mutableStateOf(SettingsRepository.isVibrationEnabled(context)) }
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(id = R.string.confirm_restore_from_secret_title)) },
         text = { Text(stringResource(id = R.string.confirm_restore_from_secret_message)) },
         confirmButton = {
             Button(
-                onClick = onConfirm,
+                onClick = {
+                    if (isVibrationEnabled) performVibration(context)
+                    onConfirm()
+                },
 
             ) {
                 Text(stringResource(id = R.string.restore_button))
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
+            TextButton(onClick = {
+                if (isVibrationEnabled) performVibration(context)
+                onDismiss()
+            }) {
                 Text(stringResource(id = R.string.dialog_cancel))
             }
         }
@@ -259,13 +286,18 @@ fun ConfirmDeleteFromSecretDialog(
     onConfirm: () -> Unit,
     onDismiss: () -> Unit
 ) {
+    val context = LocalContext.current
+    val isVibrationEnabled by remember { mutableStateOf(SettingsRepository.isVibrationEnabled(context)) }
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(id = R.string.confirm_delete_from_secret_title)) },
         text = { Text(stringResource(id = R.string.confirm_delete_from_secret_message)) },
         confirmButton = {
             Button(
-                onClick = onConfirm,
+                onClick = {
+                    if (isVibrationEnabled) performVibration(context)
+                    onConfirm()
+                },
                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
 
             ) {
@@ -273,7 +305,10 @@ fun ConfirmDeleteFromSecretDialog(
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
+            TextButton(onClick = {
+                if (isVibrationEnabled) performVibration(context)
+                onDismiss()
+            }) {
                 Text(stringResource(id = R.string.dialog_cancel))
             }
         }
@@ -285,19 +320,27 @@ fun ConfirmRestoreDialog(
     onConfirm: () -> Unit,
     onDismiss: () -> Unit
 ) {
+    val context = LocalContext.current
+    val isVibrationEnabled by remember { mutableStateOf(SettingsRepository.isVibrationEnabled(context)) }
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(id = R.string.confirm_restore_title)) },
         text = { Text(stringResource(id = R.string.confirm_restore_message)) },
         confirmButton = {
             Button(
-                onClick = onConfirm,
+                onClick = {
+                    if (isVibrationEnabled) performVibration(context)
+                    onConfirm()
+                },
             ) {
                 Text(stringResource(id = R.string.restore_button))
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
+            TextButton(onClick = {
+                if (isVibrationEnabled) performVibration(context)
+                onDismiss()
+            }) {
                 Text(stringResource(id = R.string.dialog_cancel))
             }
         }
@@ -308,12 +351,17 @@ fun ConfirmRestoreDialog(
 
 @Composable
 fun ExternalMediaErrorDialog(onDismiss: () -> Unit) {
+    val context = LocalContext.current
+    val isVibrationEnabled by remember { mutableStateOf(SettingsRepository.isVibrationEnabled(context)) }
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(id = R.string.external_media_error_title)) },
         text = { Text(stringResource(id = R.string.external_media_error_message)) },
         confirmButton = {
-            TextButton(onClick = onDismiss) {
+            TextButton(onClick = {
+                if (isVibrationEnabled) performVibration(context)
+                onDismiss()
+            }) {
                 Text(stringResource(id = R.string.dialog_ok))
             }
         }
@@ -397,6 +445,8 @@ fun RenameDialog(
     onDismiss: () -> Unit,
     onRename: (String) -> Unit
 ) {
+    val context = LocalContext.current
+    val isVibrationEnabled by remember { mutableStateOf(SettingsRepository.isVibrationEnabled(context)) }
     var newName by remember { mutableStateOf(currentName) }
 
     AlertDialog(
@@ -410,12 +460,18 @@ fun RenameDialog(
             )
         },
         confirmButton = {
-            Button(onClick = { onRename(newName) }) {
+            Button(onClick = {
+                if (isVibrationEnabled) performVibration(context)
+                onRename(newName)
+            }) {
                 Text(stringResource(id = R.string.rename_button))
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
+            TextButton(onClick = {
+                if (isVibrationEnabled) performVibration(context)
+                onDismiss()
+            }) {
                 Text(stringResource(id = R.string.dialog_cancel))
             }
         }

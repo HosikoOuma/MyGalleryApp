@@ -199,4 +199,8 @@
     <string name="fab_action_description">Выберите действие для плавающей кнопки</string>
     <string name="fab_action_shuffle">Перемешивание</string>
     <string name="fab_action_camera">Камера</string>
+    <string name="about_section_title">О приложении</string>
+    <string name="trash_description">Не удалите важные для вас материалы!</string>
+    <string name="welcome_title">Добро пожаловать!</string>
+    <string name="welcome_description">Этому приложению требуется разрешение на доступ к медиафайлам на вашем устройстве. Пожалуйста, предоставьте разрешение, чтобы продолжить.</string>
 </resources>

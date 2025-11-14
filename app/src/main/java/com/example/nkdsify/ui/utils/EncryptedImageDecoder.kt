@@ -12,7 +12,6 @@ import coil.decode.Decoder
 import coil.fetch.SourceResult
 import coil.request.Options
 import com.example.nkdsify.ui.utils.SecretRepository.getSecretFolder
-import okio.Path.Companion.toPath
 import java.io.ByteArrayOutputStream
 import java.io.File
 

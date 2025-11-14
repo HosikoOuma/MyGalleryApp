@@ -32,6 +32,20 @@ object SettingsRepository {
     private const val CHECK_FOR_UPDATES_ON_STARTUP_KEY = "check_for_updates_on_startup"
     private const val SPECIAL_LANGUAGE_UNLOCKED_KEY = "special_language_unlocked"
     private const val FAB_ACTION_KEY = "fab_action"
+    private const val FIRST_LAUNCH_KEY = "first_launch"
+
+
+    fun isFirstLaunch(context: Context): Boolean {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        return prefs.getBoolean(FIRST_LAUNCH_KEY, true)
+    }
+
+    fun setFirstLaunchDone(context: Context) {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit {
+            putBoolean(FIRST_LAUNCH_KEY, false)
+        }
+    }
 
     fun setFabAction(context: Context, fabAction: FabAction) {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
@@ -116,7 +130,7 @@ object SettingsRepository {
 
     fun isUseLargeFab(context: Context): Boolean {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        return prefs.getBoolean(USE_LARGE_FAB_KEY, true)
+        return prefs.getBoolean(USE_LARGE_FAB_KEY, false)
     }
 
     fun setSwipeToDismissEnabled(context: Context, enabled: Boolean) {
@@ -201,7 +215,7 @@ object SettingsRepository {
 
     fun isBlurEnabled(context: Context): Boolean {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        return prefs.getBoolean(BLUR_ENABLED_KEY, true) // Enabled by default
+        return prefs.getBoolean(BLUR_ENABLED_KEY, false) // Enabled by default
     }
 
     fun setMuteVideoByDefault(context: Context, enabled: Boolean) {
@@ -250,7 +264,7 @@ object SettingsRepository {
 
     fun isTrashBlurEnabled(context: Context): Boolean {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        return prefs.getBoolean(TRASH_BLUR_ENABLED_KEY, true) // Enabled by default
+        return prefs.getBoolean(TRASH_BLUR_ENABLED_KEY, false) // Enabled by default
     }
 
     fun setZoomType(context: Context, zoomType: ZoomType) {

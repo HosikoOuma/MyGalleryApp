@@ -27,7 +27,7 @@
 
     <application
         android:allowBackup="true"
-        android:label="NKDSify"
+        android:label="Nekolery"
         android:theme="@style/Theme.App.Starting"
         android:icon="@mipmap/ic_launcher">
         <activity

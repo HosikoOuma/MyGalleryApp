@@ -3,7 +3,6 @@ package com.example.nkdsify.ui.utils
 import android.content.ContentValues
 import android.content.Context
 import android.graphics.Bitmap
-import android.media.ThumbnailUtils
 import android.net.Uri
 import android.os.Build
 import android.os.Environment

@@ -4,15 +4,15 @@
     "type": "APK",
     "kind": "Directory"
   },
-  "applicationId": "com.example.nkdsify",
+  "applicationId": "com.nkds.hosikoouma.nekolery",
   "variantName": "release",
   "elements": [
     {
       "type": "SINGLE",
       "filters": [],
       "attributes": [],
-      "versionCode": 16,
-      "versionName": "1.15",
+      "versionCode": 19,
+      "versionName": "2.0",
       "outputFile": "app-release.apk"
     }
   ],

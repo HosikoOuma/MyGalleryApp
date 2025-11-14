@@ -1,13 +1,20 @@
 package com.example.nkdsify.ui.screens
 
 import android.net.Uri
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -34,24 +41,46 @@ fun TrashScreen(
 ) {
     if (items.isEmpty()) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Text(text = stringResource(id = R.string.trash_is_empty))
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.Delete,
+                    contentDescription = null,
+                    modifier = Modifier.size(64.dp),
+                    tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                )
+                Text(
+                    text = stringResource(id = R.string.trash_is_empty),
+                    style = MaterialTheme.typography.headlineSmall
+                )
+            }
         }
         return
     }
 
     Column(modifier = Modifier.fillMaxSize()) {
         if (selectedItems.isEmpty()) {
-            Box(
+            Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(16.dp),
-                contentAlignment = Alignment.Center
+                    .padding(16.dp)
             ) {
-                Button(
-                    onClick = onClearTrash,
-                    shape = RoundedCornerShape(8.dp)
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Text(stringResource(id = R.string.clear_trash_button))
+                    Text(stringResource(id = R.string.trash_description))
+                    Button(
+                        onClick = onClearTrash,
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Text(stringResource(id = R.string.clear_trash_button))
+                    }
                 }
             }
         }

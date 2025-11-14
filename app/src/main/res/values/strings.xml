@@ -157,7 +157,7 @@
     <string name="check_for_updates_button">Check for updates</string>
     <string name="no_updates_available">You have the latest version installed.</string>
     <string name="version_label">Version: %1$s</string>
-    <string name="dont_show_again_button">Dont show again</string>
+    <string name="dont_show_again_button">Don\'t show again</string>
     <string name="privacy_section_title">Privacy</string>
     <string name="main_section_title">Main</string>
     <string name="media_section_title">Media</string>
@@ -197,5 +197,8 @@
     <string name="fab_action_description">Choose what the floating action button does</string>
     <string name="fab_action_shuffle">Shuffle</string>
     <string name="fab_action_camera">Camera</string>
-
+    <string name="about_section_title">About app</string>
+    <string name="trash_description">Don\'t delete materials that are important to you!</string>
+    <string name="welcome_title">Welcome!</string>
+    <string name="welcome_description">This application requires permission to access media on your device. Please grant permission to continue.</string>
 </resources>

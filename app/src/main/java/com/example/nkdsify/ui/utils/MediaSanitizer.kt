@@ -2,10 +2,8 @@ package com.example.nkdsify.ui.utils
 
 import android.content.Context
 import android.net.Uri
-import android.os.Build
 import android.provider.MediaStore
 import com.example.nkdsify.data.MediaFolder
-import com.example.nkdsify.data.MediaItem
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 

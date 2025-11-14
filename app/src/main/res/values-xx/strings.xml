@@ -65,7 +65,7 @@
     <string name="vibration_label">Вибро-хуибро</string>
     <string name="shake_to_blur_label">ШЕЙК-ТО-БЛЮР бляьб</string>
     <string name="loop_video_label">заЛУПИТЬ видосики</string>
-    <string name="swipe_to_dismiss_label">Отключить свайп порно</string>
+    <string name="swipe_to_dismiss_label">Заебенить свайп порно</string>
     <string name="theme_label">Темка</string>
     <string name="zoom_gesture_label">Жест приближения</string>
     <string name="blur_type_label">Тип блюра</string>
@@ -194,6 +194,8 @@
     <string name="fab_action_description">Выбери чё она будет делать)</string>
     <string name="fab_action_shuffle">Шафл порна</string>
     <string name="fab_action_camera">Кам ера</string>
-
-
+    <string name="about_section_title">Мяу мяу нига</string>
+    <string name="trash_description">Не ёбни самую сасную пАрнушку, братик)</string>
+    <string name="welcome_title">1</string>
+    <string name="welcome_description">1</string>
 </resources>
