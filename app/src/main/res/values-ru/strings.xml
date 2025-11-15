@@ -216,4 +216,6 @@
     Установка запрещена. Пожалуйста, выдайте разрешение на установку для обновления</string>
     <string name="install_permission_needed">Необходимо разрешение на установку</string>
     <string name="install_permission_message">Чтобы обновить приложение, вам необходимо разрешить установку из этого источника. Пожалуйста, предоставьте разрешение на следующем экране.</string>
+    <string name="move_tag_up_content_description">Вверх</string>
+    <string name="move_tag_down_content_description">Вниз</string>
 </resources>

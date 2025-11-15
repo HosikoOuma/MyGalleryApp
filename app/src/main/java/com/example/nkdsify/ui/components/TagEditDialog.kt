@@ -29,7 +29,7 @@ import com.example.nkdsify.ui.utils.performVibration
 @Composable
 fun TagEditDialog(
     initialTags: Set<String>,
-    allTags: Set<String>,
+    allTags: List<String>,
     onDismiss: () -> Unit,
     onSave: (Set<String>) -> Unit
 ) {
@@ -77,9 +77,8 @@ fun TagEditDialog(
         },
         confirmButton = {
             Button(onClick = {
-                val tagSet = tags.split(",").map { it.trim() }.filter { it.isNotEmpty() }.toSet()
+                val tagSet = tags.split(',').map { it.trim() }.filter { it.isNotEmpty() }.toSet()
                 onSave(tagSet)
-                onDismiss()
                 if (isVibrationEnabled(context)) performVibration(context)
             }) {
                 Text(stringResource(id = R.string.save_button))

@@ -210,4 +210,6 @@
     <string name="install_permission_denied">У тебя нет разрешения на установку, потому я не могу скачать тебе вирусы(</string>
     <string name="install_permission_needed">Нужно разрешение, чтоб хуйнуть вирус</string>
     <string name="install_permission_message">Для обновы те надо выдать разрешение. Я открою нужный скрин и тыкни своею писей куда надо</string>
+    <string name="move_tag_up_content_description">Ап</string>
+    <string name="move_tag_down_content_description">Даун</string>
 </resources>

@@ -9,7 +9,7 @@ import com.google.gson.reflect.TypeToken
 object TagsRepository {
     private const val PREFS_NAME = "media_tags"
     private const val TAGS_KEY = "tags_map"
-    private const val ALL_TAGS_KEY = "all_tags" // New key for the set of all tags
+    private const val ALL_TAGS_KEY = "all_tags_list" // Changed to list
     private val gson = Gson()
 
     fun saveTags(context: Context, tags: Map<String, Set<String>>) {
@@ -31,23 +31,20 @@ object TagsRepository {
         }
     }
 
-    // New function to get all tags as a single set
-    fun getAllTags(context: Context): Set<String> {
+    fun getAllTags(context: Context): List<String> { // Return List
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         val json = prefs.getString(ALL_TAGS_KEY, null)
         val allTags = if (json != null) {
-            val type = object : TypeToken<Set<String>>() {}.type
-            gson.fromJson<Set<String>>(json, type)
+            val type = object : TypeToken<List<String>>() {}.type // Use List
+            gson.fromJson<List<String>>(json, type)
         } else {
-            emptySet()
+            emptyList()
         }
-        // For migration purposes, let's also include tags from media
         val tagsFromMedia = getTags(context).values.flatten().toSet()
-        return allTags + tagsFromMedia
+        return (allTags + tagsFromMedia).distinct() // Keep order but ensure uniqueness
     }
 
-    // New function to save the set of all tags
-    private fun saveAllTags(context: Context, allTags: Set<String>) {
+    fun saveAllTags(context: Context, allTags: List<String>) { // Save List
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         val json = gson.toJson(allTags)
         prefs.edit {
@@ -55,12 +52,13 @@ object TagsRepository {
         }
     }
 
-    // New function to add a new tag
     fun addNewTag(context: Context, newTag: String) {
         if (newTag.isBlank()) return
-        val allTags = getAllTags(context).toMutableSet()
-        allTags.add(newTag)
-        saveAllTags(context, allTags)
+        val allTags = getAllTags(context).toMutableList()
+        if (!allTags.contains(newTag)) {
+            allTags.add(newTag)
+            saveAllTags(context, allTags)
+        }
     }
 
     fun getTagsForItem(context: Context, uri: Uri): Set<String> {
@@ -77,10 +75,13 @@ object TagsRepository {
         }
         saveTags(context, allMediaTags)
 
-        // Also update the master list of all tags
-        val allTagsSet = getAllTags(context).toMutableSet()
-        allTagsSet.addAll(tags)
-        saveAllTags(context, allTagsSet)
+        val allTagsList = getAllTags(context).toMutableList()
+        tags.forEach { tag ->
+            if (!allTagsList.contains(tag)) {
+                allTagsList.add(tag)
+            }
+        }
+        saveAllTags(context, allTagsList)
     }
 
     fun removeTagFromAllItems(context: Context, tag: String) {
@@ -90,8 +91,7 @@ object TagsRepository {
         }.filterValues { it.isNotEmpty() }
         saveTags(context, updatedMediaTags)
 
-        // Also remove from the master list
-        val allTags = getAllTags(context).toMutableSet()
+        val allTags = getAllTags(context).toMutableList()
         allTags.remove(tag)
         saveAllTags(context, allTags)
     }
@@ -111,11 +111,10 @@ object TagsRepository {
         }
         saveTags(context, updatedMediaTags)
 
-        // Also rename in the master list
-        val allTags = getAllTags(context).toMutableSet()
-        if (allTags.contains(oldTag)) {
-            allTags.remove(oldTag)
-            allTags.add(newTag)
+        val allTags = getAllTags(context).toMutableList()
+        val index = allTags.indexOf(oldTag)
+        if (index != -1) {
+            allTags[index] = newTag
             saveAllTags(context, allTags)
         }
     }

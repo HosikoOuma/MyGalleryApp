@@ -3,6 +3,10 @@
 package com.example.nkdsify
 
 import android.Manifest
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.ui.draw.scale
 import android.app.Activity
 import android.app.WallpaperManager
 import android.content.ContentValues
@@ -446,7 +450,8 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
         var favoriteItems by remember { mutableStateOf<List<MediaItem>>(emptyList()) }
         var trashedItems by remember { mutableStateOf<List<MediaItem>>(emptyList()) }
         var tags by remember { mutableStateOf(TagsRepository.getTags(context)) }
-        var allTags by remember { mutableStateOf(TagsRepository.getAllTags(context)) }
+        var allTags by remember { mutableStateOf<List<String>>(emptyList()) }
+        allTags = TagsRepository.getAllTags(context)
 
         val selectedItems = remember { mutableStateListOf<Uri>() }
         val isSelectionMode = selectedItems.isNotEmpty()
@@ -454,6 +459,15 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
             if (isVibrationEnabled) performVibration(context)
             TagsRepository.addNewTag(context, newTag)
             allTags = TagsRepository.getAllTags(context)
+        }
+        val onMoveTag: (Int, Int) -> Unit = { from, to ->
+            if (from in allTags.indices && to in allTags.indices) {
+                val mutableTags = allTags.toMutableList()
+                val movedTag = mutableTags.removeAt(from)
+                mutableTags.add(to, movedTag)
+                allTags = mutableTags
+                TagsRepository.saveAllTags(context, mutableTags)
+            }
         }
         val imageLoader = remember(context) {
             ImageLoader.Builder(context)
@@ -706,12 +720,12 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
             val uri = showTagDialog!!
             TagEditDialog(
                 initialTags = TagsRepository.getTagsForItem(context, uri),
-                allTags = allTags, 
+                allTags = allTags.toList(),
                 onDismiss = { showTagDialog = null },
                 onSave = { tagSet ->
                     TagsRepository.setTagsForItem(context, uri, tagSet)
                     tags = TagsRepository.getTags(context)
-                    allTags = TagsRepository.getAllTags(context) 
+                    allTags = TagsRepository.getAllTags(context) .toList()
                     showTagDialog = null
                 })
         }
@@ -724,7 +738,7 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
 
             TagEditDialog(
                 initialTags = commonTags,
-                allTags = allTags, 
+                allTags = allTags.toList(),
                 onDismiss = { showBulkTagDialog = false },
                 onSave = { newTags ->
                     val tagsToAdd = newTags - commonTags
@@ -736,7 +750,7 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
                         TagsRepository.setTagsForItem(context, uri, currentTags)
                     }
                     tags = TagsRepository.getTags(context)
-                    allTags = TagsRepository.getAllTags(context)
+                    allTags = TagsRepository.getAllTags(context).toList()
                     showBulkTagDialog = false
                     selectedItems.clear()
                 }
@@ -1279,7 +1293,11 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
                     )
                 },
                 floatingActionButton = {
-                    if (isShuffleButtonVisible && currentScreen !is Screen.Trash && currentScreen !is Screen.Settings && currentScreen !is Screen.TagManagement && currentScreen !is Screen.MediaByTag && currentScreen !is Screen.SecretStorage) {
+                    if (isShuffleButtonVisible && currentScreen!is Screen.Trash && currentScreen !is Screen.Settings && currentScreen !is Screen.TagManagement && currentScreen !is Screen.MediaByTag && currentScreen !is Screen.SecretStorage) {
+                        val interactionSource = remember { MutableInteractionSource() }
+                        val isPressed by interactionSource.collectIsPressedAsState()
+                        val scale by animateFloatAsState(if (isPressed) 0.9f else 1f, label = "FabScale")
+
                         val allFavoritesAlbumName = stringResource(id = R.string.album_name_all_favorites)
                         val onClick: () -> Unit = {
                             if (isVibrationEnabled) performVibration(context)
@@ -1310,7 +1328,6 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
                                     }
                                 }
                                 FabAction.CAMERA -> {
-                                    // ПРАВИЛЬНЫЙ СПОСОБ: Просто открыть приложение камеры
                                     val intent = Intent(MediaStore.INTENT_ACTION_STILL_IMAGE_CAMERA)
                                     if (intent.resolveActivity(context.packageManager) != null) {
                                         context.startActivity(intent)
@@ -1322,14 +1339,22 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
                         }
 
                         if (useLargeFab) {
-                            LargeFloatingActionButton(onClick = onClick) {
+                            LargeFloatingActionButton(
+                                onClick = onClick,
+                                modifier = Modifier.scale(scale),
+                                interactionSource = interactionSource
+                            ) {
                                 when (selectedFabAction) {
                                     FabAction.SHUFFLE -> Icon(Icons.Filled.Photo, contentDescription = stringResource(id = R.string.content_description_shuffle_play), modifier = Modifier.size(40.dp))
                                     FabAction.CAMERA -> Icon(Icons.Filled.Camera, contentDescription = "Open Camera", modifier = Modifier.size(40.dp))
                                 }
                             }
                         } else {
-                            FloatingActionButton(onClick = onClick) {
+                            FloatingActionButton(
+                                onClick = onClick,
+                                modifier = Modifier.scale(scale),
+                                interactionSource = interactionSource
+                            ) {
                                 when (selectedFabAction) {
                                     FabAction.SHUFFLE -> Icon(Icons.Filled.Photo, contentDescription = stringResource(id = R.string.content_description_shuffle_play), modifier = Modifier.size(24.dp))
                                     FabAction.CAMERA -> Icon(Icons.Filled.Camera, contentDescription = "Open Camera", modifier = Modifier.size(24.dp))
@@ -1349,6 +1374,7 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
                 Box(modifier = boxModifier) {
                     if (hasPermissions) {
                         AppNavigation(
+                            onMoveTag = onMoveTag,
                             onGoToSecretStorage = {
                                 BiometricUtils.authenticate(
                                     activity = context as AppCompatActivity,

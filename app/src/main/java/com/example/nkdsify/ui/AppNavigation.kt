@@ -80,6 +80,7 @@ fun AppNavigation(
     isVibrationEnabled: Boolean,
     onVibrationEnabledChange: (Boolean) -> Unit,
     secretViewerState: MediaViewerState?,
+    onMoveTag: (from: Int, Int) -> Unit,
     setSecretViewerState: (MediaViewerState) -> Unit,
     onOpenAlbum: (String) -> Unit,
     isShowFileCountEnabled: Boolean,
@@ -92,7 +93,7 @@ fun AppNavigation(
     onLoopVideoEnabledChange: (Boolean) -> Unit,
     selectedBlurType: BlurType,
     onBlurTypeChange: (BlurType) -> Unit,
-    allTags: Set<String>,
+    allTags: List<String>,
     onAddNewTag: (String) -> Unit,
     isSwipeToDismissEnabled: Boolean,
     onSwipeToDismissEnabledChange: (Boolean) -> Unit,
@@ -291,7 +292,8 @@ fun AppNavigation(
                     onEditTag = onEditTag,
                     onTagClick = onTagClick,
                     allTags = allTags,
-                    onAddNewTag = onAddNewTag
+                    onAddNewTag = onAddNewTag,
+                    onMoveTag = onMoveTag,
                 )
             }
 

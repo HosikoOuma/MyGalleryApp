@@ -11,9 +11,11 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ArrowDownward
+import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.AlertDialog
@@ -42,11 +44,12 @@ import com.example.nkdsify.ui.utils.performVibration
 
 @Composable
 fun TagManagementScreen(
-    allTags: Set<String>,
+    allTags: List<String>,
     onDeleteTag: (String) -> Unit,
     onEditTag: (oldTag: String, newTag: String) -> Unit,
     onAddNewTag: (String) -> Unit,
-    onTagClick: (String) -> Unit
+    onTagClick: (String) -> Unit,
+    onMoveTag: (from: Int, to: Int) -> Unit
 ) {
     val context = LocalContext.current
     var showEditDialog by remember { mutableStateOf<String?>(null) }
@@ -174,7 +177,7 @@ fun TagManagementScreen(
             Text(stringResource(id = R.string.no_tags_found), modifier = Modifier.align(Alignment.Center))
         } else {
             LazyColumn(modifier = Modifier.padding(16.dp)) {
-                items(allTags.toList()) { tag ->
+                itemsIndexed(allTags) { index, tag ->
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -190,6 +193,12 @@ fun TagManagementScreen(
                     ) {
                         Text(tag, modifier = Modifier.weight(1f))
                         Row {
+                            IconButton(onClick = { onMoveTag(index, index - 1) }, enabled = index > 0) {
+                                Icon(Icons.Default.ArrowUpward, contentDescription = stringResource(id = R.string.move_tag_up_content_description))
+                            }
+                            IconButton(onClick = { onMoveTag(index, index + 1) }, enabled = index < allTags.size - 1) {
+                                Icon(Icons.Default.ArrowDownward, contentDescription = stringResource(id = R.string.move_tag_down_content_description))
+                            }
                             IconButton(onClick = {
                                 showEditDialog = tag
                                 if (isVibrationEnabled(context)) performVibration(context)
@@ -211,6 +220,15 @@ fun TagManagementScreen(
                     }
                 }
             }
+        }
+
+        FloatingActionButton(
+            onClick = { showAddDialog = true },
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(16.dp)
+        ) {
+            Icon(Icons.Default.Add, contentDescription = stringResource(id = R.string.add_new_tag_content_description))
         }
     }
 }
