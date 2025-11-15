@@ -29,6 +29,7 @@
         android:allowBackup="true"
         android:label="Nekolery"
         android:theme="@style/Theme.App.Starting"
+        android:enableOnBackInvokedCallback="true"
         android:icon="@mipmap/ic_launcher">
         <activity
             android:name=".MainActivity"

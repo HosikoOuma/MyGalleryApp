@@ -193,10 +193,16 @@ fun TagManagementScreen(
                     ) {
                         Text(tag, modifier = Modifier.weight(1f))
                         Row {
-                            IconButton(onClick = { onMoveTag(index, index - 1) }, enabled = index > 0) {
+                            IconButton(onClick = {
+                                onMoveTag(index, index - 1)
+                                if (isVibrationEnabled(context)) performVibration(context)
+                            }, enabled = index > 0) {
                                 Icon(Icons.Default.ArrowUpward, contentDescription = stringResource(id = R.string.move_tag_up_content_description))
                             }
-                            IconButton(onClick = { onMoveTag(index, index + 1) }, enabled = index < allTags.size - 1) {
+                            IconButton(onClick = {
+                                onMoveTag(index, index + 1)
+                                if (isVibrationEnabled(context)) performVibration(context)
+                            }, enabled = index < allTags.size - 1) {
                                 Icon(Icons.Default.ArrowDownward, contentDescription = stringResource(id = R.string.move_tag_down_content_description))
                             }
                             IconButton(onClick = {

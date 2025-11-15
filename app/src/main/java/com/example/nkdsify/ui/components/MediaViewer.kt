@@ -4,7 +4,9 @@ import android.content.Intent
 import android.media.MediaPlayer
 import android.net.Uri
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.animate
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -60,6 +62,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
@@ -160,6 +163,12 @@ fun MediaViewer(
     val isVibrationEnabled = remember { SettingsRepository.isVibrationEnabled(context) }
     var showExternalMediaError by remember { mutableStateOf(false) }
     var isMuted by remember(pagerState.currentPage) { mutableStateOf(isMuteVideoByDefault) }
+
+    LaunchedEffect(items.isEmpty()) {
+        if (items.isEmpty()) {
+            onDismiss()
+        }
+    }
 
     // --- Unified Controls Visibility State ---
     var controlsVisible by remember { mutableStateOf(true) }
@@ -294,14 +303,12 @@ fun MediaViewer(
                             IconButton(onClick = {
                                 if (isVibrationEnabled) performVibration(context)
                                 onRestore(listOf(currentItem.uri))
-                                onDismiss()
                             }) {
                                 Icon(Icons.Filled.RestoreFromTrash, contentDescription = "Restore", tint = Color.White)
                             }
                             IconButton(onClick = {
                                 if (isVibrationEnabled) performVibration(context)
                                 onDelete(listOf(currentItem.uri))
-                                onDismiss()
                             }) {
                                 Icon(Icons.Filled.Delete, contentDescription = "Delete", tint = Color.White)
                             }
@@ -335,20 +342,35 @@ fun MediaViewer(
                                     showExternalMediaError = true
                                 } else {
                                     onDelete(listOf(currentItem.uri))
-                                    onDismiss()
                                 }
                             }) {
                                 Icon(Icons.Filled.Delete, contentDescription = "Delete", tint = Color.White)
                             }
+                            val coroutineScope = rememberCoroutineScope()
+                            val scale = remember { Animatable(1f) }
+
                             IconButton(onClick = {
                                 if (isVibrationEnabled) performVibration(context)
                                 if (isExternal) {
                                     showExternalMediaError = true
                                 } else {
+                                    // Toggle favorite state first
                                     onToggleFavorite(currentItem.uri)
+                                    // Then run the animation
+                                    coroutineScope.launch {
+                                        scale.animateTo(
+                                            targetValue = 1.3f,
+                                            animationSpec = spring(dampingRatio = 0.5f, stiffness = 400f)
+                                        )
+                                        scale.animateTo(
+                                            targetValue = 1f,
+                                            animationSpec = spring()
+                                        )
+                                    }
                                 }
                             }) {
                                 Icon(
+                                    modifier = Modifier.scale(scale.value),
                                     imageVector = if (favorites.contains(currentItem.uri)) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
                                     contentDescription = "Favorite",
                                     tint = if (favorites.contains(currentItem.uri)) Color.Red else Color.White

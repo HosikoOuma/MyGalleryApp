@@ -3,6 +3,9 @@
 package com.example.nkdsify
 
 import android.Manifest
+import androidx.activity.compose.PredictiveBackHandler
+import kotlinx.coroutines.flow.collect
+import java.util.concurrent.CancellationException
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
@@ -925,17 +928,35 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
 
         if (showConfirmDeleteDialog) {
             ConfirmDeleteDialog(onConfirm = {
+                val urisToDelete = itemsToDelete
+                val currentViewerState = viewerState
+                val isDeletingFromViewer = currentViewerState != null && currentViewerState.items.any { it.uri in urisToDelete }
+
                 if (isClearingTrash) {
                     TrashRepository.clearTrash(context)
                     isClearingTrash = false
                 } else {
-                    TrashRepository.removeFromTrash(context, itemsToDelete)
+                    TrashRepository.removeFromTrash(context, urisToDelete)
                 }
+
                 if (isVibrationEnabled) performVibration(context)
                 refreshTrigger++
                 selectedItems.clear()
-                viewerState = null
                 showConfirmDeleteDialog = false
+
+                if (isDeletingFromViewer) {
+                    val originalIndex = currentViewerState!!.items.indexOfFirst { it.uri in urisToDelete }
+                    val newItems = currentViewerState.items.filterNot { it.uri in urisToDelete }
+                    if (newItems.isEmpty()) {
+                        viewerState = null
+                    } else {
+                        val newIndex = originalIndex.coerceAtMost(newItems.size - 1)
+                        viewerState = currentViewerState.copy(items = newItems, startIndex = newIndex)
+                    }
+                } else {
+                    viewerState = null
+                }
+                itemsToDelete = emptyList()
             }, onDismiss = { showConfirmDeleteDialog = false
                 if (isVibrationEnabled) performVibration(context)
             })
@@ -948,17 +969,32 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
                         activity = context as AppCompatActivity,
                         onSuccess = {
                             coroutineScope.launch {
-                                SecretRepository.deleteFromSecret(context, itemsToDeleteFromSecret)
-                                // Обновляем список секретных файлов напрямую
+                                val urisToDelete = itemsToDeleteFromSecret
+                                val currentViewerState = secretViewerState
+
+                                SecretRepository.deleteFromSecret(context, urisToDelete)
                                 secretItems = withContext(Dispatchers.IO) { SecretRepository.getSecretMediaItems(context) }
 
-                                // Сбрасываем состояния
-                                showConfirmDeleteFromSecretDialog = false
-                                itemsToDeleteFromSecret = emptyList()
-                                secretViewerState = null
-                                selectedItems.clear()
+                                // Update UI on the main thread
+                                withContext(Dispatchers.Main) {
+                                    showConfirmDeleteFromSecretDialog = false
+                                    itemsToDeleteFromSecret = emptyList()
+                                    selectedItems.clear()
+
+                                    if (currentViewerState != null) {
+                                        val originalIndex = currentViewerState.items.indexOfFirst { it.uri in urisToDelete }
+                                        val newItems = currentViewerState.items.filterNot { it.uri in urisToDelete }
+                                        if (newItems.isEmpty()) {
+                                            secretViewerState = null
+                                        } else {
+                                            val newIndex = originalIndex.coerceAtMost(newItems.size - 1)
+                                            secretViewerState = currentViewerState.copy(items = newItems, startIndex = newIndex)
+                                        }
+                                    }
+                                }
                             }
                         },
+
                         onError = { _, _ -> /* Do nothing on error */ },
                         onFailed = { /* Do nothing on failure */ }
                     )
@@ -1019,18 +1055,20 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
             ConfirmTrashDialog(
                 onConfirm = {
                     val urisToTrash = itemsToTrash
+                    val currentViewerState = viewerState
+                    val isDeletingFromViewer = currentViewerState != null && currentViewerState.items.any { it.uri in urisToTrash }
+
                     coroutineScope.launch(Dispatchers.IO) {
                         val copiedUris = TrashRepository.copyToTrash(context, urisToTrash)
                         if (copiedUris.isNotEmpty()) {
                             var itemsDeleted = false
                             copiedUris.forEach { uri ->
                                 try {
-                                    // Удаляем каждый файл индивидуально
                                     if (context.contentResolver.delete(uri, null, null) > 0) {
                                         itemsDeleted = true
                                     }
                                 } catch (e: Exception) {
-                                    // Можно добавить обработку ошибок для каждого файла
+                                    // Handle error
                                 }
                             }
                             if (itemsDeleted) {
@@ -1044,7 +1082,19 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
                     selectedItems.clear()
                     itemsToTrash = emptyList()
                     showConfirmTrashDialog = false
-                    viewerState = null
+
+                    if (isDeletingFromViewer) {
+                        val originalIndex = currentViewerState!!.items.indexOfFirst { it.uri in urisToTrash }
+                        val newItems = currentViewerState.items.filterNot { it.uri in urisToTrash }
+                        if (newItems.isEmpty()) {
+                            viewerState = null
+                        } else {
+                            val newIndex = originalIndex.coerceAtMost(newItems.size - 1)
+                            viewerState = currentViewerState.copy(items = newItems, startIndex = newIndex)
+                        }
+                    } else {
+                        viewerState = null
+                    }
                 },
                 onDismiss = { showConfirmTrashDialog = false
                     if (isVibrationEnabled) performVibration(context)
@@ -1304,27 +1354,39 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
 
                             when (selectedFabAction) {
                                 FabAction.SHUFFLE -> {
-                                    val itemsToShuffle = when (val screen = currentScreen) {
-                                        is Screen.FolderContent -> screen.folder.items
-                                        is Screen.AllMedia -> allMedia
-                                        is Screen.Favorites -> {
-                                            if (screen.openAlbumName != null) {
-                                                val taggedAlbums = favoriteItems
-                                                    .flatMap { item -> (tags[item.uri.toString()] ?: emptySet()).map { tag -> tag to item } }
-                                                    .groupBy({ it.first }, { it.second })
-                                                if (screen.openAlbumName == allFavoritesAlbumName) favoriteItems else taggedAlbums[screen.openAlbumName]
-                                                    ?: emptyList()
-                                            } else {
-                                                favoriteItems
+                                    coroutineScope.launch {
+                                        val itemsToShuffle = when (val screen = currentScreen) {
+                                            is Screen.FolderContent -> screen.folder.items
+                                            is Screen.AllMedia -> {
+                                                withContext(Dispatchers.Default) {
+                                                    when (mediaTypeFilter) {
+                                                        MediaTypeFilter.PHOTOS -> allMedia.filter { !it.isVideo }
+                                                        MediaTypeFilter.VIDEOS -> allMedia.filter { it.isVideo }
+                                                        else -> allMedia
+                                                    }
+                                                }
                                             }
+                                                    is Screen.Folders -> allMedia
+                                            is Screen.Favorites -> {
+                                                if (screen.openAlbumName != null) {
+                                                    val taggedAlbums = favoriteItems
+                                                        .flatMap { item -> (tags[item.uri.toString()] ?: emptySet()).map { tag -> tag to item } }
+                                                        .groupBy({ it.first }, { it.second })
+                                                    if (screen.openAlbumName == allFavoritesAlbumName) favoriteItems else taggedAlbums[screen.openAlbumName]
+                                                        ?: emptyList()
+                                                } else {
+                                                    favoriteItems
+                                                }
+                                            }
+                                            else -> emptyList()
                                         }
-                                        is Screen.Folders -> allMedia
-                                        else -> emptyList()
-                                    }
 
-                                    if (itemsToShuffle.isNotEmpty()) {
-                                        val shuffledItems = itemsToShuffle.shuffled()
-                                        viewerState = MediaViewerState(items = shuffledItems, startIndex = 0)
+                                        if (itemsToShuffle.isNotEmpty()) {
+                                            val shuffledItems = withContext(Dispatchers.Default) {
+                                                itemsToShuffle.shuffled()
+                                            }
+                                            viewerState = MediaViewerState(items = shuffledItems, startIndex = 0)
+                                        }
                                     }
                                 }
                                 FabAction.CAMERA -> {
@@ -1337,7 +1399,6 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
                                 }
                             }
                         }
-
                         if (useLargeFab) {
                             LargeFloatingActionButton(
                                 onClick = onClick,
