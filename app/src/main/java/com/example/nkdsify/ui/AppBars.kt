@@ -285,22 +285,25 @@ fun TopBar(
                                     Icon(Icons.Default.Add, contentDescription = stringResource(id = R.string.add_new_tag_content_description))
                                 }
                             }
+
                             if (currentScreen !is Screen.Settings && currentScreen !is Screen.TagManagement && currentScreen !is Screen.SecretStorage) {
-                                IconButton(onClick = {
-                                    if (isVibrationEnabled) performVibration(context)
-                                    onSearchClick()
-                                }) {
-                                    Icon(Icons.Filled.Search, contentDescription = stringResource(id = R.string.search_content_description))
+
+                                if (currentScreen !is Screen.Trash) {
+                                    IconButton(onClick = {
+                                        if (isVibrationEnabled) performVibration(context)
+                                        onSearchClick()
+                                    }) {
+                                        Icon(Icons.Filled.Search, contentDescription = stringResource(id = R.string.search_content_description))
+                                    }
+                                    IconButton(onClick = {
+                                        if (isVibrationEnabled) performVibration(context)
+                                        onFilterByDateClick()
+                                    }) {
+                                        Icon(Icons.Filled.DateRange, contentDescription = stringResource(id = R.string.filter_by_date_content_description))
+                                    }
                                 }
+
                                 var menuExpanded by remember { mutableStateOf(false) }
-
-                                IconButton(onClick = {
-                                    if (isVibrationEnabled) performVibration(context)
-                                    onFilterByDateClick()
-                                }) {
-                                    Icon(Icons.Filled.DateRange, contentDescription = stringResource(id = R.string.filter_by_date_content_description))
-                                }
-
                                 Box {
                                     IconButton(onClick = {
                                         if (isVibrationEnabled) performVibration(context)
@@ -330,7 +333,7 @@ fun TopBar(
                                             trailingIcon = { Icon(Icons.Filled.SwapVert, contentDescription = stringResource(id = R.string.reverse_sort_content_description)) },
                                             onClick = { if (isVibrationEnabled) performVibration(context); onReverseSort(); menuExpanded = false }
                                         )
-                                        if (selectedDate != null) {
+                                        if (selectedDate != null && currentScreen !is Screen.Trash) {
                                             DropdownMenuItem(
                                                 text = { Text(stringResource(id = R.string.reset_date_filter)) },
                                                 onClick = { if (isVibrationEnabled) performVibration(context); onResetDateFilter(); menuExpanded = false }
@@ -338,6 +341,7 @@ fun TopBar(
                                         }
                                     }
                                 }
+
                                 if (currentScreen is Screen.FolderContent || (currentScreen is Screen.Favorites && currentScreen.openAlbumName != null)) {
                                     IconButton(onClick = {
                                         if (isVibrationEnabled) performVibration(context)
@@ -349,77 +353,6 @@ fun TopBar(
                             }
                         }
                     }
-                }
-            }
-        )
-    }
-}
-
-@Composable
-fun BottomBar(
-    currentScreen: Screen,
-    onScreenChange: (Screen) -> Unit,
-    context: Context,
-    onSettingsClick: () -> Unit,
-    isVibrationEnabled: Boolean
-) {
-    var lastTap by rememberSaveable { mutableLongStateOf(0L) }
-    var tapCount by rememberSaveable { mutableIntStateOf(0) }
-
-    LaunchedEffect(currentScreen) {
-        tapCount = 0
-    }
-
-    NavigationBar {
-        NavigationBarItem(
-            icon = { Icon(Icons.Filled.Settings, contentDescription = stringResource(id = R.string.settings_content_description)) },
-            label = { Text(stringResource(id = R.string.screen_title_settings)) },
-            selected = currentScreen is Screen.Settings,
-            onClick = { 
-                if (isVibrationEnabled) performVibration(context)
-                onSettingsClick() 
-            }
-        )
-        NavigationBarItem(
-            icon = { Icon(Icons.Filled.Delete, contentDescription = stringResource(id = R.string.trash_content_description)) },
-            label = { Text(stringResource(id = R.string.screen_title_trash)) },
-            selected = currentScreen is Screen.Trash,
-            onClick = { if (isVibrationEnabled) performVibration(context); onScreenChange(Screen.Trash) }
-        )
-        NavigationBarItem(
-            icon = { Icon(Icons.Filled.PhotoLibrary, contentDescription = stringResource(id = R.string.folders_content_description)) },
-            label = { Text(stringResource(id = R.string.screen_title_folders)) },
-            selected = currentScreen is Screen.Folders || currentScreen is Screen.FolderContent,
-            onClick = { if (isVibrationEnabled) performVibration(context); onScreenChange(Screen.Folders) }
-        )
-        NavigationBarItem(
-            icon = { Icon(Icons.Default.PermMedia, contentDescription = stringResource(id = R.string.all_media_content_description)) },
-            label = { Text(stringResource(id = R.string.screen_title_all_media)) },
-            selected = currentScreen is Screen.AllMedia,
-            onClick = { if (isVibrationEnabled) performVibration(context); onScreenChange(Screen.AllMedia) }
-        )
-        NavigationBarItem(
-            icon = { Icon(Icons.Filled.Favorite, contentDescription = stringResource(id = R.string.favorites_content_description)) },
-            label = { Text(stringResource(id = R.string.screen_title_favorites)) },
-            selected = currentScreen is Screen.Favorites,
-            onClick = {
-                if (isVibrationEnabled) performVibration(context)
-                onScreenChange(Screen.Favorites())
-                val now = System.currentTimeMillis()
-                if (now - lastTap < 500) {
-                    tapCount++
-                } else {
-                    tapCount = 1
-                }
-                lastTap = now
-
-                if (tapCount == 10) {
-                    if (isVibrationEnabled) performVibration(context)
-                    tapCount = 0
-                    Toast.makeText(context, context.getString(R.string.uwu_toast), Toast.LENGTH_SHORT).show()
-                    val mediaPlayer = MediaPlayer.create(context, R.raw.uwu)
-                    mediaPlayer.setOnCompletionListener { it.release() }
-                    mediaPlayer.start()
                 }
             }
         )
