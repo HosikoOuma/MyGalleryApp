@@ -27,6 +27,7 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.OptIn
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -35,6 +36,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -49,6 +51,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
@@ -124,6 +127,9 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
         }
         val foldersGridState = rememberLazyGridState()
         val favoritesGridState = rememberLazyGridState()
+        val trashGridState = rememberLazyGridState()
+        val allMediaGridState = rememberLazyGridState()
+        val secretGridState = rememberLazyGridState()
         val manageStorageLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
                 myAppState.hasManageStoragePermission = Environment.isExternalStorageManager()
@@ -236,7 +242,9 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
                 myAppState.isSearchActive = false
                 myAppState.searchQuery = ""
             }
-            myAppState.selectedItems.clear()
+            if (myAppState.currentScreen !is Screen.Trash) {
+                myAppState.selectedItems.clear()
+            }
         }
         LaunchedEffect(Unit) {
             if (!myAppState.hasPermissions) {
@@ -375,6 +383,9 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
                             imageLoader = imageLoader,
                             foldersGridState = foldersGridState,
                             favoritesGridState = favoritesGridState,
+                            trashGridState = trashGridState,
+                            allMediaGridState = allMediaGridState,
+                            secretGridState = secretGridState,
                             favorites = favorites,
                             keyboardController = keyboardController,
                             onMoveTag = onMoveTag,
@@ -423,6 +434,17 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
                             state = pullRefreshState,
                         )
                     }
+                }
+            }
+
+            if (myAppState.isProcessing) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color.Black.copy(alpha = 0.5f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator()
                 }
             }
 

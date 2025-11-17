@@ -17,6 +17,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.SoftwareKeyboardController
 import coil.ImageLoader
 import com.example.nkdsify.MyAppState
+import com.example.nkdsify.data.MediaTypeFilter
 import com.example.nkdsify.data.MediaViewerState
 import com.example.nkdsify.data.Screen
 import com.example.nkdsify.ui.components.MediaGrid
@@ -39,6 +40,9 @@ fun MyAppNavigation(
     imageLoader: ImageLoader,
     foldersGridState: LazyGridState,
     favoritesGridState: LazyGridState,
+    trashGridState: LazyGridState,
+    allMediaGridState: LazyGridState,
+    secretGridState: LazyGridState,
     favorites: MutableList<Uri>,
     keyboardController: SoftwareKeyboardController?,
     onMoveTag: (Int, Int) -> Unit,
@@ -93,11 +97,16 @@ fun MyAppNavigation(
         }
     }
 
-    val filteredAllMedia = remember(myAppState.allMedia, myAppState.isSearchActive, myAppState.searchQuery) {
+    val filteredAllMedia = remember(myAppState.allMedia, myAppState.isSearchActive, myAppState.searchQuery, myAppState.mediaTypeFilter) {
+        val media = when (myAppState.mediaTypeFilter) {
+            MediaTypeFilter.PHOTOS -> myAppState.allMedia.filter { !it.isVideo }
+            MediaTypeFilter.VIDEOS -> myAppState.allMedia.filter { it.isVideo }
+            else -> myAppState.allMedia
+        }
         if (myAppState.isSearchActive && myAppState.searchQuery.isNotEmpty()) {
-            myAppState.allMedia.filter { it.name.contains(myAppState.searchQuery, ignoreCase = true) }
+            media.filter { it.name.contains(myAppState.searchQuery, ignoreCase = true) }
         } else {
-            myAppState.allMedia
+            media
         }
     }
 
@@ -164,7 +173,8 @@ fun MyAppNavigation(
                         }
                     },
                     onClearSelection = { myAppState.selectedItems.clear() },
-                    blurType = myAppState.selectedBlurType
+                    blurType = myAppState.selectedBlurType,
+                    gridState = foldersGridState
                 )
             }
 
@@ -379,7 +389,8 @@ fun MyAppNavigation(
                     },
                     isTrashBlurEnabled = isTrashBlurEnabled,
                     onClearSelection = { myAppState.selectedItems.clear() },
-                    blurType = myAppState.selectedBlurType
+                    blurType = myAppState.selectedBlurType,
+                    gridState = trashGridState
                 )
             }
             is Screen.AllMedia -> {
@@ -401,7 +412,8 @@ fun MyAppNavigation(
                         }
                     },
                     onClearSelection = { myAppState.selectedItems.clear() },
-                    blurType = myAppState.selectedBlurType
+                    blurType = myAppState.selectedBlurType,
+                    gridState = allMediaGridState
                 )
             }
             is Screen.MediaByTag -> {
@@ -427,7 +439,8 @@ fun MyAppNavigation(
                         }
                     },
                     onClearSelection = { myAppState.selectedItems.clear() },
-                    blurType = myAppState.selectedBlurType
+                    blurType = myAppState.selectedBlurType,
+                    gridState = favoritesGridState
                 )
             }
             is Screen.SecretStorage -> {
@@ -448,7 +461,8 @@ fun MyAppNavigation(
                         myAppState.secretViewerState = MediaViewerState(items = items, startIndex = items.indexOf(item))
                     },
                     isBlurEnabled = isBlurEnabled,
-                    blurType = myAppState.selectedBlurType
+                    blurType = myAppState.selectedBlurType,
+                    gridState = secretGridState
                 )
             }
         }

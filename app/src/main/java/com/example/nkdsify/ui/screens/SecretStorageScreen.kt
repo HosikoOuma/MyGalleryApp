@@ -3,6 +3,7 @@ package com.example.nkdsify.ui.screens
 import android.net.Uri
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -23,7 +24,8 @@ fun SecretStorageScreen(
     onClearSelection: () -> Unit,
     onItemClick: (List<MediaItem>, MediaItem) -> Unit,
     isBlurEnabled: Boolean,
-    blurType: BlurType
+    blurType: BlurType,
+    gridState: LazyGridState
 ) {
     if (items.isEmpty()) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -39,7 +41,8 @@ fun SecretStorageScreen(
             blurType = blurType,
             onItemClick = { item -> onItemClick(items, item) },
             onToggleSelection = onToggleSelection,
-            onClearSelection = onClearSelection
+            onClearSelection = onClearSelection,
+            gridState = gridState
         )
     }
 }

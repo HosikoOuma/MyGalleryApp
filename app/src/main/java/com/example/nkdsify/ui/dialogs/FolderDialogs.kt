@@ -33,6 +33,7 @@ fun FolderDialogs(myAppState: MyAppState) {
             onDismiss = { myAppState.showFolderSelectionDialog = false },
             onFolderSelected = { destinationFolder: MediaFolder ->
                 coroutineScope.launch {
+                    myAppState.isProcessing = true
                     val folderPath = destinationFolder.items.firstOrNull()?.let {
                         getFolderPathFromUri(context, it.uri)
                     } ?: destinationFolder.name
@@ -61,6 +62,7 @@ fun FolderDialogs(myAppState: MyAppState) {
                     myAppState.showFolderSelectionDialog = false
                     myAppState.filesToProcess = emptyList()
                     myAppState.currentFileOperation = null
+                    myAppState.isProcessing = false
                 }
             }
         )
@@ -86,17 +88,19 @@ fun FolderDialogs(myAppState: MyAppState) {
     if (myAppState.showConfirmMoveToSecretDialog) {
         ConfirmMoveToSecretDialog(
             onConfirm = {
+                myAppState.showConfirmMoveToSecretDialog = false
                 BiometricUtils.authenticate(
                     activity = context as AppCompatActivity,
                     onSuccess = {
                         coroutineScope.launch {
+                            myAppState.isProcessing = true
                             val itemsToMove = if (myAppState.isSelectionMode) myAppState.selectedItems.toList() else listOfNotNull(myAppState.showDetailsDialog)
                             SecretRepository.moveToSecret(context, itemsToMove)
-                            myAppState.showConfirmMoveToSecretDialog = false
                             myAppState.showDetailsDialog = null
                             myAppState.selectedItems.clear()
                             myAppState.viewerState = null
                             myAppState.refreshTrigger++
+                            myAppState.isProcessing = false
                         }
                     },
                     onError = { _, _ -> /* Do nothing on error */ },

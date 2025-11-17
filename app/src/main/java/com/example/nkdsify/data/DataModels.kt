@@ -80,8 +80,8 @@ enum class Theme {
 }
 
 enum class ZoomType {
-    PINCH,
-    DOUBLE_TAP
+    DOUBLE_TAP,
+    PINCH
 }
 
 enum class Language(val code: String) {

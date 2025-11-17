@@ -18,6 +18,7 @@ import com.example.nkdsify.ui.utils.MediaDetailsDialog
 import com.example.nkdsify.ui.utils.RenameDialog
 import com.example.nkdsify.ui.utils.getMediaDetails
 import com.example.nkdsify.ui.utils.renameMedia
+import com.example.nkdsify.ui.utils.SelectionDetailsDialog
 
 @Composable
 fun InfoDialogs(myAppState: MyAppState, screenWidth: Int, screenHeight: Int) {
@@ -43,6 +44,12 @@ fun InfoDialogs(myAppState: MyAppState, screenWidth: Int, screenHeight: Int) {
             }
         }
         myAppState.showDetailsDialog = null
+    }
+    if (myAppState.showSelectionDetailsDialog) {
+        SelectionDetailsDialog(
+            details = myAppState.selectionDetails,
+            onDismiss = { myAppState.showSelectionDetailsDialog = false }
+        )
     }
 
     if (myAppState.showDetailsDialog != null) {

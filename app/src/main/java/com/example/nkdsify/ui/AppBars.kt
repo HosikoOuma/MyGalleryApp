@@ -4,6 +4,12 @@ import android.content.Context
 import android.media.MediaPlayer
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -66,7 +72,8 @@ fun TopBar(
     onRestoreFromSecret: () -> Unit,
     onDeleteFromSecret: () -> Unit,
     mediaTypeFilter: MediaTypeFilter,
-    onMediaTypeFilterChange: (MediaTypeFilter) -> Unit
+    onMediaTypeFilterChange: (MediaTypeFilter) -> Unit,
+    onSelectionDetailsClick: () -> Unit
 ) {
     if (isSelectionMode) {
         TopAppBar(
@@ -155,6 +162,11 @@ fun TopBar(
                             }
                             DropdownMenu(expanded = menuExpanded, onDismissRequest = { menuExpanded = false }) {
                                 DropdownMenuItem(
+                                    text = { Text(stringResource(id = R.string.details_content_description)) },
+                                    onClick = { if (isVibrationEnabled) performVibration(context); onSelectionDetailsClick(); menuExpanded = false },
+                                    leadingIcon = { Icon(Icons.Default.Info, contentDescription = stringResource(id = R.string.details_content_description)) }
+                                )
+                                DropdownMenuItem(
                                     text = { Text(stringResource(id = R.string.copy_button)) },
                                     onClick = { if (isVibrationEnabled) performVibration(context); onCopy(); menuExpanded = false },
                                     leadingIcon = { Icon(Icons.Default.ContentCopy, contentDescription = stringResource(id = R.string.copy_button)) }
@@ -192,17 +204,19 @@ fun TopBar(
 
         TopAppBar(
             title = {
-                if (isSearchActive) {
-                    TextField(
-                        value = searchQuery,
-                        onValueChange = onSearchQueryChange,
-                        placeholder = { Text(stringResource(id = R.string.search_placeholder)) },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .focusRequester(focusRequester)
-                    )
-                } else {
-                    Text(title)
+                AnimatedContent(targetState = isSearchActive, label = "Search bar animation") { targetState ->
+                    if (targetState) {
+                        TextField(
+                            value = searchQuery,
+                            onValueChange = onSearchQueryChange,
+                            placeholder = { Text(stringResource(id = R.string.search_placeholder)) },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .focusRequester(focusRequester)
+                        )
+                    } else {
+                        Text(title)
+                    }
                 }
             },
             modifier = Modifier.statusBarsPadding(),
@@ -236,99 +250,101 @@ fun TopBar(
                 }
             },
             actions = {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    if (currentScreen is Screen.AllMedia) {
-                        IconButton(onClick = {
-                            val nextFilter = when (mediaTypeFilter) {
-                                MediaTypeFilter.ALL -> MediaTypeFilter.PHOTOS
-                                MediaTypeFilter.PHOTOS -> MediaTypeFilter.VIDEOS
-                                MediaTypeFilter.VIDEOS -> MediaTypeFilter.ALL
-                            }
-                            onMediaTypeFilterChange(nextFilter)
-                        }) {
-                            val icon = when (mediaTypeFilter) {
-                                MediaTypeFilter.PHOTOS -> Icons.Default.PhotoLibrary
-                                MediaTypeFilter.VIDEOS -> Icons.Default.VideoLibrary
-                                else -> Icons.Default.FilterList
-                            }
-                            Icon(icon, contentDescription = stringResource(id = R.string.filter_media_type))
-                        }
-                    }
-                    if (currentScreen is Screen.TagManagement) {
+                AnimatedContent(targetState = isSearchActive, label = "Search actions animation") { targetState ->
+                    if (targetState) {
                         IconButton(onClick = {
                             if (isVibrationEnabled) performVibration(context)
-                            onAddNewTag()
+                            onCloseSearch()
                         }) {
-                            Icon(Icons.Default.Add, contentDescription = stringResource(id = R.string.add_new_tag_content_description))
+                            Icon(Icons.Filled.Close, contentDescription = stringResource(id = R.string.close_search_content_description))
                         }
-                    }
-                    if (currentScreen !is Screen.Settings && currentScreen !is Screen.TagManagement && currentScreen !is Screen.SecretStorage) {
-                        if (isSearchActive) {
-                            IconButton(onClick = {
-                                if (isVibrationEnabled) performVibration(context)
-                                onCloseSearch()
-                            }) {
-                                Icon(Icons.Filled.Close, contentDescription = stringResource(id = R.string.close_search_content_description))
+                    } else {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            if (currentScreen is Screen.AllMedia) {
+                                IconButton(onClick = {
+                                    val nextFilter = when (mediaTypeFilter) {
+                                        MediaTypeFilter.ALL -> MediaTypeFilter.PHOTOS
+                                        MediaTypeFilter.PHOTOS -> MediaTypeFilter.VIDEOS
+                                        MediaTypeFilter.VIDEOS -> MediaTypeFilter.ALL
+                                    }
+                                    onMediaTypeFilterChange(nextFilter)
+                                }) {
+                                    val icon = when (mediaTypeFilter) {
+                                        MediaTypeFilter.PHOTOS -> Icons.Default.PhotoLibrary
+                                        MediaTypeFilter.VIDEOS -> Icons.Default.VideoLibrary
+                                        else -> Icons.Default.FilterList
+                                    }
+                                    Icon(icon, contentDescription = stringResource(id = R.string.filter_media_type))
+                                }
                             }
-                        } else {
-                            IconButton(onClick = {
-                                if (isVibrationEnabled) performVibration(context)
-                                onSearchClick()
-                            }) {
-                                Icon(Icons.Filled.Search, contentDescription = stringResource(id = R.string.search_content_description))
-                            }
-                            var menuExpanded by remember { mutableStateOf(false) }
-
-                            IconButton(onClick = {
-                                if (isVibrationEnabled) performVibration(context)
-                                onFilterByDateClick()
-                            }) {
-                                Icon(Icons.Filled.DateRange, contentDescription = stringResource(id = R.string.filter_by_date_content_description))
-                            }
-
-                            Box {
+                            if (currentScreen is Screen.TagManagement) {
                                 IconButton(onClick = {
                                     if (isVibrationEnabled) performVibration(context)
-                                    menuExpanded = true
+                                    onAddNewTag()
                                 }) {
-                                    Icon(Icons.AutoMirrored.Filled.Sort, contentDescription = stringResource(id = R.string.sort_by_content_description))
+                                    Icon(Icons.Default.Add, contentDescription = stringResource(id = R.string.add_new_tag_content_description))
                                 }
-                                DropdownMenu(expanded = menuExpanded, onDismissRequest = { menuExpanded = false }) {
-                                    DropdownMenuItem(
-                                        text = { Text(stringResource(id = R.string.sort_by_date_modified)) },
-                                        onClick = { if (isVibrationEnabled) performVibration(context); onSortTypeChange(SortType.DATE_MODIFIED); menuExpanded = false }
-                                    )
-                                    DropdownMenuItem(
-                                        text = { Text(stringResource(id = R.string.sort_by_date_added)) },
-                                        onClick = { if (isVibrationEnabled) performVibration(context); onSortTypeChange(SortType.DATE_ADDED); menuExpanded = false }
-                                    )
-                                    DropdownMenuItem(
-                                        text = { Text(stringResource(id = R.string.sort_by_alphabet)) },
-                                        onClick = { if (isVibrationEnabled) performVibration(context); onSortTypeChange(SortType.ALPHABET); menuExpanded = false }
-                                    )
-                                    DropdownMenuItem(
-                                        text = { Text(stringResource(id = R.string.sort_by_size)) },
-                                        onClick = { if (isVibrationEnabled) performVibration(context); onSortTypeChange(SortType.SIZE); menuExpanded = false }
-                                    )
-                                    DropdownMenuItem(
-                                        text = { Text(stringResource(id = R.string.reverse_sort)) },
-                                        trailingIcon = { Icon(Icons.Filled.SwapVert, contentDescription = stringResource(id = R.string.reverse_sort_content_description)) },
-                                        onClick = { if (isVibrationEnabled) performVibration(context); onReverseSort(); menuExpanded = false }
-                                    )
-                                    if (selectedDate != null) {
+                            }
+                            if (currentScreen !is Screen.Settings && currentScreen !is Screen.TagManagement && currentScreen !is Screen.SecretStorage) {
+                                IconButton(onClick = {
+                                    if (isVibrationEnabled) performVibration(context)
+                                    onSearchClick()
+                                }) {
+                                    Icon(Icons.Filled.Search, contentDescription = stringResource(id = R.string.search_content_description))
+                                }
+                                var menuExpanded by remember { mutableStateOf(false) }
+
+                                IconButton(onClick = {
+                                    if (isVibrationEnabled) performVibration(context)
+                                    onFilterByDateClick()
+                                }) {
+                                    Icon(Icons.Filled.DateRange, contentDescription = stringResource(id = R.string.filter_by_date_content_description))
+                                }
+
+                                Box {
+                                    IconButton(onClick = {
+                                        if (isVibrationEnabled) performVibration(context)
+                                        menuExpanded = true
+                                    }) {
+                                        Icon(Icons.AutoMirrored.Filled.Sort, contentDescription = stringResource(id = R.string.sort_by_content_description))
+                                    }
+                                    DropdownMenu(expanded = menuExpanded, onDismissRequest = { menuExpanded = false }) {
                                         DropdownMenuItem(
-                                            text = { Text(stringResource(id = R.string.reset_date_filter)) },
-                                            onClick = { if (isVibrationEnabled) performVibration(context); onResetDateFilter(); menuExpanded = false }
+                                            text = { Text(stringResource(id = R.string.sort_by_date_modified)) },
+                                            onClick = { if (isVibrationEnabled) performVibration(context); onSortTypeChange(SortType.DATE_MODIFIED); menuExpanded = false }
                                         )
+                                        DropdownMenuItem(
+                                            text = { Text(stringResource(id = R.string.sort_by_date_added)) },
+                                            onClick = { if (isVibrationEnabled) performVibration(context); onSortTypeChange(SortType.DATE_ADDED); menuExpanded = false }
+                                        )
+                                        DropdownMenuItem(
+                                            text = { Text(stringResource(id = R.string.sort_by_alphabet)) },
+                                            onClick = { if (isVibrationEnabled) performVibration(context); onSortTypeChange(SortType.ALPHABET); menuExpanded = false }
+                                        )
+                                        DropdownMenuItem(
+                                            text = { Text(stringResource(id = R.string.sort_by_size)) },
+                                            onClick = { if (isVibrationEnabled) performVibration(context); onSortTypeChange(SortType.SIZE); menuExpanded = false }
+                                        )
+                                        DropdownMenuItem(
+                                            text = { Text(stringResource(id = R.string.reverse_sort)) },
+                                            trailingIcon = { Icon(Icons.Filled.SwapVert, contentDescription = stringResource(id = R.string.reverse_sort_content_description)) },
+                                            onClick = { if (isVibrationEnabled) performVibration(context); onReverseSort(); menuExpanded = false }
+                                        )
+                                        if (selectedDate != null) {
+                                            DropdownMenuItem(
+                                                text = { Text(stringResource(id = R.string.reset_date_filter)) },
+                                                onClick = { if (isVibrationEnabled) performVibration(context); onResetDateFilter(); menuExpanded = false }
+                                            )
+                                        }
                                     }
                                 }
-                            }
-                            if (currentScreen is Screen.FolderContent || (currentScreen is Screen.Favorites && currentScreen.openAlbumName != null)) {
-                                IconButton(onClick = {
-                                    if (isVibrationEnabled) performVibration(context)
-                                    onDetailsClick()
-                                }) {
-                                    Icon(Icons.Filled.Info, contentDescription = stringResource(id = R.string.details_content_description))
+                                if (currentScreen is Screen.FolderContent || (currentScreen is Screen.Favorites && currentScreen.openAlbumName != null)) {
+                                    IconButton(onClick = {
+                                        if (isVibrationEnabled) performVibration(context)
+                                        onDetailsClick()
+                                    }) {
+                                        Icon(Icons.Filled.Info, contentDescription = stringResource(id = R.string.details_content_description))
+                                    }
                                 }
                             }
                         }

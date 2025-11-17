@@ -1,18 +1,21 @@
 package com.example.nkdsify.ui.screens
 
 import android.net.Uri
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -37,7 +40,8 @@ fun TrashScreen(
     onClearTrash: () -> Unit,
     isTrashBlurEnabled: Boolean,
     onClearSelection: () -> Unit,
-    blurType: BlurType
+    blurType: BlurType,
+    gridState: LazyGridState
 ) {
     if (items.isEmpty()) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -60,42 +64,33 @@ fun TrashScreen(
         return
     }
 
-    Column(modifier = Modifier.fillMaxSize()) {
-        if (selectedItems.isEmpty()) {
-            Card(
+    Box(modifier = Modifier.fillMaxSize()) {
+        MediaGrid(
+            items = items,
+            favorites = emptyList(),
+            selectedItems = selectedItems,
+            imageLoader = imageLoader,
+            onItemClick = onItemClick,
+            onToggleSelection = onToggleSelection,
+            isBlurEnabled = isTrashBlurEnabled,
+            onClearSelection = onClearSelection,
+            blurType = blurType,
+            gridState = gridState
+        )
+
+        AnimatedVisibility(
+            visible = selectedItems.isEmpty(),
+            modifier = Modifier.align(Alignment.BottomCenter),
+            enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
+            exit = slideOutVertically(targetOffsetY = { it }) + fadeOut()
+        ) {
+            Button(
+                onClick = onClearTrash,
                 modifier = Modifier
-                    .fillMaxWidth()
                     .padding(16.dp)
             ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Text(stringResource(id = R.string.trash_description))
-                    Button(
-                        onClick = onClearTrash,
-                        shape = RoundedCornerShape(8.dp)
-                    ) {
-                        Text(stringResource(id = R.string.clear_trash_button))
-                    }
-                }
+                Text(stringResource(id = R.string.clear_trash_button))
             }
-        }
-        Box(modifier = Modifier.weight(1f)) {
-            MediaGrid(
-                items = items,
-                favorites = emptyList(),
-                selectedItems = selectedItems,
-                imageLoader = imageLoader,
-                onItemClick = onItemClick,
-                onToggleSelection = onToggleSelection,
-                isBlurEnabled = isTrashBlurEnabled,
-                onClearSelection = onClearSelection,
-                blurType = blurType
-            )
         }
     }
 }

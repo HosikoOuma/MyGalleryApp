@@ -212,4 +212,5 @@
     <string name="install_permission_message">Для обновы те надо выдать разрешение. Я открою нужный скрин и тыкни своею писей куда надо</string>
     <string name="move_tag_up_content_description">Ап</string>
     <string name="move_tag_down_content_description">Даун</string>
+    <string name="size_selected_items">Общий сайз: %s</string>
 </resources>

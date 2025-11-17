@@ -81,7 +81,8 @@ fun FavoritesScreen(
             onToggleSelection = onToggleSelection,
             onClearSelection = onClearSelection,
             blurType = blurType,
-            isBlurEnabled = isBlurInFolderEnabled
+            isBlurEnabled = isBlurInFolderEnabled,
+            gridState = gridState
         )
     } else {
         if (displayAlbums.isEmpty()) {

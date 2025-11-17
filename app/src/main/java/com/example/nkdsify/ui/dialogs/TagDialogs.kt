@@ -3,19 +3,9 @@ package com.example.nkdsify.ui.dialogs
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.layout.Column
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource
+import androidx.core.net.toUri
 import com.example.nkdsify.MyAppState
 import com.example.nkdsify.R
 import com.example.nkdsify.ui.components.BackupAndRestoreDialog
@@ -28,7 +18,7 @@ fun TagDialogs(
     myAppState: MyAppState,
     onAddNewTag: (String) -> Unit,
     isVibrationEnabled: Boolean,
-    favorites: List<Uri>
+    favorites: MutableList<Uri>
 ) {
     val context = LocalContext.current
     val importFavoritesLauncher = rememberLauncherForActivityResult(contract = ActivityResultContracts.GetContent()) { uri: Uri? ->
@@ -38,8 +28,8 @@ fun TagDialogs(
                     val json = java.io.BufferedReader(java.io.InputStreamReader(inputStream)).readText()
                     val type = object : com.google.gson.reflect.TypeToken<Set<String>>() {}.type
                     val importedFavorites: Set<String> = Gson().fromJson(json, type)
-                    // favorites.clear()
-                    // favorites.addAll(importedFavorites.map { uriString -> uriString.toUri() })
+                    favorites.clear()
+                    favorites.addAll(importedFavorites.map { uriString -> uriString.toUri() })
                     myAppState.refreshTrigger++
                     android.widget.Toast.makeText(context, context.getString(R.string.favorites_imported_successfully), android.widget.Toast.LENGTH_SHORT).show()
                 }

@@ -25,7 +25,6 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
@@ -73,7 +72,8 @@ fun MediaGrid(
     onToggleSelection: (MediaItem) -> Unit,
     onClearSelection: () -> Unit,
     isBlurEnabled: Boolean = false,
-    blurType: BlurType
+    blurType: BlurType,
+    gridState: LazyGridState
 ) {
     if (items.isEmpty()) {
         Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -83,7 +83,6 @@ fun MediaGrid(
     }
     val context = LocalContext.current
     val haptics = LocalHapticFeedback.current
-    val gridState = rememberLazyGridState()
     val isSelectionMode = selectedItems.isNotEmpty()
     val isVibrationEnabled by remember { mutableStateOf(SettingsRepository.isVibrationEnabled(context)) }
 

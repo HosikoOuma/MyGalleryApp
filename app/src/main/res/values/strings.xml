@@ -215,4 +215,5 @@
     <string name="install_permission_message">To update the app, you need to allow installing from this source. Please grant the permission in the next screen.</string>
     <string name="move_tag_up_content_description">Up</string>
     <string name="move_tag_down_content_description">Down</string>
+    <string name="size_selected_items">Total size: %s</string>
 </resources>

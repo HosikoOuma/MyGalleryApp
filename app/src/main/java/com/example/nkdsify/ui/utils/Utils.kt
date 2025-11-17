@@ -546,6 +546,23 @@ fun renameMedia(context: Context, uri: Uri, newName: String) {
         Log.e("renameMedia", "Failed to rename media: $uri", e)
     }
 }
+@Composable
+fun SelectionDetailsDialog(
+    details: String,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(id = R.string.details_content_description)) },
+        text = { Text(details) },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(id = R.string.dialog_ok))
+            }
+        }
+    )
+}
+
 
 object FavoritesRepository {
     private const val PREFS_NAME = "MyGalleryAppPrefs"

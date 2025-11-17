@@ -3,10 +3,14 @@ package com.example.nkdsify.ui
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.snapshots.SnapshotStateList
+import androidx.compose.ui.res.stringResource
 import com.example.nkdsify.FileOperation
 import com.example.nkdsify.MyAppState
+import com.example.nkdsify.R
+import com.example.nkdsify.ui.utils.getMediaDetails
 import com.example.nkdsify.ui.utils.performVibration
 
 @Composable
@@ -117,6 +121,18 @@ fun MyAppTopBar(
         },
         onAddNewTag = {
             myAppState.showAddDialog = true
+        },
+        onSelectionDetailsClick = {
+            if (myAppState.selectedItems.size == 1) {
+                // Если выделен один файл - показываем полную информацию
+                myAppState.showDetailsDialog = myAppState.selectedItems.first()
+            } else if (myAppState.selectedItems.size > 1) {
+                // Если выделено больше одного - показываем общий вес
+                val totalSize = myAppState.selectedItems.sumOf { getMediaDetails(context, it)?.size ?: 0L }
+                val formattedSize = android.text.format.Formatter.formatShortFileSize(context, totalSize)
+                myAppState.selectionDetails = context.getString(R.string.size_selected_items, formattedSize)
+                myAppState.showSelectionDetailsDialog = true
+            }
         }
     )
 }

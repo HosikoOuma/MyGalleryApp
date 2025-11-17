@@ -22,19 +22,21 @@ fun RestorationDialogs(myAppState: MyAppState, isVibrationEnabled: Boolean) {
     if (myAppState.showConfirmRestoreFromSecretDialog) {
         ConfirmRestoreFromSecretDialog(
             onConfirm = {
+                myAppState.showConfirmRestoreFromSecretDialog = false
                 BiometricUtils.authenticate(
                     activity = context as AppCompatActivity,
                     onSuccess = {
                         coroutineScope.launch {
+                            myAppState.isProcessing = true
                             SecretRepository.restoreFromSecret(context, myAppState.itemsToRestoreFromSecret)
                             // Обновляем список секретных файлов напрямую
                             myAppState.secretItems = withContext(Dispatchers.IO) { SecretRepository.getSecretMediaItems(context) }
 
                             // Сбрасываем состояния
-                            myAppState.showConfirmRestoreFromSecretDialog = false
                             myAppState.itemsToRestoreFromSecret = emptyList()
                             myAppState.secretViewerState = null
                             myAppState.selectedItems.clear()
+                            myAppState.isProcessing = false
                         }
                     },
                     onError = { _, _ -> /* Do nothing on error */ },

@@ -276,7 +276,7 @@ object SettingsRepository {
 
     fun getZoomType(context: Context): ZoomType {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        val zoomTypeName = prefs.getString(ZOOM_TYPE_KEY, ZoomType.PINCH.name) ?: ZoomType.PINCH.name
+        val zoomTypeName = prefs.getString(ZOOM_TYPE_KEY, ZoomType.DOUBLE_TAP.name) ?: ZoomType.DOUBLE_TAP.name
         return ZoomType.valueOf(zoomTypeName)
     }
 
