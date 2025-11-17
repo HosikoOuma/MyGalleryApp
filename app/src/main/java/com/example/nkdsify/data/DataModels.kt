@@ -1,6 +1,7 @@
 package com.example.nkdsify.data
 
 import android.net.Uri
+import androidx.exifinterface.media.ExifInterface
 
 sealed class Screen {
     data object Folders : Screen()
@@ -55,7 +56,8 @@ data class MediaDetails(
     val dateModified: Long,
     val path: String,
     val resolution: String,
-    val isVideo: Boolean
+    val isVideo: Boolean,
+    val exif: ExifInterface? = null
 )
 
 data class MediaViewerState(

@@ -23,6 +23,7 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.MaterialTheme.colorScheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
@@ -35,6 +36,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.core.content.edit
+import androidx.exifinterface.media.ExifInterface
 import com.example.nkdsify.R
 import com.example.nkdsify.data.MediaDetails
 import java.io.InputStream
@@ -44,6 +46,7 @@ import java.time.format.DateTimeFormatter
 import java.util.Locale
 import kotlin.math.log10
 import kotlin.math.pow
+import kotlin.math.roundToInt
 
 fun getMediaDetails(context: Context, uri: Uri): MediaDetails? {
     val projection = if (uri.scheme == "content") {
@@ -107,6 +110,17 @@ fun getMediaDetails(context: Context, uri: Uri): MediaDetails? {
                 } catch (e: Exception) {
                     Log.e("getMediaDetails", "Failed to get resolution for URI: $uri", e)
                 }
+                val exif = if (!isVideo) {
+                    try {
+                        context.contentResolver.openInputStream(uri)?.use { inputStream ->
+                            ExifInterface(inputStream)
+                        }
+                    } catch (e: Exception) {
+                        null
+                    }
+                } else {
+                    null
+                }
 
                 MediaDetails(
                     name = cursor.getString(nameColumn),
@@ -115,7 +129,8 @@ fun getMediaDetails(context: Context, uri: Uri): MediaDetails? {
                     dateModified = if (dateModifiedColumn != -1) cursor.getLong(dateModifiedColumn) else 0,
                     path = cursor.getString(dataColumn),
                     resolution = resolution,
-                    isVideo = isVideo
+                    isVideo = isVideo,
+                    exif = exif
                 )
             } else {
                 null
@@ -298,7 +313,7 @@ fun ConfirmDeleteFromSecretDialog(
                     if (isVibrationEnabled) performVibration(context)
                     onConfirm()
                 },
-                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                colors = ButtonDefaults.buttonColors(containerColor = colorScheme.error)
 
             ) {
                 Text(stringResource(id = R.string.delete_button))
@@ -392,6 +407,9 @@ fun MediaDetailsDialog(
                 Text(stringResource(id = R.string.details_date_modified, formatTimestamp(details.dateModified)))
                 Text(stringResource(id = R.string.details_path, details.path))
                 Text(stringResource(id = R.string.details_resolution, details.resolution))
+                if (details.exif != null) {
+                    ExifData(exif = details.exif)
+                }
             }
         },
         confirmButton = {
@@ -438,6 +456,46 @@ fun MediaDetailsDialog(
         }
     )
 }
+
+@Composable
+fun ExifData(exif: ExifInterface) {
+    val cameraModel = exif.getAttribute(ExifInterface.TAG_MODEL)
+
+    // Use getAttributeDouble which can handle rational values.
+    val aperture = exif.getAttributeDouble(ExifInterface.TAG_APERTURE_VALUE, 0.0)
+    val shutterSpeed = exif.getAttributeDouble(ExifInterface.TAG_SHUTTER_SPEED_VALUE, 0.0)
+    val iso = exif.getAttribute(ExifInterface.TAG_ISO_SPEED)
+    val focalLength = exif.getAttributeDouble(ExifInterface.TAG_FOCAL_LENGTH, 0.0)
+
+    if (!cameraModel.isNullOrBlank()) {
+        Text("Camera: $cameraModel")
+    }
+
+    // The value is an APEX value. F-number = 2^(aperture_apex / 2)
+    if (aperture > 0.0) {
+        val fStop = 2.0.pow(aperture / 2.0)
+        Text("Aperture: f/${String.format("%.1f", fStop)}")
+    }
+
+    // The value is an APEX value. Exposure time = 1 / (2^shutter_speed_apex)
+    if (shutterSpeed > 0.0) {
+        val exposureTime = 1.0 / 2.0.pow(shutterSpeed)
+        if (exposureTime < 1.0) {
+            Text("Shutter speed: 1/${(1.0 / exposureTime).roundToInt()}s")
+        } else {
+            Text("Shutter speed: ${String.format("%.1f", exposureTime)}s")
+        }
+    }
+
+    if (!iso.isNullOrBlank()) {
+        Text("ISO: $iso")
+    }
+
+    if (focalLength > 0.0) {
+        Text("Focal length: ${focalLength.roundToInt()} mm")
+    }
+}
+
 
 @Composable
 fun RenameDialog(

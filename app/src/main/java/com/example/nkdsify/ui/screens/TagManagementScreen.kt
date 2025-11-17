@@ -285,14 +285,5 @@ fun TagManagementScreen(
                 }
             }
         }
-
-        FloatingActionButton(
-            onClick = { showAddDialog = true },
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .padding(16.dp)
-        ) {
-            Icon(Icons.Default.Add, contentDescription = stringResource(id = R.string.add_new_tag_content_description))
-        }
     }
 }
