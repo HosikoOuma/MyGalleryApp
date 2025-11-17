@@ -5,7 +5,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.FavoriteBorder
-import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
@@ -18,7 +17,6 @@ import androidx.compose.ui.unit.dp
 import com.example.nkdsify.R
 import com.example.nkdsify.data.Theme
 import com.example.nkdsify.ui.theme.NkdsifyAppTheme
-import androidx.compose.ui.res.painterResource
 import com.example.nkdsify.ui.utils.SettingsRepository
 
 @Composable
