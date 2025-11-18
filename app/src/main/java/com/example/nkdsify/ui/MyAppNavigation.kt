@@ -39,6 +39,7 @@ fun MyAppNavigation(
     myAppState: MyAppState,
     imageLoader: ImageLoader,
     foldersGridState: LazyGridState,
+    folderContentGridState: LazyGridState,
     favoritesGridState: LazyGridState,
     trashGridState: LazyGridState,
     allMediaGridState: LazyGridState,
@@ -174,7 +175,7 @@ fun MyAppNavigation(
                     },
                     onClearSelection = { myAppState.selectedItems.clear() },
                     blurType = myAppState.selectedBlurType,
-                    gridState = foldersGridState
+                    gridState = folderContentGridState
                 )
             }
 

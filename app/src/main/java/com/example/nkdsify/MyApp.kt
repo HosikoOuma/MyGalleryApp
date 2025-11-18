@@ -13,20 +13,24 @@ import com.example.nkdsify.ui.dialogs.OthersDialogs
 import com.example.nkdsify.ui.MyAppNavigation
 import android.app.Activity
 import android.app.DownloadManager
+import android.app.WallpaperManager
 import android.content.BroadcastReceiver
 import android.content.ContentUris
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.media.MediaPlayer
 import android.net.Uri
 import android.os.Build
 import android.os.Environment
 import android.provider.MediaStore
 import android.provider.Settings
+import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.OptIn
+import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -42,6 +46,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshContainer
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
+import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -62,6 +67,7 @@ import coil.ImageLoader
 import coil.decode.GifDecoder
 import coil.decode.ImageDecoderDecoder
 import coil.decode.VideoFrameDecoder
+import com.canhub.cropper.CropImageContract
 import com.example.nkdsify.data.MediaFolder
 import com.example.nkdsify.data.MediaItem
 import com.example.nkdsify.data.MediaViewerState
@@ -71,6 +77,7 @@ import com.example.nkdsify.data.loadFavoriteMediaItems
 import com.example.nkdsify.data.loadMediaFolders
 import com.example.nkdsify.data.loadTrashedMediaItems
 import com.example.nkdsify.ui.MyAppFAB
+import com.example.nkdsify.ui.components.EasterEggDialog
 import com.example.nkdsify.ui.components.MediaViewer
 import com.example.nkdsify.ui.dialogs.DeletionDialogs
 import com.example.nkdsify.ui.theme.NkdsifyAppTheme
@@ -83,10 +90,14 @@ import com.example.nkdsify.ui.utils.TrashRepository
 import com.example.nkdsify.ui.utils.getMediaDetails
 import com.example.nkdsify.ui.utils.performVibration
 import com.example.nkdsify.ui.utils.sanitizeFolders
+import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.io.BufferedReader
+import java.io.InputStreamReader
 import kotlin.collections.isNotEmpty
 import kotlin.collections.map
 
@@ -126,6 +137,7 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
             onViewerOpenChange(myAppState.viewerState != null)
         }
         val foldersGridState = rememberLazyGridState()
+        val folderContentGridState = rememberLazyGridState()
         val favoritesGridState = rememberLazyGridState()
         val trashGridState = rememberLazyGridState()
         val allMediaGridState = rememberLazyGridState()
@@ -238,6 +250,11 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
             FavoritesRepository.saveFavorites(context, favoriteStrings)
         }
         LaunchedEffect(myAppState.currentScreen) {
+            if (myAppState.currentScreen is Screen.FolderContent) {
+                coroutineScope.launch {
+                    folderContentGridState.scrollToItem(0)
+                }
+            }
             if (myAppState.currentScreen !is Screen.FolderContent && myAppState.currentScreen !is Screen.Favorites) {
                 myAppState.isSearchActive = false
                 myAppState.searchQuery = ""
@@ -340,6 +357,8 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
         )
         DeletionDialogs(myAppState = myAppState, isVibrationEnabled = isVibrationEnabled)
         RestorationDialogs(myAppState = myAppState, isVibrationEnabled = isVibrationEnabled)
+
+
         Box(Modifier.fillMaxSize()) {
             MyAppBackHandler(myAppState = myAppState)
             Scaffold(
@@ -382,6 +401,7 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
                             myAppState = myAppState,
                             imageLoader = imageLoader,
                             foldersGridState = foldersGridState,
+                            folderContentGridState = folderContentGridState,
                             favoritesGridState = favoritesGridState,
                             trashGridState = trashGridState,
                             allMediaGridState = allMediaGridState,
