@@ -5,6 +5,8 @@ import android.media.MediaPlayer
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
@@ -23,6 +25,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
@@ -32,6 +35,7 @@ import com.example.nkdsify.data.MediaTypeFilter
 import com.example.nkdsify.data.Screen
 import com.example.nkdsify.data.SortType
 import com.example.nkdsify.ui.utils.performVibration
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -141,11 +145,24 @@ fun TopBar(
                         }) {
                             Icon(Icons.Default.Delete, contentDescription = stringResource(id = R.string.delete_content_description))
                         }
+                        val coroutineScope = rememberCoroutineScope()
+                        val scale = remember { Animatable(1f) }
                         IconButton(onClick = {
                             if (isVibrationEnabled) performVibration(context)
                             onToggleFavorite()
+                            coroutineScope.launch {
+                                scale.animateTo(
+                                    targetValue = 1.3f,
+                                    animationSpec = spring(dampingRatio = 0.5f, stiffness = 400f)
+                                )
+                                scale.animateTo(
+                                    targetValue = 1f,
+                                    animationSpec = spring()
+                                )
+                            }
                         }) {
                             Icon(
+                                modifier = Modifier.scale(scale.value),
                                 imageVector = if (isFavoritesScreen) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
                                 contentDescription = if (isFavoritesScreen) stringResource(id = R.string.remove_from_favorites_content_description) else stringResource(id = R.string.add_to_favorites_content_description),
                                 tint = if (isFavoritesScreen) Color.Red else MaterialTheme.colorScheme.onSurface

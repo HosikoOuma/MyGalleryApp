@@ -5,6 +5,8 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -159,7 +161,7 @@ fun MediaGrid(
                                 .size(24.dp)
                         )
                     }
-                    if (favorites.contains(item.uri) && !isSelected) {
+                    if (favorites.contains(item.uri)) {
                         Icon(
                             imageVector = Icons.Filled.Favorite,
                             contentDescription = "Favorite",
@@ -169,14 +171,17 @@ fun MediaGrid(
                                 .size(24.dp)
                         )
                     }
-                    if (isSelected) {
+                    AnimatedVisibility(
+                        visible = isSelected,
+                        enter = scaleIn() + fadeIn(),
+                        exit = scaleOut() + fadeOut(),
+                        modifier = Modifier.align(Alignment.Center)
+                    ) {
                         Icon(
                             imageVector = Icons.Filled.CheckCircle,
                             contentDescription = "Selected",
                             tint = Color.White,
-                            modifier = Modifier
-                                .align(Alignment.Center)
-                                .size(36.dp)
+                            modifier = Modifier.size(36.dp)
                         )
                     }
                 }
@@ -217,7 +222,7 @@ private fun CustomVerticalScrollbar(
                 }
             } }
     ) {
-        val scrollbarState by remember(gridState) {
+        val scrollbarState by remember(gridState, maxHeight) {
             derivedStateOf {
                 val layoutInfo = gridState.layoutInfo
                 val totalItems = layoutInfo.totalItemsCount

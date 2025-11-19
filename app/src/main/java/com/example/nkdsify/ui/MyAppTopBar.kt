@@ -44,6 +44,7 @@ fun MyAppTopBar(
                     val urisWithTag = myAppState.tags.filter { it.value.contains(screen.tag) }.keys.map { Uri.parse(it) }.toSet()
                     myAppState.allMedia.filter { it.uri in urisWithTag }.map { it.uri }
                 }
+                is Screen.Trash -> myAppState.trashedItems.map { it.uri }
                 else -> emptyList()
             }.distinct()
 
@@ -65,7 +66,6 @@ fun MyAppTopBar(
         onEditTags = { myAppState.showBulkTagDialog = true },
         onShare = {
             val currentSelected = myAppState.selectedItems.toList()
-            myAppState.selectedItems.clear()
             val shareIntent = Intent().apply {
                 action = Intent.ACTION_SEND_MULTIPLE
                 putParcelableArrayListExtra(Intent.EXTRA_STREAM, ArrayList(currentSelected))
@@ -89,7 +89,6 @@ fun MyAppTopBar(
                     favorites.add(uri)
                 }
             }
-            myAppState.selectedItems.clear()
         },
         isFavoritesScreen = myAppState.currentScreen is com.example.nkdsify.data.Screen.Favorites,
         isSearchActive = myAppState.isSearchActive,
@@ -116,13 +115,11 @@ fun MyAppTopBar(
             myAppState.filesToProcess = myAppState.selectedItems.toList()
             myAppState.currentFileOperation = FileOperation.COPY
             myAppState.showFolderSelectionDialog = true
-            myAppState.selectedItems.clear()
         },
         onMove = {
             myAppState.filesToProcess = myAppState.selectedItems.toList()
             myAppState.currentFileOperation = FileOperation.MOVE
             myAppState.showFolderSelectionDialog = true
-            myAppState.selectedItems.clear()
         },
         onMoveToSecret = {
             myAppState.showConfirmMoveToSecretDialog = true
@@ -142,9 +139,10 @@ fun MyAppTopBar(
             if (myAppState.selectedItems.size == 1 && myAppState.currentScreen !is Screen.SecretStorage) {
                 myAppState.showDetailsDialog = myAppState.selectedItems.first()
             } else if (myAppState.selectedItems.isNotEmpty()) {
+                val count = myAppState.selectedItems.size
                 val totalSize = myAppState.selectedItems.sumOf { getMediaDetails(context, it)?.size ?: 0L }
                 val formattedSize = android.text.format.Formatter.formatShortFileSize(context, totalSize)
-                myAppState.selectionDetails = context.getString(R.string.size_selected_items, formattedSize)
+                myAppState.selectionDetails = "Выбрано: $count\nОбщий вес: $formattedSize"
                 myAppState.showSelectionDetailsDialog = true
             }
         }
