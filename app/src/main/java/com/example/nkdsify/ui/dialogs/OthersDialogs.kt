@@ -1,7 +1,11 @@
 package com.example.nkdsify.ui.dialogs
 
+import android.app.DownloadManager
+import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.os.Environment
+import android.widget.Toast
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -36,7 +40,7 @@ fun OthersDialogs(myAppState: MyAppState) {
             },
             onDownload = {
                 myAppState.downloadUrl?.let { url ->
-                    // downloadAndUpdate(context, url, myAppState.latestVersion!!)
+                    downloadAndUpdate(context, url, myAppState.latestVersion!!)
                 }
                 myAppState.showUpdateDialog = false
             },
@@ -61,5 +65,23 @@ fun OthersDialogs(myAppState: MyAppState) {
         }) {
             DatePicker(state = datePickerState)
         }
+    }
+}
+
+private fun downloadAndUpdate(context: Context, url: String, version: String) {
+    try {
+        val request = DownloadManager.Request(Uri.parse(url))
+            .setTitle("MyGalleryApp Update")
+            .setDescription("Downloading version $version")
+            .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
+            .setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, "MyGalleryApp-$version.apk")
+            .setMimeType("application/vnd.android.package-archive")
+
+        val downloadManager = context.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
+        downloadManager.enqueue(request)
+
+        Toast.makeText(context, "Download started...", Toast.LENGTH_SHORT).show()
+    } catch (e: Exception) {
+        Toast.makeText(context, "Download failed: ${e.message}", Toast.LENGTH_LONG).show()
     }
 }

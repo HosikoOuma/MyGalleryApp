@@ -52,6 +52,7 @@ fun FavoritesScreen(
     isBlurEnabled: Boolean,
     isBlurInFolderEnabled: Boolean,
     gridState: LazyGridState,
+    contentGridState: LazyGridState,
     openAlbumName: String?,
     onOpenAlbum: (String) -> Unit,
     isShowFileCountEnabled: Boolean,
@@ -82,7 +83,7 @@ fun FavoritesScreen(
             onClearSelection = onClearSelection,
             blurType = blurType,
             isBlurEnabled = isBlurInFolderEnabled,
-            gridState = gridState
+            gridState = contentGridState
         )
     } else {
         if (displayAlbums.isEmpty()) {

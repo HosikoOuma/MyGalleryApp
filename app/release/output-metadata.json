@@ -4,15 +4,15 @@
     "type": "APK",
     "kind": "Directory"
   },
-  "applicationId": "com.nkds.hosikoouma.nekolerytest",
+  "applicationId": "com.nkds.hosikoouma.nekolery",
   "variantName": "release",
   "elements": [
     {
       "type": "SINGLE",
       "filters": [],
       "attributes": [],
-      "versionCode": 22,
-      "versionName": "2.0.3",
+      "versionCode": 23,
+      "versionName": "2.0.4",
       "outputFile": "app-release.apk"
     }
   ],

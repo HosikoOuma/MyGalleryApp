@@ -3,13 +3,12 @@ package com.example.nkdsify.ui
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.snapshots.SnapshotStateList
-import androidx.compose.ui.res.stringResource
 import com.example.nkdsify.FileOperation
 import com.example.nkdsify.MyAppState
 import com.example.nkdsify.R
+import com.example.nkdsify.data.Screen
 import com.example.nkdsify.ui.utils.getMediaDetails
 import com.example.nkdsify.ui.utils.performVibration
 
@@ -29,11 +28,30 @@ fun MyAppTopBar(
         onCloseSelection = { myAppState.selectedItems.clear() },
         currentScreen = myAppState.currentScreen,
         onSelectAll = {
-            val allUris = myAppState.trashedItems.map { it.uri }
-            if (myAppState.selectedItems.containsAll(allUris)) {
-                myAppState.selectedItems.removeAll(allUris)
+            val currentItemsUris = when (val screen = myAppState.currentScreen) {
+                is Screen.FolderContent -> screen.folder.items.map { it.uri }
+                is Screen.Favorites -> {
+                    if (screen.openAlbumName != null) {
+                        val taggedAlbums = myAppState.favoriteItems
+                            .flatMap { item -> (myAppState.tags[item.uri.toString()] ?: emptySet()).map { tag -> tag to item } }
+                            .groupBy({ it.first }, { it.second })
+                        taggedAlbums[screen.openAlbumName]?.map { it.uri } ?: emptyList()
+                    } else {
+                        myAppState.favoriteItems.map { it.uri }
+                    }
+                }
+                is Screen.MediaByTag -> {
+                    val urisWithTag = myAppState.tags.filter { it.value.contains(screen.tag) }.keys.map { Uri.parse(it) }.toSet()
+                    myAppState.allMedia.filter { it.uri in urisWithTag }.map { it.uri }
+                }
+                else -> emptyList()
+            }.distinct()
+
+            if (myAppState.selectedItems.size == currentItemsUris.size && myAppState.selectedItems.containsAll(currentItemsUris)) {
+                myAppState.selectedItems.clear()
             } else {
-                myAppState.selectedItems.addAll(allUris)
+                myAppState.selectedItems.clear()
+                myAppState.selectedItems.addAll(currentItemsUris)
             }
         },
         onRestore = {
@@ -63,14 +81,12 @@ fun MyAppTopBar(
             if (isVibrationEnabled) {
                 performVibration(context)
             }
-            if (myAppState.currentScreen is com.example.nkdsify.data.Screen.Favorites) {
-                val urisToUnfavorite = myAppState.selectedItems.toList()
-                favorites.removeAll(urisToUnfavorite.toSet())
-                myAppState.favoriteItems = myAppState.favoriteItems.filterNot { it.uri in urisToUnfavorite.toSet() }
-            } else {
-                val urisToAdd = myAppState.selectedItems.filterNot { favorites.contains(it) }
-                if (urisToAdd.isNotEmpty()) {
-                    favorites.addAll(urisToAdd)
+            val selectedUris = myAppState.selectedItems.toList()
+            selectedUris.forEach { uri ->
+                if (favorites.contains(uri)) {
+                    favorites.remove(uri)
+                } else {
+                    favorites.add(uri)
                 }
             }
             myAppState.selectedItems.clear()
@@ -123,11 +139,9 @@ fun MyAppTopBar(
             myAppState.showAddDialog = true
         },
         onSelectionDetailsClick = {
-            if (myAppState.selectedItems.size == 1) {
-                // Если выделен один файл - показываем полную информацию
+            if (myAppState.selectedItems.size == 1 && myAppState.currentScreen !is Screen.SecretStorage) {
                 myAppState.showDetailsDialog = myAppState.selectedItems.first()
-            } else if (myAppState.selectedItems.size > 1) {
-                // Если выделено больше одного - показываем общий вес
+            } else if (myAppState.selectedItems.isNotEmpty()) {
                 val totalSize = myAppState.selectedItems.sumOf { getMediaDetails(context, it)?.size ?: 0L }
                 val formattedSize = android.text.format.Formatter.formatShortFileSize(context, totalSize)
                 myAppState.selectionDetails = context.getString(R.string.size_selected_items, formattedSize)

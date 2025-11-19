@@ -139,6 +139,7 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
         val foldersGridState = rememberLazyGridState()
         val folderContentGridState = rememberLazyGridState()
         val favoritesGridState = rememberLazyGridState()
+        val favoritesContentGridState = rememberLazyGridState()
         val trashGridState = rememberLazyGridState()
         val allMediaGridState = rememberLazyGridState()
         val secretGridState = rememberLazyGridState()
@@ -253,6 +254,11 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
             if (myAppState.currentScreen is Screen.FolderContent) {
                 coroutineScope.launch {
                     folderContentGridState.scrollToItem(0)
+                }
+            }
+            if (myAppState.currentScreen is Screen.Favorites && (myAppState.currentScreen as Screen.Favorites).openAlbumName != null) {
+                coroutineScope.launch {
+                    favoritesContentGridState.scrollToItem(0)
                 }
             }
             if (myAppState.currentScreen !is Screen.FolderContent && myAppState.currentScreen !is Screen.Favorites) {
@@ -403,6 +409,7 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
                             foldersGridState = foldersGridState,
                             folderContentGridState = folderContentGridState,
                             favoritesGridState = favoritesGridState,
+                            favoritesContentGridState = favoritesContentGridState,
                             trashGridState = trashGridState,
                             allMediaGridState = allMediaGridState,
                             secretGridState = secretGridState,

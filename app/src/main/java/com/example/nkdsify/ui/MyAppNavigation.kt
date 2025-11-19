@@ -41,6 +41,7 @@ fun MyAppNavigation(
     foldersGridState: LazyGridState,
     folderContentGridState: LazyGridState,
     favoritesGridState: LazyGridState,
+    favoritesContentGridState: LazyGridState,
     trashGridState: LazyGridState,
     allMediaGridState: LazyGridState,
     secretGridState: LazyGridState,
@@ -200,6 +201,7 @@ fun MyAppNavigation(
                     isBlurEnabled = isBlurEnabled,
                     isBlurInFolderEnabled = isBlurInFolderEnabled,
                     gridState = favoritesGridState,
+                    contentGridState = favoritesContentGridState,
                     openAlbumName = screen.openAlbumName,
                     onOpenAlbum = { albumName ->
                         if (isVibrationEnabled) performVibration(context)
