@@ -103,7 +103,8 @@ fun SettingsScreen(
     onCheckForUpdates: () -> Unit,
     currentVersion: String,
     selectedFabAction: FabAction,
-    onFabActionChange: (FabAction) -> Unit
+    onFabActionChange: (FabAction) -> Unit,
+    onViewHistoryClick: () -> Unit
 ) {
     val context = LocalContext.current
     var themeMenuExpanded by remember { mutableStateOf(false) }
@@ -370,6 +371,13 @@ fun SettingsScreen(
                     vibrate()
                     onManageHiddenFoldersClick()
                 }, text = stringResource(id = R.string.manage_hidden_folders_button))
+                SettingsButtonRow(
+                    onClick = {
+                        vibrate()
+                        onViewHistoryClick()
+                    },
+                    text = stringResource(id = R.string.view_history_title)
+                )
                 if (isBiometricAvailable) {
                     Button(
                         onClick = {

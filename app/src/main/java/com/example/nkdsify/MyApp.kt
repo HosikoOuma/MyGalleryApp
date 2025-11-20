@@ -39,17 +39,21 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.pulltorefresh.PullToRefreshContainer
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -72,6 +76,7 @@ import com.example.nkdsify.data.MediaFolder
 import com.example.nkdsify.data.MediaItem
 import com.example.nkdsify.data.MediaViewerState
 import com.example.nkdsify.data.Screen
+import com.example.nkdsify.data.SortType
 import com.example.nkdsify.data.loadAllMedia
 import com.example.nkdsify.data.loadFavoriteMediaItems
 import com.example.nkdsify.data.loadMediaFolders
@@ -87,6 +92,7 @@ import com.example.nkdsify.ui.utils.SecretRepository
 import com.example.nkdsify.ui.utils.SettingsRepository
 import com.example.nkdsify.ui.utils.TagsRepository
 import com.example.nkdsify.ui.utils.TrashRepository
+import com.example.nkdsify.ui.utils.ViewHistoryRepository
 import com.example.nkdsify.ui.utils.getMediaDetails
 import com.example.nkdsify.ui.utils.performVibration
 import com.example.nkdsify.ui.utils.sanitizeFolders
@@ -143,6 +149,7 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
         val trashGridState = rememberLazyGridState()
         val allMediaGridState = rememberLazyGridState()
         val secretGridState = rememberLazyGridState()
+        val viewHistoryGridState = rememberLazyGridState()
         val manageStorageLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
                 myAppState.hasManageStoragePermission = Environment.isExternalStorageManager()
@@ -206,6 +213,25 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
             if (myAppState.currentScreen is Screen.SecretStorage) {
                 myAppState.secretItems = SecretRepository.getSecretMediaItems(context)
             }
+            if (myAppState.currentScreen is Screen.ViewHistory) {
+                // Get history, which is already sorted by timestamp descending
+                val historyWithTimestamps = ViewHistoryRepository.getHistory(context)
+                val allMediaMap by lazy { myAppState.allMedia.associateBy { it.uri.toString() } }
+
+                // Map the sorted history URIs to MediaItem objects, preserving the chronological order
+                myAppState.viewHistory = historyWithTimestamps.mapNotNull { historyItem ->
+                    allMediaMap[historyItem.uri]
+                }
+            }
+        }
+        val filteredViewHistory by remember(myAppState.viewHistory, myAppState.searchQuery, myAppState.isSearchActive) {
+            derivedStateOf {
+                if (myAppState.isSearchActive && myAppState.searchQuery.isNotEmpty() && myAppState.currentScreen is Screen.ViewHistory) {
+                    myAppState.viewHistory.filter { it.name.contains(myAppState.searchQuery, ignoreCase = true) }
+                } else {
+                    myAppState.viewHistory
+                }
+            }
         }
         LaunchedEffect(initialUri, myAppState.hasPermissions) {
             if (initialUri != null && myAppState.hasPermissions) {
@@ -256,12 +282,17 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
                     folderContentGridState.scrollToItem(0)
                 }
             }
+            if (myAppState.currentScreen is Screen.ViewHistory) {
+                coroutineScope.launch {
+                    viewHistoryGridState.scrollToItem(0)
+                }
+            }
             if (myAppState.currentScreen is Screen.Favorites && (myAppState.currentScreen as Screen.Favorites).openAlbumName != null) {
                 coroutineScope.launch {
                     favoritesContentGridState.scrollToItem(0)
                 }
             }
-            if (myAppState.currentScreen !is Screen.FolderContent && myAppState.currentScreen !is Screen.Favorites) {
+            if (myAppState.currentScreen !is Screen.FolderContent && myAppState.currentScreen !is Screen.Favorites && myAppState.currentScreen !is Screen.ViewHistory) {
                 myAppState.isSearchActive = false
                 myAppState.searchQuery = ""
             }
@@ -350,9 +381,33 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
             is Screen.AllMedia -> stringResource(id = R.string.screen_title_all_media)
             is Screen.MediaByTag -> screen.tag
             is Screen.SecretStorage -> stringResource(id = R.string.secret_storage)
+            is Screen.ViewHistory -> stringResource(id = R.string.view_history_title)
         }
 
         OthersDialogs(myAppState = myAppState)
+        if (myAppState.showClearHistoryDialog) {
+            AlertDialog(
+                onDismissRequest = { myAppState.showClearHistoryDialog = false },
+                title = { Text(stringResource(id = R.string.clear_history_title)) },
+                text = { Text(stringResource(id = R.string.clear_history_confirmation)) },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            ViewHistoryRepository.clearHistory(context)
+                            myAppState.viewHistory = emptyList()
+                            myAppState.showClearHistoryDialog = false
+                        }
+                    ) {
+                        Text(stringResource(id = R.string.dialog_clear))
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { myAppState.showClearHistoryDialog = false }) {
+                        Text(stringResource(id = R.string.dialog_cancel))
+                    }
+                }
+            )
+        }
         InfoDialogs(myAppState = myAppState, screenWidth = screenWidth, screenHeight = screenHeight)
         FolderDialogs(myAppState = myAppState)
         TagDialogs(
@@ -413,6 +468,8 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
                             trashGridState = trashGridState,
                             allMediaGridState = allMediaGridState,
                             secretGridState = secretGridState,
+                            viewHistoryGridState = viewHistoryGridState,
+                             filteredViewHistory = filteredViewHistory,
                             favorites = favorites,
                             keyboardController = keyboardController,
                             onMoveTag = onMoveTag,

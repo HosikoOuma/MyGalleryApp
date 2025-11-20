@@ -219,4 +219,9 @@
     <string name="move_tag_up_content_description">Вверх</string>
     <string name="move_tag_down_content_description">Вниз</string>
     <string name="size_selected_items">Общий вес: %s</string>
+    <string name="history_is_empty">История пуста</string>
+    <string name="view_history_title">История</string>
+    <string name="clear_history_title">Очистить историю</string>
+    <string name="clear_history_confirmation">Вы хотите очистить историю?</string>
+    <string name="dialog_clear">Очистить</string>
 </resources>

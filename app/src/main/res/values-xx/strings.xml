@@ -213,4 +213,9 @@
     <string name="move_tag_up_content_description">Ап</string>
     <string name="move_tag_down_content_description">Даун</string>
     <string name="size_selected_items">Общий сайз: %s</string>
+    <string name="history_is_empty">Хистори нема блять</string>
+    <string name="view_history_title">Хистори</string>
+    <string name="clear_history_title">Ёбнуть хисторию</string>
+    <string name="clear_history_confirmation">Ты точно хочешь ёбнуть хисторию, братик?</string>
+    <string name="dialog_clear">Ёбнуть</string>
 </resources>

@@ -77,7 +77,8 @@ fun TopBar(
     onDeleteFromSecret: () -> Unit,
     mediaTypeFilter: MediaTypeFilter,
     onMediaTypeFilterChange: (MediaTypeFilter) -> Unit,
-    onSelectionDetailsClick: () -> Unit
+    onSelectionDetailsClick: () -> Unit,
+    onClearHistoryClick: () -> Unit
 ) {
     if (isSelectionMode) {
         TopAppBar(
@@ -243,7 +244,7 @@ fun TopBar(
             },
             modifier = Modifier.statusBarsPadding(),
             navigationIcon = {
-                if (currentScreen is Screen.FolderContent || (currentScreen is Screen.Favorites && currentScreen.openAlbumName != null)) {
+                if (currentScreen is Screen.FolderContent || (currentScreen is Screen.Favorites && currentScreen.openAlbumName != null) || currentScreen is Screen.ViewHistory) {
                     IconButton(onClick = {
                         if (isVibrationEnabled) performVibration(context)
                         onBackClick()
@@ -307,7 +308,7 @@ fun TopBar(
                                     Icon(Icons.Default.Add, contentDescription = stringResource(id = R.string.add_new_tag_content_description))
                                 }
                             }
-
+                            
                             if (currentScreen !is Screen.Settings && currentScreen !is Screen.TagManagement && currentScreen !is Screen.SecretStorage) {
 
                                 if (currentScreen !is Screen.Trash) {
@@ -317,49 +318,60 @@ fun TopBar(
                                     }) {
                                         Icon(Icons.Filled.Search, contentDescription = stringResource(id = R.string.search_content_description))
                                     }
-                                    IconButton(onClick = {
-                                        if (isVibrationEnabled) performVibration(context)
-                                        onFilterByDateClick()
-                                    }) {
-                                        Icon(Icons.Filled.DateRange, contentDescription = stringResource(id = R.string.filter_by_date_content_description))
+                                    if (currentScreen !is Screen.ViewHistory) {
+                                        IconButton(onClick = {
+                                            if (isVibrationEnabled) performVibration(context)
+                                            onFilterByDateClick()
+                                        }) {
+                                            Icon(Icons.Filled.DateRange, contentDescription = stringResource(id = R.string.filter_by_date_content_description))
+                                        }
                                     }
                                 }
 
-                                var menuExpanded by remember { mutableStateOf(false) }
-                                Box {
+                                if (currentScreen is Screen.ViewHistory) {
                                     IconButton(onClick = {
                                         if (isVibrationEnabled) performVibration(context)
-                                        menuExpanded = true
+                                        onClearHistoryClick()
                                     }) {
-                                        Icon(Icons.AutoMirrored.Filled.Sort, contentDescription = stringResource(id = R.string.sort_by_content_description))
+                                        Icon(Icons.Default.Delete, contentDescription = stringResource(id = R.string.clear_history_title))
                                     }
-                                    DropdownMenu(expanded = menuExpanded, onDismissRequest = { menuExpanded = false }) {
-                                        DropdownMenuItem(
-                                            text = { Text(stringResource(id = R.string.sort_by_date_modified)) },
-                                            onClick = { if (isVibrationEnabled) performVibration(context); onSortTypeChange(SortType.DATE_MODIFIED); menuExpanded = false }
-                                        )
-                                        DropdownMenuItem(
-                                            text = { Text(stringResource(id = R.string.sort_by_date_added)) },
-                                            onClick = { if (isVibrationEnabled) performVibration(context); onSortTypeChange(SortType.DATE_ADDED); menuExpanded = false }
-                                        )
-                                        DropdownMenuItem(
-                                            text = { Text(stringResource(id = R.string.sort_by_alphabet)) },
-                                            onClick = { if (isVibrationEnabled) performVibration(context); onSortTypeChange(SortType.ALPHABET); menuExpanded = false }
-                                        )
-                                        DropdownMenuItem(
-                                            text = { Text(stringResource(id = R.string.sort_by_size)) },
-                                            onClick = { if (isVibrationEnabled) performVibration(context); onSortTypeChange(SortType.SIZE); menuExpanded = false }
-                                        )
-                                        DropdownMenuItem(
-                                            text = { Text(stringResource(id = R.string.reverse_sort)) },
-                                            trailingIcon = { Icon(Icons.Filled.SwapVert, contentDescription = stringResource(id = R.string.reverse_sort_content_description)) },
-                                            onClick = { if (isVibrationEnabled) performVibration(context); onReverseSort(); menuExpanded = false }
-                                        )
-                                        if (selectedDate != null && currentScreen !is Screen.Trash) {
+                                } else {
+                                    var menuExpanded by remember { mutableStateOf(false) }
+                                    Box {
+                                        IconButton(onClick = {
+                                            if (isVibrationEnabled) performVibration(context)
+                                            menuExpanded = true
+                                        }) {
+                                            Icon(Icons.AutoMirrored.Filled.Sort, contentDescription = stringResource(id = R.string.sort_by_content_description))
+                                        }
+                                        DropdownMenu(expanded = menuExpanded, onDismissRequest = { menuExpanded = false }) {
                                             DropdownMenuItem(
-                                                text = { Text(stringResource(id = R.string.reset_date_filter)) },
-                                                onClick = { if (isVibrationEnabled) performVibration(context); onResetDateFilter(); menuExpanded = false }
+                                                text = { Text(stringResource(id = R.string.sort_by_date_modified)) },
+                                                onClick = { if (isVibrationEnabled) performVibration(context); onSortTypeChange(SortType.DATE_MODIFIED); menuExpanded = false }
                                             )
+                                            DropdownMenuItem(
+                                                text = { Text(stringResource(id = R.string.sort_by_date_added)) },
+                                                onClick = { if (isVibrationEnabled) performVibration(context); onSortTypeChange(SortType.DATE_ADDED); menuExpanded = false }
+                                            )
+                                            DropdownMenuItem(
+                                                text = { Text(stringResource(id = R.string.sort_by_alphabet)) },
+                                                onClick = { if (isVibrationEnabled) performVibration(context); onSortTypeChange(SortType.ALPHABET); menuExpanded = false }
+                                            )
+                                            DropdownMenuItem(
+                                                text = { Text(stringResource(id = R.string.sort_by_size)) },
+                                                onClick = { if (isVibrationEnabled) performVibration(context); onSortTypeChange(SortType.SIZE); menuExpanded = false }
+                                            )
+                                            DropdownMenuItem(
+                                                text = { Text(stringResource(id = R.string.reverse_sort)) },
+                                                trailingIcon = { Icon(Icons.Filled.SwapVert, contentDescription = stringResource(id = R.string.reverse_sort_content_description)) },
+                                                onClick = { if (isVibrationEnabled) performVibration(context); onReverseSort(); menuExpanded = false }
+                                            )
+                                            if (selectedDate != null && currentScreen !is Screen.Trash) {
+                                                DropdownMenuItem(
+                                                    text = { Text(stringResource(id = R.string.reset_date_filter)) },
+                                                    onClick = { if (isVibrationEnabled) performVibration(context); onResetDateFilter(); menuExpanded = false }
+                                                )
+                                            }
                                         }
                                     }
                                 }

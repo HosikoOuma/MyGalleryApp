@@ -35,4 +35,7 @@ fun MyAppBackHandler(myAppState: MyAppState) {
     BackHandler(enabled = myAppState.currentScreen is Screen.SecretStorage) {
         myAppState.currentScreen = Screen.Settings
     }
+    BackHandler(enabled = myAppState.currentScreen is Screen.ViewHistory) {
+        myAppState.currentScreen = Screen.Settings
+    }
 }

@@ -79,6 +79,7 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.media3.common.MediaItem as Media3Item
 import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
+import com.example.nkdsify.ui.utils.ViewHistoryRepository
 import androidx.media3.ui.PlayerView
 import coil.ImageLoader
 import coil.compose.rememberAsyncImagePainter
@@ -167,6 +168,13 @@ fun MediaViewer(
     LaunchedEffect(items.isEmpty()) {
         if (items.isEmpty()) {
             onDismiss()
+        }
+    }
+    LaunchedEffect(pagerState.currentPage) {
+        if (!isExternal && !isTrashMode && !isSecretMode) {
+            items.getOrNull(pagerState.currentPage)?.let { item ->
+                ViewHistoryRepository.addToHistory(context, item.uri)
+            }
         }
     }
 

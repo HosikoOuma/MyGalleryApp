@@ -216,4 +216,9 @@
     <string name="move_tag_up_content_description">Up</string>
     <string name="move_tag_down_content_description">Down</string>
     <string name="size_selected_items">Total size: %s</string>
+    <string name="history_is_empty">History is empty</string>
+    <string name="view_history_title">History</string>
+    <string name="clear_history_title">Clear History</string>
+    <string name="clear_history_confirmation">Do you want to clear the history?</string>
+    <string name="dialog_clear">Clear</string>
 </resources>

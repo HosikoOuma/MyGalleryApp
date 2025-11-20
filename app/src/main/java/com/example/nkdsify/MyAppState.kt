@@ -60,6 +60,8 @@ class MyAppState(
     var isProcessing by mutableStateOf(false)
     var showSelectionDetailsDialog by mutableStateOf(false)
     var selectionDetails by mutableStateOf("")
+    var showClearHistoryDialog by mutableStateOf(false)
+    var viewHistory by mutableStateOf<List<MediaItem>>(emptyList())
 
     var showUpdateDialog by mutableStateOf(false)
     var latestVersion by mutableStateOf<String?>(null)

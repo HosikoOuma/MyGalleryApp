@@ -145,6 +145,9 @@ fun MyAppTopBar(
                 myAppState.selectionDetails = "Выбрано: $count\nОбщий вес: $formattedSize"
                 myAppState.showSelectionDetailsDialog = true
             }
+        },
+        onClearHistoryClick = {
+            myAppState.showClearHistoryDialog = true
         }
     )
 }

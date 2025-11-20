@@ -17,6 +17,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.SoftwareKeyboardController
 import coil.ImageLoader
 import com.example.nkdsify.MyAppState
+import com.example.nkdsify.data.MediaItem
 import com.example.nkdsify.data.MediaTypeFilter
 import com.example.nkdsify.data.MediaViewerState
 import com.example.nkdsify.data.Screen
@@ -27,6 +28,7 @@ import com.example.nkdsify.ui.screens.SecretStorageScreen
 import com.example.nkdsify.ui.screens.SettingsScreen
 import com.example.nkdsify.ui.screens.TagManagementScreen
 import com.example.nkdsify.ui.screens.TrashScreen
+import com.example.nkdsify.ui.screens.ViewHistoryScreen
 import com.example.nkdsify.ui.utils.BiometricUtils
 import com.example.nkdsify.ui.utils.SettingsRepository
 import com.example.nkdsify.ui.utils.TagsRepository
@@ -45,6 +47,8 @@ fun MyAppNavigation(
     trashGridState: LazyGridState,
     allMediaGridState: LazyGridState,
     secretGridState: LazyGridState,
+    viewHistoryGridState: LazyGridState,
+    filteredViewHistory: List<MediaItem>,
     favorites: MutableList<Uri>,
     keyboardController: SoftwareKeyboardController?,
     onMoveTag: (Int, Int) -> Unit,
@@ -120,6 +124,7 @@ fun MyAppNavigation(
             is Screen.Trash -> 3
             is Screen.Settings -> 4
             is Screen.SecretStorage -> 5
+            is Screen.ViewHistory -> 6
             is Screen.FolderContent -> 10
             is Screen.TagManagement -> 14
             is Screen.MediaByTag -> 15
@@ -281,6 +286,7 @@ fun MyAppNavigation(
                             onFailed = { /* Do nothing */ }
                         )
                     },
+                    onViewHistoryClick = { myAppState.currentScreen = Screen.ViewHistory },
                     isVibrationEnabled = isVibrationEnabled,
                     onVibrationEnabledChange = {
                         onVibrationEnabledChange(it)
@@ -466,6 +472,29 @@ fun MyAppNavigation(
                     isBlurEnabled = isBlurEnabled,
                     blurType = myAppState.selectedBlurType,
                     gridState = secretGridState
+                )
+            }
+            is Screen.ViewHistory -> {
+                ViewHistoryScreen(
+                    items = filteredViewHistory, // Use filtered list
+                    favorites = favorites,
+                    selectedItems = myAppState.selectedItems,
+                    imageLoader = imageLoader,
+                    onItemClick = { items, item ->
+                        keyboardController?.hide()
+                        myAppState.viewerState = MediaViewerState(items = items, startIndex = items.indexOf(item))
+                    },
+                    onToggleSelection = { item ->
+                        if (myAppState.selectedItems.contains(item.uri)) {
+                            myAppState.selectedItems.remove(item.uri)
+                        } else {
+                            myAppState.selectedItems.add(item.uri)
+                        }
+                    },
+                    onClearSelection = { myAppState.selectedItems.clear() },
+                    gridState = viewHistoryGridState,
+                    blurType = myAppState.selectedBlurType,
+                    isBlurEnabled = isBlurEnabled
                 )
             }
         }
