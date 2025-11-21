@@ -17,6 +17,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.ContextCompat
+import com.example.nkdsify.data.AppFontFamily
 import com.example.nkdsify.data.FabAction
 import com.example.nkdsify.data.MediaTypeFilter
 import com.example.nkdsify.data.Language
@@ -47,6 +48,7 @@ fun rememberMyAppState(
 class MyAppState(
     private val context: Context
 ) {
+    var selectedFontFamily by mutableStateOf(SettingsRepository.getFontFamily(context))
     var selectedZoomType by mutableStateOf(SettingsRepository.getZoomType(context))
     var selectedBlurType by mutableStateOf(SettingsRepository.getBlurType(context))
     var isShowFileCountEnabled by mutableStateOf(SettingsRepository.isShowFileCountEnabled(context))

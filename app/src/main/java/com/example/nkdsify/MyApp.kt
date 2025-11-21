@@ -138,7 +138,10 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
             (context as? Activity)?.recreate()
         }
     }
-    NkdsifyAppTheme(theme = myAppState.selectedTheme) {
+    NkdsifyAppTheme(
+        theme = myAppState.selectedTheme,
+        appFontFamily = myAppState.selectedFontFamily
+    ) {
         LaunchedEffect(myAppState.viewerState) {
             onViewerOpenChange(myAppState.viewerState != null)
         }
@@ -496,7 +499,12 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
                             autoDeleteTrashEnabled = autoDeleteTrashEnabled,
                             onAutoDeleteTrashEnabledChange = onAutoDeleteTrashEnabledChange,
                             autoDeleteTrashDays = autoDeleteTrashDays,
-                            onAutoDeleteTrashDaysChange = onAutoDeleteTrashDaysChange
+                            onAutoDeleteTrashDaysChange = onAutoDeleteTrashDaysChange,
+                            selectedFontFamily = myAppState.selectedFontFamily,
+                            onFontFamilyChange = {
+                                myAppState.selectedFontFamily = it
+                                SettingsRepository.setFontFamily(context, it)
+                            }
                         )
 
                     } else {

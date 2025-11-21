@@ -2,6 +2,7 @@ package com.example.nkdsify.ui.screens
 import android.content.Context
 import android.content.Intent
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.forEach
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement.Center
 import androidx.compose.foundation.layout.Box
@@ -48,6 +49,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import com.example.nkdsify.R
+import com.example.nkdsify.data.AppFontFamily
 import com.example.nkdsify.data.BlurType
 import com.example.nkdsify.data.FabAction
 import com.example.nkdsify.data.Language
@@ -56,6 +58,7 @@ import com.example.nkdsify.data.ZoomType
 import com.example.nkdsify.ui.utils.BiometricUtils
 import com.example.nkdsify.ui.utils.SettingsRepository
 import com.example.nkdsify.ui.utils.performVibration
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -106,7 +109,9 @@ fun SettingsScreen(
     selectedFabAction: FabAction,
     onFabActionChange: (FabAction) -> Unit,
     onViewHistoryClick: () -> Unit,
-    onAboutClick:() -> Unit
+    onAboutClick:() -> Unit,
+    selectedFontFamily: AppFontFamily,
+    onFontFamilyChange: (AppFontFamily) -> Unit
 ) {
     val context = LocalContext.current
     var themeMenuExpanded by remember { mutableStateOf(false) }
@@ -118,6 +123,7 @@ fun SettingsScreen(
     val scrollState = rememberScrollState()
     var specialLanguageUnlocked by remember { mutableStateOf(SettingsRepository.isSpecialLanguageUnlocked(context)) }
     val isBiometricAvailable = remember { BiometricUtils.isBiometricAvailable(context) }
+    var fontMenuExpanded by remember { mutableStateOf(false) }
 
     val vibrate: () -> Unit = {
         if (isVibrationEnabled) performVibration(context)
@@ -139,7 +145,14 @@ fun SettingsScreen(
             FabAction.CAMERA -> stringResource(id = R.string.fab_action_camera)
         }
     }
-
+    @Composable
+    fun getFontName(fontFamily: AppFontFamily): String {
+        return when (fontFamily) {
+            AppFontFamily.SYSTEM -> stringResource(R.string.font_family_default)
+            AppFontFamily.JETBRAINS_MONO -> stringResource(R.string.font_family_jetbrains_mono)
+            AppFontFamily.GOOGLE_SANS -> stringResource(R.string.font_family_google_sans)
+        }
+    }
 
     @Composable
     fun getZoomTypeName(zoomType: ZoomType): String {
@@ -211,7 +224,9 @@ fun SettingsScreen(
         horizontalAlignment = Alignment.Start
     ) {
         Spacer(modifier = Modifier.height(16.dp))
-        Card(modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)) {
+        Card(modifier = Modifier
+            .fillMaxWidth()
+            .padding(bottom = 8.dp)) {
             Column(modifier = Modifier.padding(16.dp)) {
                 SettingsHeader(stringResource(id = R.string.main_section_title), Icons.Default.Build)
                 SettingsRow(title = stringResource(id = R.string.language_label)) {
@@ -279,6 +294,25 @@ fun SettingsScreen(
                         }
                     }
                 }
+                SettingsRow(title = stringResource(id = R.string.settings_item_font_family)) {
+                    Box {
+                        TextButton(onClick = {
+                            vibrate()
+                            fontMenuExpanded = true
+                        }) {
+                            Text(getFontName(selectedFontFamily))
+                        }
+                        DropdownMenu(expanded = fontMenuExpanded, onDismissRequest = { fontMenuExpanded = false }) {
+                            AppFontFamily.entries.forEach { fontFamily ->
+                                DropdownMenuItem(text = { Text(getFontName(fontFamily)) }, onClick = {
+                                    vibrate()
+                                    onFontFamilyChange(fontFamily)
+                                    fontMenuExpanded = false
+                                })
+                            }
+                        }
+                    }
+                }
                 SettingsRow(title = stringResource(id = R.string.auto_delete_trash_label)) {
                     Switch(checked = autoDeleteTrashEnabled, onCheckedChange = {
                         vibrate()
@@ -317,7 +351,9 @@ fun SettingsScreen(
             }
         }
 
-        Card(modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)) {
+        Card(modifier = Modifier
+            .fillMaxWidth()
+            .padding(bottom = 8.dp)) {
             Column(modifier = Modifier.padding(16.dp)) {
                 SettingsHeader(stringResource(id = R.string.privacy_section_title), Icons.Default.PrivacyTip)
                 SettingsRow(title = stringResource(id = R.string.blur_folder_previews_label)) {
@@ -387,7 +423,9 @@ fun SettingsScreen(
                             onGoToSecretStorage()
                         },
                         shape = RoundedCornerShape(12.dp),
-                        modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 8.dp)
                     ) {
                         Text(stringResource(id = R.string.secret_storage))
                     }
@@ -395,7 +433,9 @@ fun SettingsScreen(
             }
         }
 
-        Card(modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)) {
+        Card(modifier = Modifier
+            .fillMaxWidth()
+            .padding(bottom = 8.dp)) {
             Column(modifier = Modifier.padding(16.dp)) {
                 SettingsHeader(stringResource(id = R.string.media_section_title), Icons.Default.Photo)
                 SettingsRow(title = stringResource(id = R.string.mute_video_by_default_label)) {
@@ -438,7 +478,9 @@ fun SettingsScreen(
             }
         }
 
-        Card(modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)) {
+        Card(modifier = Modifier
+            .fillMaxWidth()
+            .padding(bottom = 8.dp)) {
             Column(modifier = Modifier.padding(16.dp)) {
                 SettingsHeader(stringResource(id = R.string.tags_string), Icons.AutoMirrored.Filled.Label)
                 SettingsButtonRow(onClick = {
@@ -452,7 +494,9 @@ fun SettingsScreen(
             }
         }
 
-        Card(modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)) {
+        Card(modifier = Modifier
+            .fillMaxWidth()
+            .padding(bottom = 8.dp)) {
             Column(modifier = Modifier.padding(16.dp)) {
                 SettingsHeader(stringResource(id = R.string.about_section_title), Icons.Default.Info)
                 SettingsButtonRow(onClick = {
@@ -513,7 +557,9 @@ private fun SettingsRow(
     content: @Composable () -> Unit
 ) {
     Row(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(

@@ -2,6 +2,7 @@ package com.example.nkdsify.ui.utils
 
 import android.content.Context
 import androidx.core.content.edit
+import com.example.nkdsify.data.AppFontFamily
 import com.example.nkdsify.data.BlurType
 import com.example.nkdsify.data.FabAction
 import com.example.nkdsify.data.Language
@@ -34,6 +35,14 @@ object SettingsRepository {
     private const val FAB_ACTION_KEY = "fab_action"
     private const val FIRST_LAUNCH_KEY = "first_launch"
 
+
+    fun setFontFamily(context: Context, fontFamily: AppFontFamily) {context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit().putString("font_family", fontFamily.name).apply()
+    }
+
+    fun getFontFamily(context: Context): AppFontFamily {
+        val fontName = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).getString("font_family", AppFontFamily.SYSTEM.name) ?: AppFontFamily.SYSTEM.name
+        return AppFontFamily.valueOf(fontName)
+    }
 
     fun isFirstLaunch(context: Context): Boolean {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)

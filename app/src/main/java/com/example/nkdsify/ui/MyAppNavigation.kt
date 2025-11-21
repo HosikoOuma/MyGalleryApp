@@ -17,6 +17,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.SoftwareKeyboardController
 import coil.ImageLoader
 import com.example.nkdsify.MyAppState
+import com.example.nkdsify.data.AppFontFamily
 import com.example.nkdsify.data.MediaItem
 import com.example.nkdsify.data.MediaTypeFilter
 import com.example.nkdsify.data.MediaViewerState
@@ -75,7 +76,9 @@ fun MyAppNavigation(
     autoDeleteTrashEnabled: Boolean,
     onAutoDeleteTrashEnabledChange: (Boolean) -> Unit,
     autoDeleteTrashDays: Int,
-    onAutoDeleteTrashDaysChange: (Int) -> Unit
+    onAutoDeleteTrashDaysChange: (Int) -> Unit,
+    selectedFontFamily: AppFontFamily,
+    onFontFamilyChange: (AppFontFamily) -> Unit
 ) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
@@ -225,6 +228,8 @@ fun MyAppNavigation(
 
             is Screen.Settings -> {
                 SettingsScreen(
+                    selectedFontFamily = selectedFontFamily,
+                    onFontFamilyChange = onFontFamilyChange,
                     onAboutClick = {
                         myAppState.currentScreen = Screen.About
                     },

@@ -224,4 +224,9 @@
     <string name="clear_history_title">Очистить историю</string>
     <string name="clear_history_confirmation">Вы хотите очистить историю?</string>
     <string name="dialog_clear">Очистить</string>
+    <string name="settings_item_font_family">Шрифт</string>
+    <string name="font_family_default">Системный</string>
+    <string name="font_family_google_sans">Google Sans</string>
+    <string name="font_family_jetbrains_mono">JetBrains Mono</string>
+
 </resources>

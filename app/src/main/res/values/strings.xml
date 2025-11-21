@@ -221,4 +221,8 @@
     <string name="clear_history_title">Clear History</string>
     <string name="clear_history_confirmation">Do you want to clear the history?</string>
     <string name="dialog_clear">Clear</string>
+    <string name="settings_item_font_family">Font Family</string>
+    <string name="font_family_default">Default</string>
+    <string name="font_family_google_sans">Google Sans</string>
+    <string name="font_family_jetbrains_mono">JetBrains Mono</string>
 </resources>

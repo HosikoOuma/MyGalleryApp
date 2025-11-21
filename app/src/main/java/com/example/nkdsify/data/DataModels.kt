@@ -1,7 +1,11 @@
 package com.example.nkdsify.data
 
 import android.net.Uri
+import androidx.compose.ui.text.font.Font
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
 import androidx.exifinterface.media.ExifInterface
+import com.example.nkdsify.R
 
 sealed class Screen {
     data object Folders : Screen()
@@ -16,6 +20,24 @@ sealed class Screen {
     data object ViewHistory : Screen()
     data object About : Screen()
 }
+
+enum class AppFontFamily {
+    SYSTEM,
+    JETBRAINS_MONO,
+    GOOGLE_SANS
+}
+
+val JetBrainsMonoFontFamily = FontFamily(
+    Font(R.font.jetbrains_mono_regular, FontWeight.Normal),
+    Font(R.font.jetbrains_mono_bold, FontWeight.Bold),
+    Font(R.font.jetbrains_mono_medium, FontWeight.Medium),
+    Font(R.font.jetbrains_mono_extrabold, FontWeight.ExtraBold),
+)
+val GoogleSansFontFamily = FontFamily(
+    Font(R.font.gsr, FontWeight.Normal),
+    Font(R.font.gsb, FontWeight.Bold),
+    Font(R.font.gsm, FontWeight.Medium),
+)
 enum class MediaTypeFilter {
     ALL,
     PHOTOS,

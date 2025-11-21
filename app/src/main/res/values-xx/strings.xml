@@ -218,4 +218,9 @@
     <string name="clear_history_title">Ёбнуть хисторию</string>
     <string name="clear_history_confirmation">Ты точно хочешь ёбнуть хисторию, братик?</string>
     <string name="dialog_clear">Ёбнуть</string>
+    <string name="settings_item_font_family">Буковки</string>
+    <string name="font_family_default">Сыыыыстем</string>
+    <string name="font_family_google_sans">Google Sans</string>
+    <string name="font_family_jetbrains_mono">JetBrains Mono</string>
+
 </resources>
