@@ -3,6 +3,7 @@ import android.content.Context
 import android.content.Intent
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.Arrangement.Center
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -104,7 +105,8 @@ fun SettingsScreen(
     currentVersion: String,
     selectedFabAction: FabAction,
     onFabActionChange: (FabAction) -> Unit,
-    onViewHistoryClick: () -> Unit
+    onViewHistoryClick: () -> Unit,
+    onAboutClick:() -> Unit
 ) {
     val context = LocalContext.current
     var themeMenuExpanded by remember { mutableStateOf(false) }
@@ -471,12 +473,22 @@ fun SettingsScreen(
             }
         }
 
-        Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+        Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Center) {
             Spacer(modifier = Modifier.height(16.dp))
             Button(
                 onClick = {
                     vibrate()
                     onEasterEggClick()
+                },
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Text(stringResource(id = R.string.easter_egg_button))
+            }
+            Spacer(modifier = Modifier.width(16.dp))
+            Button(
+                onClick = {
+                    vibrate()
+                    onAboutClick()
                 },
                 shape = RoundedCornerShape(12.dp)
             ) {

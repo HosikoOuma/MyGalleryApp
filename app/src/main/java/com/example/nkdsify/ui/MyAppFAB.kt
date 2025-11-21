@@ -40,7 +40,13 @@ fun MyAppFAB(
     coroutineScope: CoroutineScope,
     context: Context
 ) {
-    if (myAppState.isShuffleButtonVisible && myAppState.currentScreen !is Screen.Trash && myAppState.currentScreen !is Screen.Settings && myAppState.currentScreen !is Screen.TagManagement && myAppState.currentScreen !is Screen.MediaByTag && myAppState.currentScreen !is Screen.SecretStorage && myAppState.currentScreen !is Screen.ViewHistory) {
+    if (myAppState.isShuffleButtonVisible && myAppState.currentScreen !is Screen.Trash
+        && myAppState.currentScreen !is Screen.Settings
+        && myAppState.currentScreen !is Screen.TagManagement
+        && myAppState.currentScreen !is Screen.MediaByTag
+        && myAppState.currentScreen !is Screen.SecretStorage
+        && myAppState.currentScreen !is Screen.ViewHistory
+        && myAppState.currentScreen !is Screen.About) {
         val interactionSource = remember { MutableInteractionSource() }
         val isPressed by interactionSource.collectIsPressedAsState()
         val scale by animateFloatAsState(if (isPressed) 0.9f else 1f, label = "FabScale")

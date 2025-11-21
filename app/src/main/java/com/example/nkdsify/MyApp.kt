@@ -382,6 +382,7 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
             is Screen.MediaByTag -> screen.tag
             is Screen.SecretStorage -> stringResource(id = R.string.secret_storage)
             is Screen.ViewHistory -> stringResource(id = R.string.view_history_title)
+            is Screen.About -> "Hi"
         }
 
         OthersDialogs(myAppState = myAppState)

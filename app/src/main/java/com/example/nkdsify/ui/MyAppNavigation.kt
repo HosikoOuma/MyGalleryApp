@@ -22,6 +22,7 @@ import com.example.nkdsify.data.MediaTypeFilter
 import com.example.nkdsify.data.MediaViewerState
 import com.example.nkdsify.data.Screen
 import com.example.nkdsify.ui.components.MediaGrid
+import com.example.nkdsify.ui.screens.AboutScreen
 import com.example.nkdsify.ui.screens.FavoritesScreen
 import com.example.nkdsify.ui.screens.FoldersGrid
 import com.example.nkdsify.ui.screens.SecretStorageScreen
@@ -128,6 +129,7 @@ fun MyAppNavigation(
             is Screen.FolderContent -> 10
             is Screen.TagManagement -> 14
             is Screen.MediaByTag -> 15
+            is Screen.About -> 20
         }
 
         val initialOrder = getScreenOrder(initialState)
@@ -154,6 +156,9 @@ fun MyAppNavigation(
                 isShowFileCountEnabled = myAppState.isShowFileCountEnabled,
                 blurType = myAppState.selectedBlurType
             )
+            is Screen.About -> {
+                AboutScreen()
+            }
 
             is Screen.FolderContent -> {
                 val folder = myAppState.allFolders.find { it.id == screen.folder.id } ?: screen.folder
@@ -220,6 +225,9 @@ fun MyAppNavigation(
 
             is Screen.Settings -> {
                 SettingsScreen(
+                    onAboutClick = {
+                        myAppState.currentScreen = Screen.About
+                    },
                     isBlurEnabled = isBlurEnabled,
                     onBlurEnabledChange = {
                         onBlurEnabledChange(it)

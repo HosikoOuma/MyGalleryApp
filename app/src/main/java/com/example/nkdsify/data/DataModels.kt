@@ -14,6 +14,7 @@ sealed class Screen {
     data class MediaByTag(val tag: String) : Screen()
     data object SecretStorage : Screen()
     data object ViewHistory : Screen()
+    data object About : Screen()
 }
 enum class MediaTypeFilter {
     ALL,
