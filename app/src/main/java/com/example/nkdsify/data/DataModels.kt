@@ -100,7 +100,8 @@ enum class SortType {
 enum class Theme {
     SYSTEM,
     LIGHT,
-    DARK
+    DARK,
+    GRUVBOX
 }
 
 enum class ZoomType {

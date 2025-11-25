@@ -237,5 +237,6 @@
     <string name="details_date_range">Диапазон дат</string>
     <string name="details_item_count">Кол-во хуйни</string>
     <string name="selection_details_text">Выбрано: %1$d\nХуев в дыр очке: %2$s</string>
+    <string name="theme_gruvbox">Gruvbox</string>
 
 </resources>

@@ -137,6 +137,7 @@ fun SettingsScreen(
             Theme.SYSTEM -> stringResource(id = R.string.theme_system)
             Theme.LIGHT -> stringResource(id = R.string.theme_light)
             Theme.DARK -> stringResource(id = R.string.theme_dark)
+            Theme.GRUVBOX -> stringResource(id = R.string.theme_gruvbox)
         }
     }
 

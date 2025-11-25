@@ -243,4 +243,5 @@
     <string name="details_date_range">Диапазон дат</string>
     <string name="details_item_count">Количество элементов</string>
     <string name="selection_details_text">Выбрано: %1$d\Общий вес %2$s</string>
+    <string name="theme_gruvbox">Gruvbox</string>
 </resources>

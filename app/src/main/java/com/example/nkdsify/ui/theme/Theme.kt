@@ -46,9 +46,11 @@ fun NkdsifyAppTheme(
         Theme.SYSTEM -> isSystemInDarkTheme()
         Theme.LIGHT -> false
         Theme.DARK -> true
+        Theme.GRUVBOX -> isSystemInDarkTheme()
     }
 
     val colors = when {
+        theme == Theme.GRUVBOX -> if (useDarkTheme) DarkGruvboxColorScheme else LightGruvboxColorScheme
         dynamicColor && useDarkTheme -> dynamicDarkColorScheme(context)
         dynamicColor && !useDarkTheme -> dynamicLightColorScheme(context)
         useDarkTheme -> DarkColors

@@ -77,6 +77,7 @@
     <string name="theme_system">System</string>
     <string name="theme_light">Light</string>
     <string name="theme_dark">Dark</string>
+    <string name="theme_gruvbox">Gruvbox</string>
     <string name="zoom_type_pinch">Pinch</string>
     <string name="zoom_type_double_tap">Double Tap</string>
     <string name="blur_type_blur">Blur</string>
