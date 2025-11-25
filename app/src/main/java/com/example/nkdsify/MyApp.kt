@@ -1,5 +1,4 @@
 @file:kotlin.OptIn(ExperimentalMaterial3Api::class)
-
 package com.example.nkdsify
 
 import com.example.nkdsify.ui.MyAppTopBar
@@ -13,42 +12,46 @@ import com.example.nkdsify.ui.dialogs.OthersDialogs
 import com.example.nkdsify.ui.MyAppNavigation
 import android.app.Activity
 import android.app.DownloadManager
-import android.app.WallpaperManager
 import android.content.BroadcastReceiver
 import android.content.ContentUris
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
-import android.media.MediaPlayer
 import android.net.Uri
 import android.os.Build
 import android.os.Environment
 import android.provider.MediaStore
 import android.provider.Settings
-import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.OptIn
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.pulltorefresh.PullToRefreshContainer
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.material3.rememberDatePickerState
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -71,18 +74,15 @@ import coil.ImageLoader
 import coil.decode.GifDecoder
 import coil.decode.ImageDecoderDecoder
 import coil.decode.VideoFrameDecoder
-import com.canhub.cropper.CropImageContract
 import com.example.nkdsify.data.MediaFolder
 import com.example.nkdsify.data.MediaItem
 import com.example.nkdsify.data.MediaViewerState
 import com.example.nkdsify.data.Screen
-import com.example.nkdsify.data.SortType
 import com.example.nkdsify.data.loadAllMedia
 import com.example.nkdsify.data.loadFavoriteMediaItems
 import com.example.nkdsify.data.loadMediaFolders
 import com.example.nkdsify.data.loadTrashedMediaItems
 import com.example.nkdsify.ui.MyAppFAB
-import com.example.nkdsify.ui.components.EasterEggDialog
 import com.example.nkdsify.ui.components.MediaViewer
 import com.example.nkdsify.ui.dialogs.DeletionDialogs
 import com.example.nkdsify.ui.theme.NkdsifyAppTheme
@@ -96,16 +96,10 @@ import com.example.nkdsify.ui.utils.ViewHistoryRepository
 import com.example.nkdsify.ui.utils.getMediaDetails
 import com.example.nkdsify.ui.utils.performVibration
 import com.example.nkdsify.ui.utils.sanitizeFolders
-import com.google.gson.Gson
-import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.io.BufferedReader
-import java.io.InputStreamReader
-import kotlin.collections.isNotEmpty
-import kotlin.collections.map
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalComposeUiApi::class)
 @Composable
@@ -390,27 +384,51 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
 
         OthersDialogs(myAppState = myAppState)
         if (myAppState.showClearHistoryDialog) {
-            AlertDialog(
+            val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+            ModalBottomSheet(
                 onDismissRequest = { myAppState.showClearHistoryDialog = false },
-                title = { Text(stringResource(id = R.string.clear_history_title)) },
-                text = { Text(stringResource(id = R.string.clear_history_confirmation)) },
-                confirmButton = {
-                    TextButton(
-                        onClick = {
-                            ViewHistoryRepository.clearHistory(context)
-                            myAppState.viewHistory = emptyList()
-                            myAppState.showClearHistoryDialog = false
-                        }
+                sheetState = sheetState
+            ) {
+                Column(
+                    modifier = Modifier
+                        .padding(horizontal = 24.dp)
+                        .navigationBarsPadding()
+                        .padding(bottom = 16.dp)
+                ) {
+                    Text(
+                        text = stringResource(id = R.string.clear_history_title),
+                        style = MaterialTheme.typography.headlineSmall,
+                        modifier = Modifier.padding(bottom = 8.dp)
+                    )
+                    Text(
+                        text = stringResource(id = R.string.clear_history_confirmation),
+                        style = MaterialTheme.typography.bodyLarge,
+                        modifier = Modifier.padding(bottom = 16.dp)
+                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.End,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(stringResource(id = R.string.dialog_clear))
-                    }
-                },
-                dismissButton = {
-                    TextButton(onClick = { myAppState.showClearHistoryDialog = false }) {
-                        Text(stringResource(id = R.string.dialog_cancel))
+                        TextButton(
+                            onClick = { myAppState.showClearHistoryDialog = false },
+                            modifier = Modifier.padding(end = 8.dp)
+                        ) {
+                            Text(stringResource(id = R.string.dialog_cancel))
+                        }
+                        Button(
+                            onClick = {
+                                ViewHistoryRepository.clearHistory(context)
+                                myAppState.viewHistory = emptyList()
+                                myAppState.showClearHistoryDialog = false
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                        ) {
+                            Text(stringResource(id = R.string.dialog_clear))
+                        }
                     }
                 }
-            )
+            }
         }
         InfoDialogs(myAppState = myAppState, screenWidth = screenWidth, screenHeight = screenHeight)
         FolderDialogs(myAppState = myAppState)
@@ -453,7 +471,7 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
                     )
                 }
             ) { innerPadding ->
-            val boxModifier = if (pullToRefreshEnabled) {
+                val boxModifier = if (pullToRefreshEnabled) {
                     Modifier
                         .padding(innerPadding)
                         .nestedScroll(pullRefreshState.nestedScrollConnection)
@@ -473,7 +491,7 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
                             allMediaGridState = allMediaGridState,
                             secretGridState = secretGridState,
                             viewHistoryGridState = viewHistoryGridState,
-                             filteredViewHistory = filteredViewHistory,
+                            filteredViewHistory = filteredViewHistory,
                             favorites = favorites,
                             keyboardController = keyboardController,
                             onMoveTag = onMoveTag,

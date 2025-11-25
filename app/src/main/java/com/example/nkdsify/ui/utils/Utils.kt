@@ -2,41 +2,39 @@ package com.example.nkdsify.ui.utils
 
 import android.content.ContentValues
 import android.content.Context
-import android.content.SharedPreferences
-import android.graphics.BitmapFactory
-import android.media.MediaMetadataRetriever
 import android.net.Uri
+import android.os.VibrationEffect
+import android.os.Vibrator
 import android.provider.MediaStore
 import android.util.Log
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.DriveFileMove
-import androidx.compose.material.icons.filled.ContentCopy
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.Wallpaper
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.MaterialTheme.colorScheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.core.content.edit
-import androidx.exifinterface.media.ExifInterface
 import com.example.nkdsify.R
 import com.example.nkdsify.data.MediaDetails
 import java.io.InputStream
@@ -47,6 +45,17 @@ import java.util.Locale
 import kotlin.math.log10
 import kotlin.math.pow
 import kotlin.math.roundToInt
+import android.graphics.BitmapFactory
+import android.media.MediaMetadataRetriever
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.DriveFileMove
+import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Wallpaper
+import androidx.compose.material3.Icon
+import androidx.exifinterface.media.ExifInterface
 
 fun getMediaDetails(context: Context, uri: Uri): MediaDetails? {
     val projection = if (uri.scheme == "content") {
@@ -167,6 +176,7 @@ fun formatDateRange(startMillis: Long, endMillis: Long): String {
         "${formatter.format(startDate)} - ${formatter.format(endDate)}"
     }
 }
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ConfirmDeleteDialog(
     onConfirm: () -> Unit,
@@ -174,32 +184,55 @@ fun ConfirmDeleteDialog(
 ) {
     val context = LocalContext.current
     val isVibrationEnabled by remember { mutableStateOf(SettingsRepository.isVibrationEnabled(context)) }
-    AlertDialog(
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val vibrate = { if (isVibrationEnabled) performVibration(context) }
+
+    ModalBottomSheet(
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(id = R.string.confirm_deletion_title)) },
-        text = { Text(stringResource(id = R.string.confirm_deletion_message)) },
-        confirmButton = {
-            Button(
-                onClick = {
-                    if (isVibrationEnabled) performVibration(context)
-                    onConfirm()
-                },
-                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+        sheetState = sheetState,
+    ) {
+        Column(
+            modifier = Modifier
+                .padding(horizontal = 24.dp)
+                .navigationBarsPadding()
+                .padding(bottom = 16.dp)
+        ) {
+            Text(
+                text = stringResource(id = R.string.confirm_deletion_title),
+                style = MaterialTheme.typography.headlineSmall,
+                modifier = Modifier.padding(bottom = 8.dp)
+            )
+            Text(
+                text = stringResource(id = R.string.confirm_deletion_message),
+                style = MaterialTheme.typography.bodyLarge,
+                modifier = Modifier.padding(bottom = 16.dp)
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(stringResource(id = R.string.delete_button))
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = {
-                if (isVibrationEnabled) performVibration(context)
-                onDismiss()
-            }) {
-                Text(stringResource(id = R.string.dialog_cancel))
+                TextButton(
+                    onClick = onDismiss,
+                    modifier = Modifier.padding(end = 8.dp)
+                ) {
+                    Text(stringResource(id = R.string.dialog_cancel))
+                }
+                Button(
+                    onClick = {
+                        vibrate()
+                        onConfirm()
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text(stringResource(id = R.string.delete_button))
+                }
             }
         }
-    )
+    }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ConfirmTrashDialog(
     onConfirm: () -> Unit,
@@ -207,31 +240,54 @@ fun ConfirmTrashDialog(
 ) {
     val context = LocalContext.current
     val isVibrationEnabled by remember { mutableStateOf(SettingsRepository.isVibrationEnabled(context)) }
-    AlertDialog(
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val vibrate = { if (isVibrationEnabled) performVibration(context) }
+
+    ModalBottomSheet(
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(id = R.string.confirm_move_to_trash_title)) },
-        text = { Text(stringResource(id = R.string.confirm_move_to_trash_message)) },
-        confirmButton = {
-            Button(
-                onClick = {
-                    if (isVibrationEnabled) performVibration(context)
-                    onConfirm()
-                },
+        sheetState = sheetState,
+    ) {
+        Column(
+            modifier = Modifier
+                .padding(horizontal = 24.dp)
+                .navigationBarsPadding()
+                .padding(bottom = 16.dp)
+        ) {
+            Text(
+                text = stringResource(id = R.string.confirm_move_to_trash_title),
+                style = MaterialTheme.typography.headlineSmall,
+                modifier = Modifier.padding(bottom = 8.dp)
+            )
+            Text(
+                text = stringResource(id = R.string.confirm_move_to_trash_message),
+                style = MaterialTheme.typography.bodyLarge,
+                modifier = Modifier.padding(bottom = 16.dp)
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(stringResource(id = R.string.move_to_trash_button))
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = {
-                if (isVibrationEnabled) performVibration(context)
-                onDismiss()
-            }) {
-                Text(stringResource(id = R.string.dialog_cancel))
+                TextButton(
+                    onClick = onDismiss,
+                    modifier = Modifier.padding(end = 8.dp)
+                ) {
+                    Text(stringResource(id = R.string.dialog_cancel))
+                }
+                Button(
+                    onClick = {
+                        vibrate()
+                        onConfirm()
+                    }
+                ) {
+                    Text(stringResource(id = R.string.move_to_trash_button))
+                }
             }
         }
-    )
+    }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ConfirmMoveToSecretDialog(
     onConfirm: () -> Unit,
@@ -239,31 +295,54 @@ fun ConfirmMoveToSecretDialog(
 ) {
     val context = LocalContext.current
     val isVibrationEnabled by remember { mutableStateOf(SettingsRepository.isVibrationEnabled(context)) }
-    AlertDialog(
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val vibrate = { if (isVibrationEnabled) performVibration(context) }
+
+    ModalBottomSheet(
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(id = R.string.confirm_move_to_secret_title)) },
-        text = { Text(stringResource(id = R.string.confirm_move_to_secret_message)) },
-        confirmButton = {
-            Button(
-                onClick = {
-                    if (isVibrationEnabled) performVibration(context)
-                    onConfirm()
-                },
+        sheetState = sheetState,
+    ) {
+        Column(
+            modifier = Modifier
+                .padding(horizontal = 24.dp)
+                .navigationBarsPadding()
+                .padding(bottom = 16.dp)
+        ) {
+            Text(
+                text = stringResource(id = R.string.confirm_move_to_secret_title),
+                style = MaterialTheme.typography.headlineSmall,
+                modifier = Modifier.padding(bottom = 8.dp)
+            )
+            Text(
+                text = stringResource(id = R.string.confirm_move_to_secret_message),
+                style = MaterialTheme.typography.bodyLarge,
+                modifier = Modifier.padding(bottom = 16.dp)
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(stringResource(id = R.string.confirm_move_to_secret_button))
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = {
-                if (isVibrationEnabled) performVibration(context)
-                onDismiss()
-            }) {
-                Text(stringResource(id = R.string.dialog_cancel))
+                TextButton(
+                    onClick = onDismiss,
+                    modifier = Modifier.padding(end = 8.dp)
+                ) {
+                    Text(stringResource(id = R.string.dialog_cancel))
+                }
+                Button(
+                    onClick = {
+                        vibrate()
+                        onConfirm()
+                    }
+                ) {
+                    Text(stringResource(id = R.string.confirm_move_to_secret_button))
+                }
             }
         }
-    )
+    }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ConfirmRestoreFromSecretDialog(
     onConfirm: () -> Unit,
@@ -271,31 +350,54 @@ fun ConfirmRestoreFromSecretDialog(
 ) {
     val context = LocalContext.current
     val isVibrationEnabled by remember { mutableStateOf(SettingsRepository.isVibrationEnabled(context)) }
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(stringResource(id = R.string.confirm_restore_from_secret_title)) },
-        text = { Text(stringResource(id = R.string.confirm_restore_from_secret_message)) },
-        confirmButton = {
-            Button(
-                onClick = {
-                    if (isVibrationEnabled) performVibration(context)
-                    onConfirm()
-                },
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val vibrate = { if (isVibrationEnabled) performVibration(context) }
 
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+    ) {
+        Column(
+            modifier = Modifier
+                .padding(horizontal = 24.dp)
+                .navigationBarsPadding()
+                .padding(bottom = 16.dp)
+        ) {
+            Text(
+                text = stringResource(id = R.string.confirm_restore_from_secret_title),
+                style = MaterialTheme.typography.headlineSmall,
+                modifier = Modifier.padding(bottom = 8.dp)
+            )
+            Text(
+                text = stringResource(id = R.string.confirm_restore_from_secret_message),
+                style = MaterialTheme.typography.bodyLarge,
+                modifier = Modifier.padding(bottom = 16.dp)
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(stringResource(id = R.string.restore_button))
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = {
-                if (isVibrationEnabled) performVibration(context)
-                onDismiss()
-            }) {
-                Text(stringResource(id = R.string.dialog_cancel))
+                TextButton(
+                    onClick = onDismiss,
+                    modifier = Modifier.padding(end = 8.dp)
+                ) {
+                    Text(stringResource(id = R.string.dialog_cancel))
+                }
+                Button(
+                    onClick = {
+                        vibrate()
+                        onConfirm()
+                    }
+                ) {
+                    Text(stringResource(id = R.string.restore_button))
+                }
             }
         }
-    )
+    }
 }
+
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ConfirmDeleteFromSecretDialog(
     onConfirm: () -> Unit,
@@ -303,86 +405,155 @@ fun ConfirmDeleteFromSecretDialog(
 ) {
     val context = LocalContext.current
     val isVibrationEnabled by remember { mutableStateOf(SettingsRepository.isVibrationEnabled(context)) }
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(stringResource(id = R.string.confirm_delete_from_secret_title)) },
-        text = { Text(stringResource(id = R.string.confirm_delete_from_secret_message)) },
-        confirmButton = {
-            Button(
-                onClick = {
-                    if (isVibrationEnabled) performVibration(context)
-                    onConfirm()
-                },
-                colors = ButtonDefaults.buttonColors(containerColor = colorScheme.error)
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val vibrate = { if (isVibrationEnabled) performVibration(context) }
 
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+    ) {
+        Column(
+            modifier = Modifier
+                .padding(horizontal = 24.dp)
+                .navigationBarsPadding()
+                .padding(bottom = 16.dp)
+        ) {
+            Text(
+                text = stringResource(id = R.string.confirm_delete_from_secret_title),
+                style = MaterialTheme.typography.headlineSmall,
+                modifier = Modifier.padding(bottom = 8.dp)
+            )
+            Text(
+                text = stringResource(id = R.string.confirm_delete_from_secret_message),
+                style = MaterialTheme.typography.bodyLarge,
+                modifier = Modifier.padding(bottom = 16.dp)
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(stringResource(id = R.string.delete_button))
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = {
-                if (isVibrationEnabled) performVibration(context)
-                onDismiss()
-            }) {
-                Text(stringResource(id = R.string.dialog_cancel))
+                TextButton(
+                    onClick = onDismiss,
+                    modifier = Modifier.padding(end = 8.dp)
+                ) {
+                    Text(stringResource(id = R.string.dialog_cancel))
+                }
+                Button(
+                    onClick = {
+                        vibrate()
+                        onConfirm()
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text(stringResource(id = R.string.delete_button))
+                }
             }
         }
-    )
+    }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ConfirmRestoreDialog(
-    onConfirm: () -> Unit,
-    onDismiss: () -> Unit
+fun ConfirmRestoreDialog(onConfirm: () -> Unit,
+                         onDismiss: () -> Unit
 ) {
     val context = LocalContext.current
     val isVibrationEnabled by remember { mutableStateOf(SettingsRepository.isVibrationEnabled(context)) }
-    AlertDialog(
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val vibrate = { if (isVibrationEnabled) performVibration(context) }
+
+    ModalBottomSheet(
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(id = R.string.confirm_restore_title)) },
-        text = { Text(stringResource(id = R.string.confirm_restore_message)) },
-        confirmButton = {
-            Button(
-                onClick = {
-                    if (isVibrationEnabled) performVibration(context)
-                    onConfirm()
-                },
+        sheetState = sheetState,
+    ) {
+        Column(
+            modifier = Modifier
+                .padding(horizontal = 24.dp)
+                .navigationBarsPadding()
+                .padding(bottom = 16.dp)
+        ) {
+            Text(
+                text = stringResource(id = R.string.confirm_restore_title),
+                style = MaterialTheme.typography.headlineSmall,
+                modifier = Modifier.padding(bottom = 8.dp)
+            )
+            Text(
+                text = stringResource(id = R.string.confirm_restore_message),
+                style = MaterialTheme.typography.bodyLarge,
+                modifier = Modifier.padding(bottom = 16.dp)
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(stringResource(id = R.string.restore_button))
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = {
-                if (isVibrationEnabled) performVibration(context)
-                onDismiss()
-            }) {
-                Text(stringResource(id = R.string.dialog_cancel))
+                TextButton(
+                    onClick = onDismiss,
+                    modifier = Modifier.padding(end = 8.dp)
+                ) {
+                    Text(stringResource(id = R.string.dialog_cancel))
+                }
+                Button(
+                    onClick = {
+                        vibrate()
+                        onConfirm()
+                    }
+                ) {
+                    Text(stringResource(id = R.string.restore_button))
+                }
             }
         }
-    )
+    }
 }
 
-
-
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ExternalMediaErrorDialog(onDismiss: () -> Unit) {
     val context = LocalContext.current
     val isVibrationEnabled by remember { mutableStateOf(SettingsRepository.isVibrationEnabled(context)) }
-    AlertDialog(
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val vibrate = { if (isVibrationEnabled) performVibration(context) }
+
+    ModalBottomSheet(
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(id = R.string.external_media_error_title)) },
-        text = { Text(stringResource(id = R.string.external_media_error_message)) },
-        confirmButton = {
-            TextButton(onClick = {
-                if (isVibrationEnabled) performVibration(context)
-                onDismiss()
-            }) {
-                Text(stringResource(id = R.string.dialog_ok))
+        sheetState = sheetState
+    ) {
+        Column(
+            modifier = Modifier
+                .padding(horizontal = 24.dp)
+                .navigationBarsPadding()
+                .padding(bottom = 16.dp)
+        ) {
+            Text(
+                text = stringResource(id = R.string.external_media_error_title),
+                style = MaterialTheme.typography.headlineSmall,
+                modifier = Modifier.padding(bottom = 8.dp)
+            )
+            Text(
+                text = stringResource(id = R.string.external_media_error_message),
+                style = MaterialTheme.typography.bodyLarge,
+                modifier = Modifier.padding(bottom = 16.dp)
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                TextButton(
+                    onClick = {
+                        vibrate()
+                        onDismiss()
+                    }
+                ) {
+                    Text(stringResource(id = R.string.dialog_ok))
+                }
             }
         }
-    )
+    }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MediaDetailsDialog(
     details: MediaDetails,
@@ -395,66 +566,92 @@ fun MediaDetailsDialog(
 ) {
     val context = LocalContext.current
     val isVibrationEnabled by remember { mutableStateOf(SettingsRepository.isVibrationEnabled(context)) }
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val vibrate: () -> Unit = { if (isVibrationEnabled) performVibration(context) }
 
-    AlertDialog(
+    ModalBottomSheet(
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(id = R.string.details_title)) },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(stringResource(id = R.string.details_name, details.name))
-                Text(stringResource(id = R.string.details_size, formatFileSize(details.size)))
-                Text(stringResource(id = R.string.details_date_added, formatTimestamp(details.dateAdded)))
-                Text(stringResource(id = R.string.details_date_modified, formatTimestamp(details.dateModified)))
-                Text(stringResource(id = R.string.details_path, details.path))
-                Text(stringResource(id = R.string.details_resolution, details.resolution))
+        sheetState = sheetState,
+    ) {
+        Column(
+            modifier = Modifier
+                .padding(horizontal = 24.dp)
+                .navigationBarsPadding()
+        ) {
+            Text(
+                text = stringResource(id = R.string.details_title),
+                style = MaterialTheme.typography.headlineSmall,
+                modifier = Modifier.padding(bottom = 16.dp)
+            )
+
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                DetailItem(label = stringResource(R.string.details_name_label), value = details.name)
+                DetailItem(label = stringResource(R.string.details_path_label), value = details.path)
+                DetailItem(label = stringResource(R.string.details_size_label), value = formatFileSize(details.size))
+                DetailItem(label = stringResource(R.string.details_date_added_label), value = formatTimestamp(details.dateAdded))
+                DetailItem(label = stringResource(R.string.details_date_modified_label), value = formatTimestamp(details.dateModified))
+                DetailItem(label = stringResource(R.string.details_resolution_label), value = details.resolution)
                 if (details.exif != null) {
+                    Spacer(Modifier.height(8.dp))
                     ExifData(exif = details.exif)
                 }
             }
-        },
-        confirmButton = {
-            Row {
-                IconButton(onClick = {
-                    if (isVibrationEnabled) performVibration(context)
-                    onSetAsWallpaper()
-                }) {
+
+            Spacer(Modifier.height(16.dp))
+
+            Text(
+                text = stringResource(id = R.string.actions_title),
+                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.padding(bottom = 8.dp)
+            )
+            LazyRow(
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                item { TextButton(onClick = { vibrate(); onSetAsWallpaper() }) { 
                     Icon(Icons.Default.Wallpaper, contentDescription = stringResource(id = R.string.set_as_wallpaper_content_description))
-                }
-                IconButton(onClick = {
-                    if (isVibrationEnabled) performVibration(context)
-                    onCopy()
-                }) {
+                } }
+                item { TextButton(onClick = { vibrate(); onCopy() }) { 
                     Icon(Icons.Default.ContentCopy, contentDescription = stringResource(id = R.string.copy_content_description))
-                }
-                IconButton(onClick = {
-                    if (isVibrationEnabled) performVibration(context)
-                    onMove()
-                }) {
+                } }
+                item { TextButton(onClick = { vibrate(); onMove() }) { 
                     Icon(Icons.AutoMirrored.Filled.DriveFileMove, contentDescription = stringResource(id = R.string.move_content_description))
-                }
-                IconButton(onClick = {
-                    if (isVibrationEnabled) performVibration(context)
-                    onRename()
-                }) {
+                } }
+                item { TextButton(onClick = { vibrate(); onRename() }) { 
                     Icon(Icons.Default.Edit, contentDescription = stringResource(id = R.string.rename_content_description))
-                }
-                IconButton(onClick = {
-                    if (isVibrationEnabled) performVibration(context)
-                    onMoveToSecret()
-                }) {
+                } }
+                item { TextButton(onClick = { vibrate(); onMoveToSecret() }) { 
                     Icon(Icons.Default.Lock, contentDescription = stringResource(id = R.string.move_to_secret_storage_content_description))
-                }
+                } }
             }
-        },
-        dismissButton = {
-            TextButton(onClick = {
-                if (isVibrationEnabled) performVibration(context)
-                onDismiss()
-            }) {
-                Text(stringResource(id = R.string.dialog_ok))
+
+            Spacer(Modifier.height(24.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
+                horizontalArrangement = Arrangement.End
+            ) {
+                Button(onClick = { vibrate(); onDismiss() }) {
+                    Text(stringResource(id = R.string.dialog_close))
+                }
             }
         }
-    )
+    }
+}
+
+@Composable
+private fun DetailItem(label: String, value: String) {
+    Row(modifier = Modifier.padding(vertical = 4.dp), verticalAlignment = Alignment.Top) {
+        Text(
+            text = "$label:",
+            style = MaterialTheme.typography.bodyLarge,
+            modifier = Modifier.fillMaxWidth(0.4f)
+        )
+        Text(
+            text = value,
+            style = MaterialTheme.typography.bodyMedium,
+            modifier = Modifier.weight(1f)
+        )
+    }
 }
 
 @Composable
@@ -497,6 +694,7 @@ fun ExifData(exif: ExifInterface) {
 }
 
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RenameDialog(
     currentName: String,
@@ -506,34 +704,55 @@ fun RenameDialog(
     val context = LocalContext.current
     val isVibrationEnabled by remember { mutableStateOf(SettingsRepository.isVibrationEnabled(context)) }
     var newName by remember { mutableStateOf(currentName) }
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
-    AlertDialog(
+    ModalBottomSheet(
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(id = R.string.rename_dialog_title)) },
-        text = {
+        sheetState = sheetState,
+    ) {
+        Column(
+            modifier = Modifier
+                .padding(horizontal = 24.dp)
+                .navigationBarsPadding() // Handle system navigation bar
+                .padding(bottom = 16.dp), // Padding for buttons at the bottom
+        ) {
+            Text(
+                text = stringResource(id = R.string.rename_dialog_title),
+                style = MaterialTheme.typography.headlineSmall,
+                modifier = Modifier.padding(bottom = 16.dp)
+            )
             TextField(
                 value = newName,
                 onValueChange = { newName = it },
-                singleLine = true
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth()
             )
-        },
-        confirmButton = {
-            Button(onClick = {
-                if (isVibrationEnabled) performVibration(context)
-                onRename(newName)
-            }) {
-                Text(stringResource(id = R.string.rename_button))
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = {
-                if (isVibrationEnabled) performVibration(context)
-                onDismiss()
-            }) {
-                Text(stringResource(id = R.string.dialog_cancel))
+            Spacer(Modifier.height(24.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End
+            ) {
+                TextButton(
+                    onClick = {
+                        if (isVibrationEnabled) performVibration(context)
+                        onDismiss()
+                    },
+                    modifier = Modifier.padding(end = 8.dp)
+                ) {
+                    Text(stringResource(id = R.string.dialog_cancel))
+                }
+                Button(
+                    onClick = {
+                        if (isVibrationEnabled) performVibration(context)
+                        onRename(newName)
+                    },
+                    enabled = newName.isNotBlank()
+                ) {
+                    Text(stringResource(id = R.string.rename_button))
+                }
             }
         }
-    )
+    }
 }
 
 fun renameMedia(context: Context, uri: Uri, newName: String) {
@@ -546,33 +765,57 @@ fun renameMedia(context: Context, uri: Uri, newName: String) {
         Log.e("renameMedia", "Failed to rename media: $uri", e)
     }
 }
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SelectionDetailsDialog(
     details: String,
     onDismiss: () -> Unit
 ) {
-    AlertDialog(
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
+    ModalBottomSheet(
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(id = R.string.details_content_description)) },
-        text = { Text(details) },
-        confirmButton = {
-            TextButton(onClick = onDismiss) {
-                Text(stringResource(id = R.string.dialog_ok))
+        sheetState = sheetState,
+    ) {
+        Column(
+            modifier = Modifier
+                .padding(horizontal = 24.dp)
+                .navigationBarsPadding()
+                .padding(bottom = 16.dp),
+        ) {
+            Text(
+                text = stringResource(id = R.string.details_content_description),
+                style = MaterialTheme.typography.headlineSmall,
+                modifier = Modifier.padding(bottom = 8.dp)
+            )
+            Text(
+                text = details,
+                style = MaterialTheme.typography.bodyLarge,
+                modifier = Modifier.padding(bottom = 16.dp)
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End
+            ) {
+                Button(onClick = onDismiss) {
+                    Text(stringResource(id = R.string.dialog_ok))
+                }
             }
         }
-    )
+    }
 }
-
 
 object FavoritesRepository {
     private const val PREFS_NAME = "MyGalleryAppPrefs"
     private const val FAVORITES_KEY = "favorites"
 
-    private fun getSharedPreferences(context: Context): SharedPreferences = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-
-    fun getFavorites(context: Context): Set<String> = getSharedPreferences(context).getStringSet(FAVORITES_KEY, emptySet()) ?: emptySet()
-
     fun saveFavorites(context: Context, favorites: Set<String>) {
-        getSharedPreferences(context).edit { putStringSet(FAVORITES_KEY, favorites) }
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putStringSet(FAVORITES_KEY, favorites).apply()
+    }
+
+    fun getFavorites(context: Context): Set<String> {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        return prefs.getStringSet(FAVORITES_KEY, emptySet()) ?: emptySet()
     }
 }

@@ -1,0 +1,131 @@
+Для создания таких нестандартных форм кнопок (как на вашем скриншоте: Diamond, Pentagon, Heart, Cookie и т.д.) в Jetpack Compose есть два основных пути.
+
+Самый мощный инструмент — это класс GenericShape. Он позволяет вам рисовать форму программно, используя те же команды, что и при рисовании на холсте (линии, кривые Безье, дуги).
+
+Вот разбивка по сложности реализации форм с вашей картинки:
+
+1. Простые формы (Pill, Circle, Square)
+
+Для них используйте стандартные готовые формы Compose.
+Kotlin
+
+Button(
+    onClick = {},
+    shape = CircleShape, // Круг
+    // shape = RoundedCornerShape(50) // Pill (Таблетка)
+    // shape = RectangleShape // Квадрат
+    modifier = Modifier.size(80.dp)
+) { ... }
+
+2. Геометрические формы (Triangle, Diamond)
+
+Для этого используем GenericShape. Мы просто соединяем точки прямыми линиями (lineTo).
+
+Пример для ромба (Diamond):
+Kotlin
+
+val DiamondShape = GenericShape { size, _ ->
+    moveTo(size.width / 2f, 0f) // Верхняя точка
+    lineTo(size.width, size.height / 2f) // Правая
+    lineTo(size.width / 2f, size.height) // Нижняя
+    lineTo(0f, size.height / 2f) // Левая
+    close() // Замкнуть контур
+}
+
+// Использование:
+Button(onClick = {}, shape = DiamondShape) { ... }
+
+3. Сложные формы с изгибами (Heart, Cookie, Cloud)
+
+Здесь начинается магия. Формы вроде "Cookie 4", "Heart" или "Ghost-ish" строятся на кривых Безье (cubicTo или quadraticBezierTo).
+
+Писать такие пути вручную сложно. Обычно разработчики берут SVG иконку и переносят координаты пути в код.
+
+Пример формы "Сердце" (Heart):
+Kotlin
+
+val HeartShape = GenericShape { size, _ ->
+    val width = size.width
+    val height = size.height
+
+    // Начальная точка в центре
+    moveTo(width / 2, height / 5)
+
+    // Левая дуга сердца (кривая Безье)
+    cubicTo(
+        x1 = 0f, y1 = 0f,              // Контрольная точка 1
+        x2 = 0f, y2 = height * 0.6f,   // Контрольная точка 2
+        x3 = width / 2, y3 = height    // Конечная точка (низ)
+    )
+
+    // Правая дуга
+    cubicTo(
+        x1 = width, y1 = height * 0.6f,
+        x2 = width, y2 = 0f,
+        x3 = width / 2, y3 = height / 5
+    )
+}
+
+4. Формы "Rounded Polygon" (Pentagon, Gem, Semicircle) — ✨ Самый современный способ
+
+На вашем скриншоте многие формы (например, Pentagon, Gem, Cookie) имеют скругленные углы. Рисовать их вручную через GenericShape очень трудно математически.
+
+Google выпустил специальную библиотеку для таких форм: androidx.graphics.shapes. Она позволяет генерировать сглаженные многоугольники (Rounded Polygons) на лету.
+
+Шаг 1. Добавьте зависимость:
+Groovy
+
+implementation "androidx.graphics:graphics-shapes:1.0.0-alpha05" // Проверьте актуальную версию
+
+Шаг 2. Создайте функцию для конвертации RoundedPolygon в Shape: Вам понадобится небольшой вспомогательный код, чтобы превратить математический полигон в Shape, понятный Compose.
+Kotlin
+
+// Этот код позволяет превратить RoundedPolygon в Shape для кнопки
+fun RoundedPolygon.toShape(): Shape = object : Shape {
+    override fun createOutline(size: Size, layoutDirection: LayoutDirection, density: Density): Outline {
+        val path = Path().asAndroidPath()
+        Morph(this@toShape, this@toShape).toPath(path) // Используем Morph для получения пути
+        // Масштабируем путь под размер кнопки
+        val matrix = android.graphics.Matrix()
+        val bounds = RectF()
+        path.computeBounds(bounds, true)
+        matrix.postScale(size.width / bounds.width(), size.height / bounds.height())
+        path.transform(matrix)
+
+        return Outline.Generic(path.asComposePath())
+    }
+}
+
+Шаг 3. Используйте готовые формы:
+Kotlin
+
+// 5 углов, скругление 50% (Как Pentagon на картинке)
+val PentagonShape = RoundedPolygon(
+    numVertices = 5,
+    rounding = CornerRounding(radius = 0.5f)
+).toShape()
+
+// 4 угла, сильное скругление внутрь (Похоже на Cookie/Star)
+val CookieShape = RoundedPolygon.star(
+    numVerticesPerRadius = 4,
+    innerRadius = 0.6f,
+    rounding = CornerRounding(radius = 0.3f)
+).toShape()
+
+// Применяем к кнопке
+Button(
+    onClick = {},
+    shape = PentagonShape, // Или CookieShape
+    modifier = Modifier.size(80.dp),
+    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4DD0E1))
+) {
+    // Контент
+}
+
+Резюме
+
+    Для простых форм -> RoundedCornerShape, CircleShape.
+
+    Для геометрии без скруглений (ромб, треугольник) -> GenericShape + lineTo.
+
+    Для сложных скругленных фигур (как на вашем скрине: Pentagon, Gem, Cookie) -> используйте библиотеку Graphics Shapes. Это даст самый качественный результат, как на картинке.

@@ -225,4 +225,19 @@
     <string name="font_family_default">Default</string>
     <string name="font_family_google_sans">Google Sans</string>
     <string name="font_family_jetbrains_mono">JetBrains Mono</string>
+    <string name="details_name_label">Name</string>
+    <string name="details_size_label">Size</string>
+    <string name="details_date_added_label">Date Added</string>
+    <string name="details_date_modified_label">Date Modified</string>
+    <string name="details_path_label">Path</string>
+    <string name="details_resolution_label">Resolution</string>
+    <string name="actions_title">Actions</string>
+    <string name="set_as_wallpaper_button">Set as wallpaper</string>
+    <string name="move_to_secret_storage">Move to secret</string>
+    <string name="dialog_close">Close</string>
+    <string name="album_details_dialog_title">Album Details</string>
+    <string name="details_total_size">Total size</string>
+    <string name="details_date_range">Date range</string>
+    <string name="details_item_count">Item count</string>
+    <string name="selection_details_text">Selected: %1$d\nTotal size: %2$s</string>
 </resources>

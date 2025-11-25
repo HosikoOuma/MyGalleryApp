@@ -46,9 +46,7 @@ fun DeletionDialogs(
                 setViewerState = { myAppState.viewerState = it }
             )
             myAppState.itemsToDelete = emptyList()
-        }, onDismiss = { myAppState.showConfirmDeleteDialog = false
-            if (isVibrationEnabled) com.example.nkdsify.ui.utils.performVibration(context)
-        })
+        }, onDismiss = { myAppState.showConfirmDeleteDialog = false })
     }
 
     if (myAppState.showConfirmDeleteFromSecretDialog) {
@@ -120,9 +118,7 @@ fun DeletionDialogs(
                     setViewerState = { myAppState.viewerState = it }
                 )
             },
-            onDismiss = { myAppState.showConfirmTrashDialog = false
-                if (isVibrationEnabled) com.example.nkdsify.ui.utils.performVibration(context)
-            }
+            onDismiss = { myAppState.showConfirmTrashDialog = false }
         )
     }
 }

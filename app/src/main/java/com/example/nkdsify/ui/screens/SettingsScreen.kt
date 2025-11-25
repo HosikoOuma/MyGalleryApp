@@ -4,13 +4,14 @@ import android.content.Intent
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.forEach
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.layout.Arrangement.Center
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
@@ -24,7 +25,6 @@ import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Photo
 import androidx.compose.material.icons.filled.PrivacyTip
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.DropdownMenu
@@ -32,10 +32,12 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -182,38 +184,58 @@ fun SettingsScreen(
 
     if (showSpecialLanguageDialog) {
         var code by remember { mutableStateOf("") }
-        AlertDialog(
+        val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
+        ModalBottomSheet(
             onDismissRequest = { showSpecialLanguageDialog = false },
-            title = { Text(stringResource(id = R.string.enter_special_language_code_title)) },
-            text = {
+            sheetState = sheetState
+        ) {
+            Column(
+                modifier = Modifier
+                    .padding(horizontal = 24.dp)
+                    .navigationBarsPadding()
+                    .padding(bottom = 16.dp),
+            ) {
+                Text(
+                    text = stringResource(id = R.string.enter_special_language_code_title),
+                    style = MaterialTheme.typography.headlineSmall,
+                    modifier = Modifier.padding(bottom = 16.dp)
+                )
                 TextField(
                     value = code,
                     onValueChange = { code = it },
-                    label = { Text(stringResource(id = R.string.special_language_code_label)) }
+                    label = { Text(stringResource(id = R.string.special_language_code_label)) },
+                    modifier = Modifier.fillMaxWidth()
                 )
-            },
-            confirmButton = {
-                Button(onClick = {
-                    if (code == "Трип-МоиПрефиолетовыеВнутренности") {
-                        SettingsRepository.setSpecialLanguageUnlocked(context, true)
-                        specialLanguageUnlocked = true
-                        onLanguageChange(Language.SPECIAL)
+                Spacer(Modifier.height(24.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    TextButton(
+                        onClick = {
+                            showSpecialLanguageDialog = false
+                            vibrate()
+                        },
+                        modifier = Modifier.padding(end = 8.dp)
+                    ) {
+                        Text(stringResource(id = R.string.dialog_cancel))
                     }
-                    showSpecialLanguageDialog = false
-                    vibrate()
-                }) {
-                    Text(stringResource(id = R.string.activate_button))
-                }
-            },
-            dismissButton = {
-                Button(onClick = {
-                    showSpecialLanguageDialog = false
-                    vibrate()
-                }) {
-                    Text(stringResource(id = R.string.dialog_cancel))
+                    Button(onClick = {
+                        if (code == "Трип-МоиПрефиолетовыеВнутренности") {
+                            SettingsRepository.setSpecialLanguageUnlocked(context, true)
+                            specialLanguageUnlocked = true
+                            onLanguageChange(Language.SPECIAL)
+                        }
+                        showSpecialLanguageDialog = false
+                        vibrate()
+                    }) {
+                        Text(stringResource(id = R.string.activate_button))
+                    }
                 }
             }
-        )
+        }
     }
 
     Column(
@@ -517,7 +539,7 @@ fun SettingsScreen(
             }
         }
 
-        Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Center) {
+        Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
             Spacer(modifier = Modifier.height(16.dp))
             Button(
                 onClick = {

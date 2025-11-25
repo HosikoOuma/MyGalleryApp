@@ -10,8 +10,11 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -20,16 +23,19 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DragIndicator
 import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -48,6 +54,7 @@ import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyColumnState
 import kotlin.math.abs
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TagManagementScreen(
     allTags: List<String>,
@@ -68,116 +75,180 @@ fun TagManagementScreen(
         val oldTag = showEditDialog!!
         var newTag by remember(oldTag) { mutableStateOf(oldTag) }
         val isError = newTag.isNotBlank() && newTag != oldTag && newTag in allTags
+        val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
-        AlertDialog(
+        ModalBottomSheet(
             onDismissRequest = { showEditDialog = null },
-            title = { Text(stringResource(id = R.string.edit_tag_dialog_title)) },
-            text = {
-                Column {
-                    TextField(
-                        value = newTag,
-                        onValueChange = { newTag = it },
-                        label = { Text(stringResource(id = R.string.new_tag_name_label)) },
-                        isError = isError
+            sheetState = sheetState
+        ) {
+            Column(
+                modifier = Modifier
+                    .padding(horizontal = 24.dp)
+                    .navigationBarsPadding()
+                    .padding(bottom = 16.dp)
+            ) {
+                Text(
+                    text = stringResource(id = R.string.edit_tag_dialog_title),
+                    style = MaterialTheme.typography.headlineSmall,
+                    modifier = Modifier.padding(bottom = 16.dp)
+                )
+                TextField(
+                    value = newTag,
+                    onValueChange = { newTag = it },
+                    label = { Text(stringResource(id = R.string.new_tag_name_label)) },
+                    isError = isError,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                if (isError) {
+                    Text(
+                        stringResource(R.string.tag_already_exists),
+                        color = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.padding(top = 4.dp)
                     )
-                    if (isError) {
-                        Text(stringResource(R.string.tag_already_exists), color = MaterialTheme.colorScheme.error)
+                }
+                Spacer(Modifier.height(24.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End
+                ) {
+                    TextButton(
+                        onClick = {
+                            showEditDialog = null
+                            if (isVibrationEnabled(context)) performVibration(context)
+                        },
+                        modifier = Modifier.padding(end = 8.dp)
+                    ) {
+                        Text(stringResource(id = R.string.dialog_cancel))
+                    }
+                    Button(
+                        onClick = {
+                            onEditTag(oldTag, newTag)
+                            showEditDialog = null
+                            if (isVibrationEnabled(context)) performVibration(context)
+                        },
+                        enabled = newTag.isNotBlank() && !isError
+                    ) {
+                        Text(stringResource(id = R.string.save_button))
                     }
                 }
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        onEditTag(oldTag, newTag)
-                        showEditDialog = null
-                        if (isVibrationEnabled(context)) performVibration(context)
-                    },
-                    enabled = newTag.isNotBlank() && (newTag == oldTag || newTag !in allTags)
-                ) {
-                    Text(stringResource(id = R.string.save_button))
-                }
-            },
-            dismissButton = {
-                Button(onClick = {
-                    showEditDialog = null
-                    if (isVibrationEnabled(context)) performVibration(context)
-                }) {
-                    Text(stringResource(id = R.string.dialog_cancel))
-                }
             }
-        )
+        }
     }
 
     if (showAddDialog) {
         var newTag by remember { mutableStateOf("") }
         val isError = newTag.isNotBlank() && newTag in allTags
+        val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
-        AlertDialog(
+        ModalBottomSheet(
             onDismissRequest = onDismissAddDialog,
-            title = { Text(stringResource(id = R.string.add_tag_dialog_title)) },
-            text = {
-                Column {
-                    TextField(
-                        value = newTag,
-                        onValueChange = { newTag = it },
-                        label = { Text(stringResource(id = R.string.tag_name_label)) },
-                        isError = isError
+            sheetState = sheetState,
+        ) {
+            Column(
+                modifier = Modifier
+                    .padding(horizontal = 24.dp)
+                    .navigationBarsPadding()
+                    .padding(bottom = 16.dp),
+            ) {
+                Text(
+                    text = stringResource(id = R.string.add_tag_dialog_title),
+                    style = MaterialTheme.typography.headlineSmall,
+                    modifier = Modifier.padding(bottom = 16.dp)
+                )
+                TextField(
+                    value = newTag,
+                    onValueChange = { newTag = it },
+                    label = { Text(stringResource(id = R.string.tag_name_label)) },
+                    isError = isError,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                if (isError) {
+                    Text(
+                        stringResource(R.string.tag_already_exists),
+                        color = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.padding(top = 4.dp)
                     )
-                    if (isError) {
-                        Text(stringResource(R.string.tag_already_exists), color = MaterialTheme.colorScheme.error)
+                }
+                Spacer(Modifier.height(24.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End
+                ) {
+                    TextButton(
+                        onClick = {
+                            onDismissAddDialog()
+                            if (isVibrationEnabled(context)) performVibration(context)
+                        },
+                        modifier = Modifier.padding(end = 8.dp)
+                    ) {
+                        Text(stringResource(id = R.string.dialog_cancel))
+                    }
+                    Button(
+                        onClick = {
+                            onAddNewTag(newTag)
+                            onDismissAddDialog()
+                            if (isVibrationEnabled(context)) performVibration(context)
+                        },
+                        enabled = newTag.isNotBlank() && !isError
+                    ) {
+                        Text(stringResource(id = R.string.add_button))
                     }
                 }
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        onAddNewTag(newTag)
-                        onDismissAddDialog()
-                        if (isVibrationEnabled(context)) performVibration(context)
-                    },
-                    enabled = newTag.isNotBlank() && newTag !in allTags
-                ) {
-                    Text(stringResource(id = R.string.add_button))
-                }
-            },
-            dismissButton = {
-                Button(onClick = {
-                    onDismissAddDialog()
-                    if (isVibrationEnabled(context)) performVibration(context)
-                }) {
-                    Text(stringResource(id = R.string.dialog_cancel))
-                }
             }
-        )
+        }
     }
 
     if (tagToDelete != null) {
         val tag = tagToDelete!!
-        AlertDialog(
+        val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
+        ModalBottomSheet(
             onDismissRequest = { tagToDelete = null },
-            title = { Text(stringResource(R.string.delete_tag_dialog_title)) },
-            text = { Text(stringResource(R.string.delete_tag_confirmation_text, tag)) },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        onDeleteTag(tag)
-                        tagToDelete = null
-                        if (isVibrationEnabled(context)) performVibration(context)
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+            sheetState = sheetState
+        ) {
+            Column(
+                modifier = Modifier
+                    .padding(horizontal = 24.dp)
+                    .navigationBarsPadding()
+                    .padding(bottom = 16.dp)
+            ) {
+                Text(
+                    text = stringResource(R.string.delete_tag_dialog_title),
+                    style = MaterialTheme.typography.headlineSmall,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+                Text(
+                    text = stringResource(R.string.delete_tag_confirmation_text, tag),
+                    style = MaterialTheme.typography.bodyLarge,
+                    modifier = Modifier.padding(bottom = 16.dp)
+                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(stringResource(R.string.delete_button))
-                }
-            },
-            dismissButton = {
-                Button(onClick = {
-                    tagToDelete = null
-                    if (isVibrationEnabled(context)) performVibration(context)
-                }) {
-                    Text(stringResource(id = R.string.dialog_cancel))
+                    TextButton(
+                        onClick = {
+                            tagToDelete = null
+                            if (isVibrationEnabled(context)) performVibration(context)
+                        },
+                        modifier = Modifier.padding(end = 8.dp)
+                    ) {
+                        Text(stringResource(id = R.string.dialog_cancel))
+                    }
+                    Button(
+                        onClick = {
+                            onDeleteTag(tag)
+                            tagToDelete = null
+                            if (isVibrationEnabled(context)) performVibration(context)
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                    ) {
+                        Text(stringResource(R.string.delete_button))
+                    }
                 }
             }
-        )
+        }
     }
 
     // --- MAIN UI --- (No changes below)

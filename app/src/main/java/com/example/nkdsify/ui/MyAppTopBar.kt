@@ -142,7 +142,7 @@ fun MyAppTopBar(
                 val count = myAppState.selectedItems.size
                 val totalSize = myAppState.selectedItems.sumOf { getMediaDetails(context, it)?.size ?: 0L }
                 val formattedSize = android.text.format.Formatter.formatShortFileSize(context, totalSize)
-                myAppState.selectionDetails = "Выбрано: $count\nОбщий вес: $formattedSize"
+                myAppState.selectionDetails = context.getString(R.string.selection_details_text, count, formattedSize)
                 myAppState.showSelectionDetailsDialog = true
             }
         },
