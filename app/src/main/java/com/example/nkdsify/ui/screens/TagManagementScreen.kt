@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DragIndicator
@@ -43,12 +44,9 @@ import androidx.compose.ui.unit.dp
 import com.example.nkdsify.R
 import com.example.nkdsify.ui.utils.SettingsRepository.isVibrationEnabled
 import com.example.nkdsify.ui.utils.performVibration
-import org.burnoutcrew.reorderable.ReorderableItem
-import org.burnoutcrew.reorderable.detectReorder
-import org.burnoutcrew.reorderable.rememberReorderableLazyListState
-import org.burnoutcrew.reorderable.reorderable
+import sh.calvin.reorderable.ReorderableItem
+import sh.calvin.reorderable.rememberReorderableLazyColumnState
 import kotlin.math.abs
-
 
 @Composable
 fun TagManagementScreen(
@@ -57,13 +55,15 @@ fun TagManagementScreen(
     onEditTag: (oldTag: String, newTag: String) -> Unit,
     onAddNewTag: (String) -> Unit,
     onTagClick: (String) -> Unit,
-    onMoveTag: (from: Int, to: Int) -> Unit
+    onMoveTag: (from: Int, to: Int) -> Unit,
+    showAddDialog: Boolean,
+    onDismissAddDialog: () -> Unit
 ) {
     val context = LocalContext.current
     var showEditDialog by remember { mutableStateOf<String?>(null) }
-    var showAddDialog by remember { mutableStateOf(false) }
     var tagToDelete by remember { mutableStateOf<String?>(null) }
 
+    // --- DIALOGS LOGIC --- 
     if (showEditDialog != null) {
         val oldTag = showEditDialog!!
         var newTag by remember(oldTag) { mutableStateOf(oldTag) }
@@ -113,7 +113,7 @@ fun TagManagementScreen(
         val isError = newTag.isNotBlank() && newTag in allTags
 
         AlertDialog(
-            onDismissRequest = { showAddDialog = false },
+            onDismissRequest = onDismissAddDialog,
             title = { Text(stringResource(id = R.string.add_tag_dialog_title)) },
             text = {
                 Column {
@@ -132,7 +132,7 @@ fun TagManagementScreen(
                 Button(
                     onClick = {
                         onAddNewTag(newTag)
-                        showAddDialog = false
+                        onDismissAddDialog()
                         if (isVibrationEnabled(context)) performVibration(context)
                     },
                     enabled = newTag.isNotBlank() && newTag !in allTags
@@ -142,7 +142,7 @@ fun TagManagementScreen(
             },
             dismissButton = {
                 Button(onClick = {
-                    showAddDialog = false
+                    onDismissAddDialog()
                     if (isVibrationEnabled(context)) performVibration(context)
                 }) {
                     Text(stringResource(id = R.string.dialog_cancel))
@@ -180,17 +180,18 @@ fun TagManagementScreen(
         )
     }
 
+    // --- MAIN UI --- (No changes below)
     Box(modifier = Modifier.fillMaxSize()) {
         if (allTags.isEmpty()) {
             Text(stringResource(id = R.string.no_tags_found), modifier = Modifier.align(Alignment.Center))
         } else {
-            val state = rememberReorderableLazyListState(onMove = { from, to ->
+            val lazyListState = rememberLazyListState()
+            val reorderableState = rememberReorderableLazyColumnState(lazyListState) { from, to ->
                 onMoveTag(from.index, to.index)
                 if (isVibrationEnabled(context)) {
                     performVibration(context)
                 }
-            })
-
+            }
             val slowerFlingBehavior = remember {
                 object : FlingBehavior {
                     override suspend fun ScrollScope.performFling(initialVelocity: Float): Float {
@@ -219,14 +220,13 @@ fun TagManagementScreen(
             }
 
             LazyColumn(
-                state = state.listState,
+                state = lazyListState,
                 modifier = Modifier
-                    .padding(horizontal = 16.dp, vertical = 12.dp)
-                    .reorderable(state),
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
                 flingBehavior = slowerFlingBehavior
             ) {
-                items(allTags, { it }) { tag ->
-                    ReorderableItem(state, key = tag) { isDragging ->
+                items(allTags, key = { it }) { tag ->
+                    ReorderableItem(reorderableState, key = tag) { isDragging ->
                         LaunchedEffect(isDragging) {
                             if (isDragging) {
                                 if (isVibrationEnabled(context)) {
@@ -234,7 +234,9 @@ fun TagManagementScreen(
                                 }
                             }
                         }
-                        val elevation by animateDpAsState(if (isDragging) 16.dp else 2.dp)
+
+                        val elevation by animateDpAsState(if (isDragging) 16.dp else 2.dp, label = "Elevation")
+
                         Card(
                             onClick = {
                                 onTagClick(tag)
@@ -271,11 +273,15 @@ fun TagManagementScreen(
                                             contentDescription = stringResource(id = R.string.delete_tag_content_description)
                                         )
                                     }
-                                    Icon(
-                                        imageVector = Icons.Default.DragIndicator,
-                                        contentDescription = "Reorder",
-                                        modifier = Modifier.detectReorder(state)
-                                    )
+                                    IconButton(
+                                        onClick = {},
+                                        modifier = Modifier.draggableHandle()
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.DragIndicator,
+                                            contentDescription = "Reorder"
+                                        )
+                                    }
                                 }
                             }
                         }

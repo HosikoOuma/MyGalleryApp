@@ -12,8 +12,8 @@ android {
         applicationId = "com.nkds.hosikoouma.nekolery"
         minSdk = 29
         targetSdk = 36
-        versionCode = 26
-        versionName = "2.0.7"
+        versionCode = 28
+        versionName = "2.0.9"
         //1.16
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
@@ -104,6 +104,5 @@ dependencies {
     androidTestImplementation("androidx.test.espresso:espresso-core:3.5.1")
     androidTestImplementation("androidx.compose.ui:ui-test-junit4")
     debugImplementation("androidx.compose.ui:ui-test-manifest")
-    implementation("org.burnoutcrew.composereorderable:reorderable:0.9.6")
-
+    implementation("sh.calvin.reorderable:reorderable:2.4.1")
 }

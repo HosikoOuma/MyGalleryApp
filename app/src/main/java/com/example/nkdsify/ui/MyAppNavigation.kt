@@ -384,6 +384,8 @@ fun MyAppNavigation(
                     allTags = myAppState.allTags,
                     onAddNewTag = onAddNewTag,
                     onMoveTag = onMoveTag,
+                    showAddDialog = myAppState.showAddDialog,
+                    onDismissAddDialog = { myAppState.showAddDialog = false }
                 )
             }
 

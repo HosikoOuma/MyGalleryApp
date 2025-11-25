@@ -12,6 +12,10 @@ import com.example.nkdsify.ui.components.BackupAndRestoreDialog
 import com.example.nkdsify.ui.components.TagEditDialog
 import com.example.nkdsify.ui.utils.TagsRepository
 import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
+
+// Data class to hold both the ordered list of all tags and the tag-to-file assignments
+data class TagsBackup(val allTags: List<String>, val tagsMap: Map<String, Set<String>>)
 
 @Composable
 fun TagDialogs(
@@ -26,7 +30,7 @@ fun TagDialogs(
             try {
                 context.contentResolver.openInputStream(it)?.use { inputStream ->
                     val json = java.io.BufferedReader(java.io.InputStreamReader(inputStream)).readText()
-                    val type = object : com.google.gson.reflect.TypeToken<Set<String>>() {}.type
+                    val type = object : TypeToken<Set<String>>() {}.type
                     val importedFavorites: Set<String> = Gson().fromJson(json, type)
                     favorites.clear()
                     favorites.addAll(importedFavorites.map { uriString -> uriString.toUri() })
@@ -44,10 +48,36 @@ fun TagDialogs(
             try {
                 context.contentResolver.openInputStream(it)?.use { inputStream ->
                     val json = java.io.BufferedReader(java.io.InputStreamReader(inputStream)).readText()
-                    val type = object : com.google.gson.reflect.TypeToken<Map<String, Set<String>>>() {}.type
-                    val importedTags: Map<String, Set<String>> = Gson().fromJson(json, type)
-                    myAppState.tags = importedTags
-                    TagsRepository.saveTags(context, myAppState.tags)
+                    val type = object : TypeToken<TagsBackup>() {}.type
+                    val importedBackup: TagsBackup = Gson().fromJson(json, type)
+
+                    // --- MERGE LOGIC ---
+
+                    // 1. Load existing data
+                    val currentTagsMap = TagsRepository.getTags(context).toMutableMap()
+                    val currentAllTags = TagsRepository.getAllTags(context).toMutableList()
+
+                    // 2. Merge tagsMap (file-to-tag assignments)
+                    importedBackup.tagsMap.forEach { (uri, importedTagSet) ->
+                        val currentTagSet = currentTagsMap.getOrPut(uri) { emptySet() }
+                        currentTagsMap[uri] = currentTagSet + importedTagSet // Union of the two sets
+                    }
+
+                    // 3. Merge allTags (the ordered list of unique tags)
+                    val existingTagsSet = currentAllTags.toSet()
+                    importedBackup.allTags.forEach { importedTag ->
+                        if (!existingTagsSet.contains(importedTag)) {
+                            currentAllTags.add(importedTag)
+                        }
+                    }
+
+                    // 4. Save merged data
+                    TagsRepository.saveTags(context, currentTagsMap)
+                    TagsRepository.saveAllTags(context, currentAllTags)
+
+                    // 5. Reload state in the app
+                    myAppState.tags = currentTagsMap
+                    myAppState.allTags = currentAllTags
                     myAppState.refreshTrigger++
                     android.widget.Toast.makeText(context, context.getString(R.string.tags_imported_successfully), android.widget.Toast.LENGTH_SHORT).show()
                 }
@@ -124,7 +154,12 @@ fun TagDialogs(
             },
             onImportFavorites = { importFavoritesLauncher.launch("application/json") },
             onExportTags = {
-                val json = Gson().toJson(myAppState.tags)
+                // Create a single backup object with both pieces of data
+                val backup = TagsBackup(
+                    allTags = myAppState.allTags,
+                    tagsMap = TagsRepository.getTags(context)
+                )
+                val json = Gson().toJson(backup)
                 val values = android.content.ContentValues().apply {
                     put(android.provider.MediaStore.MediaColumns.DISPLAY_NAME, "tags_backup.json")
                     put(android.provider.MediaStore.MediaColumns.MIME_TYPE, "application/json")
