@@ -1,17 +1,10 @@
 package com.example.nkdsify.ui
 
 import android.content.Context
-import android.media.MediaPlayer
-import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.spring
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.scaleIn
-import androidx.compose.animation.scaleOut
-import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -21,7 +14,6 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -387,77 +379,6 @@ fun TopBar(
                             }
                         }
                     }
-                }
-            }
-        )
-    }
-}
-
-@Composable
-fun BottomBar(
-    currentScreen: Screen,
-    onScreenChange: (Screen) -> Unit,
-    context: Context,
-    onSettingsClick: () -> Unit,
-    isVibrationEnabled: Boolean
-) {
-    var lastTap by rememberSaveable { mutableLongStateOf(0L) }
-    var tapCount by rememberSaveable { mutableIntStateOf(0) }
-
-    LaunchedEffect(currentScreen) {
-        tapCount = 0
-    }
-
-    NavigationBar {
-        NavigationBarItem(
-            icon = { Icon(Icons.Filled.Settings, contentDescription = stringResource(id = R.string.settings_content_description)) },
-            label = { Text(stringResource(id = R.string.screen_title_settings)) },
-            selected = currentScreen is Screen.Settings,
-            onClick = { 
-                if (isVibrationEnabled) performVibration(context)
-                onSettingsClick() 
-            }
-        )
-        NavigationBarItem(
-            icon = { Icon(Icons.Filled.Delete, contentDescription = stringResource(id = R.string.trash_content_description)) },
-            label = { Text(stringResource(id = R.string.screen_title_trash)) },
-            selected = currentScreen is Screen.Trash,
-            onClick = { if (isVibrationEnabled) performVibration(context); onScreenChange(Screen.Trash) }
-        )
-        NavigationBarItem(
-            icon = { Icon(Icons.Filled.PhotoLibrary, contentDescription = stringResource(id = R.string.folders_content_description)) },
-            label = { Text(stringResource(id = R.string.screen_title_folders)) },
-            selected = currentScreen is Screen.Folders || currentScreen is Screen.FolderContent,
-            onClick = { if (isVibrationEnabled) performVibration(context); onScreenChange(Screen.Folders) }
-        )
-        NavigationBarItem(
-            icon = { Icon(Icons.Default.PermMedia, contentDescription = stringResource(id = R.string.all_media_content_description)) },
-            label = { Text(stringResource(id = R.string.screen_title_all_media)) },
-            selected = currentScreen is Screen.AllMedia,
-            onClick = { if (isVibrationEnabled) performVibration(context); onScreenChange(Screen.AllMedia) }
-        )
-        NavigationBarItem(
-            icon = { Icon(Icons.Filled.Favorite, contentDescription = stringResource(id = R.string.favorites_content_description)) },
-            label = { Text(stringResource(id = R.string.screen_title_favorites)) },
-            selected = currentScreen is Screen.Favorites,
-            onClick = {
-                if (isVibrationEnabled) performVibration(context)
-                onScreenChange(Screen.Favorites())
-                val now = System.currentTimeMillis()
-                if (now - lastTap < 500) {
-                    tapCount++
-                } else {
-                    tapCount = 1
-                }
-                lastTap = now
-
-                if (tapCount == 10) {
-                    if (isVibrationEnabled) performVibration(context)
-                    tapCount = 0
-                    Toast.makeText(context, context.getString(R.string.uwu_toast), Toast.LENGTH_SHORT).show()
-                    val mediaPlayer = MediaPlayer.create(context, R.raw.uwu)
-                    mediaPlayer.setOnCompletionListener { it.release() }
-                    mediaPlayer.start()
                 }
             }
         )

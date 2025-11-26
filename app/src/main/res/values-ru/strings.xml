@@ -244,4 +244,11 @@
     <string name="details_item_count">Количество элементов</string>
     <string name="selection_details_text">Выбрано: %1$d\Общий вес %2$s</string>
     <string name="theme_gruvbox">Gruvbox</string>
+    <string name="remove_tag_content_description">Удалить тег</string>
+    <string name="add_tag_placeholder">Добавить тег</string>
+    <string name="about_me_text">Привет. Я NKDS. Он же - Хосико Оума. Это приложение - лишь эксперимент, созданный для личного пользования. Всё началось лишь в простого запроса к ИИ с просьбой написать мне простенькую галлерею. А затем всё пришло к тому, что я имею сейчас.</string>
+    <string name="about_me_telegram">ТГ - @NDhub</string>
+    <string name="theme_amoled">Amoled</string>
+
+
 </resources>

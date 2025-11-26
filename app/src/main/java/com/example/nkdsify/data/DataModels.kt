@@ -73,6 +73,7 @@ data class AlbumDetails(
     val itemCount: Int
 )
 
+
 data class MediaDetails(
     val name: String,
     val size: Long,
@@ -84,11 +85,13 @@ data class MediaDetails(
     val exif: ExifInterface? = null
 )
 
+
 data class MediaViewerState(
     val items: List<MediaItem>,
     val startIndex: Int,
     val isExternal: Boolean = false
 )
+
 
 enum class SortType {
     ALPHABET,
@@ -97,17 +100,20 @@ enum class SortType {
     SIZE
 }
 
+
 enum class Theme {
     SYSTEM,
     LIGHT,
     DARK,
-    GRUVBOX
+    AMOLED
 }
+
 
 enum class ZoomType {
     DOUBLE_TAP,
     PINCH
 }
+
 
 enum class Language(val code: String) {
     SYSTEM("system"),

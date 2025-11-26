@@ -90,14 +90,14 @@ fun MyAppTopBar(
                 }
             }
         },
-        isFavoritesScreen = myAppState.currentScreen is com.example.nkdsify.data.Screen.Favorites,
+        isFavoritesScreen = myAppState.currentScreen is Screen.Favorites,
         isSearchActive = myAppState.isSearchActive,
         searchQuery = myAppState.searchQuery,
         onSearchQueryChange = { myAppState.searchQuery = it },
         title = title,
-        onBackClick = { myAppState.currentScreen = com.example.nkdsify.data.Screen.Folders },
-        onBackClickS = { myAppState.currentScreen = com.example.nkdsify.data.Screen.Settings },
-        onBackClickTM = { myAppState.currentScreen = com.example.nkdsify.data.Screen.TagManagement },
+        onBackClick = { myAppState.currentScreen = Screen.Folders },
+        onBackClickS = { myAppState.currentScreen = Screen.Settings },
+        onBackClickTM = { myAppState.currentScreen = Screen.TagManagement },
         onCloseSearch = {
             myAppState.isSearchActive = false
             myAppState.searchQuery = ""

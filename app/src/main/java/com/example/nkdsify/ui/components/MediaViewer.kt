@@ -1,5 +1,6 @@
 package com.example.nkdsify.ui.components
 
+import android.app.Activity
 import android.content.Intent
 import android.media.MediaPlayer
 import android.net.Uri
@@ -49,6 +50,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -70,10 +72,12 @@ import androidx.compose.ui.input.pointer.PointerEvent
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.core.view.WindowCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.media3.common.MediaItem as Media3Item
@@ -123,6 +127,19 @@ fun MediaViewer(
     val pagerState = rememberPagerState(initialPage = startIndex, pageCount = { items.size })
     val context = LocalContext.current
     var tempFileUri by remember { mutableStateOf<Uri?>(null) }
+
+    val view = LocalView.current
+    val window = (view.context as Activity).window
+
+    DisposableEffect(view) {
+        val originalLightStatusBars = WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars
+        WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = false // Dark icons for light theme
+
+        onDispose {
+            WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = originalLightStatusBars
+        }
+    }
+
     if (isSecretMode) {
         DisposableEffect(Unit) {
             onDispose {

@@ -11,6 +11,7 @@ import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
@@ -22,16 +23,28 @@ import com.example.nkdsify.data.JetBrainsMonoFontFamily
 import com.example.nkdsify.data.Theme
 
 private val LightColors = lightColorScheme(
-    primary = androidx.compose.ui.graphics.Color(0xFF6750A4),
-    secondary = androidx.compose.ui.graphics.Color(0xFF625B71),
-    tertiary = androidx.compose.ui.graphics.Color(0xFF7D5260)
+    primary = Color(0xFF6750A4),
+    secondary = Color(0xFF625B71),
+    tertiary = Color(0xFF7D5260)
 )
 
 private val DarkColors = darkColorScheme(
-    primary = androidx.compose.ui.graphics.Color(0xFFD0BCFF),
-    secondary = androidx.compose.ui.graphics.Color(0xFFCCC2DC),
-    tertiary = androidx.compose.ui.graphics.Color(0xFFEFB8C8)
+    primary = Color(0xFFD0BCFF),
+    secondary = Color(0xFFCCC2DC),
+    tertiary = Color(0xFFEFB8C8)
 )
+
+private val AmoledColorScheme = darkColorScheme(
+    background = Color.Black,
+    surface = Color.Black,
+    surfaceContainerHigh = Color.Black,
+    primary = Color(0xFFD0BCFF),
+    secondary = Color(0xFFCCC2DC),
+    tertiary = Color(0xFFEFB8C8),
+    onBackground = Color.White,
+    onSurface = Color.White
+)
+
 
 @Suppress("DEPRECATION")
 @Composable
@@ -46,11 +59,11 @@ fun NkdsifyAppTheme(
         Theme.SYSTEM -> isSystemInDarkTheme()
         Theme.LIGHT -> false
         Theme.DARK -> true
-        Theme.GRUVBOX -> isSystemInDarkTheme()
+        Theme.AMOLED -> true // AMOLED is always dark
     }
 
     val colors = when {
-        theme == Theme.GRUVBOX -> if (useDarkTheme) DarkGruvboxColorScheme else LightGruvboxColorScheme
+        theme == Theme.AMOLED -> AmoledColorScheme
         dynamicColor && useDarkTheme -> dynamicDarkColorScheme(context)
         dynamicColor && !useDarkTheme -> dynamicLightColorScheme(context)
         useDarkTheme -> DarkColors
@@ -67,8 +80,8 @@ fun NkdsifyAppTheme(
     }
     val typography = when (appFontFamily) {
         AppFontFamily.JETBRAINS_MONO -> {
-            val defaultTypography = androidx.compose.material3.Typography()
-            androidx.compose.material3.Typography(
+            val defaultTypography = Typography()
+            Typography(
                 displayLarge = defaultTypography.displayLarge.copy(fontFamily = JetBrainsMonoFontFamily, fontSize = (defaultTypography.displayLarge.fontSize.value - 1).sp),
                 displayMedium = defaultTypography.displayMedium.copy(fontFamily = JetBrainsMonoFontFamily, fontSize = (defaultTypography.displayMedium.fontSize.value - 1).sp),
                 displaySmall = defaultTypography.displaySmall.copy(fontFamily = JetBrainsMonoFontFamily, fontSize = (defaultTypography.displaySmall.fontSize.value - 1).sp),
@@ -87,8 +100,8 @@ fun NkdsifyAppTheme(
             )
         }
         AppFontFamily.GOOGLE_SANS -> {
-            val defaultTypography = androidx.compose.material3.Typography()
-            androidx.compose.material3.Typography(
+            val defaultTypography = Typography()
+            Typography(
                 displayLarge = defaultTypography.displayLarge.copy(fontFamily = GoogleSansFontFamily),
                 displayMedium = defaultTypography.displayMedium.copy(fontFamily = GoogleSansFontFamily),
                 displaySmall = defaultTypography.displaySmall.copy(fontFamily = GoogleSansFontFamily),
@@ -107,7 +120,7 @@ fun NkdsifyAppTheme(
             )
         }
 
-        else -> Typography
+        else -> Typography()
     }
 
     MaterialTheme(

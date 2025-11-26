@@ -2,6 +2,7 @@ package com.example.nkdsify.ui.components
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -9,6 +10,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -39,8 +41,13 @@ fun TagEditDialog(
     onSave: (Set<String>) -> Unit
 ) {
     val context = LocalContext.current
-    var tags by remember { mutableStateOf(initialTags.joinToString(", ")) }
+    var tagsText by remember { mutableStateOf(initialTags.joinToString(", ")) }
     var expanded by remember { mutableStateOf(false) }
+
+    // This is now the single source of truth for the selected tags
+    val selectedTags = remember(tagsText) {
+        tagsText.split(',').map { it.trim() }.filter { it.isNotEmpty() }.toSet()
+    }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -54,8 +61,8 @@ fun TagEditDialog(
                 Text(stringResource(id = R.string.edit_tags_dialog_info))
                 Spacer(Modifier.height(8.dp))
                 TextField(
-                    value = tags,
-                    onValueChange = { tags = it },
+                    value = tagsText,
+                    onValueChange = { tagsText = it }, // Allow free text editing
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(top = 8.dp)
@@ -74,15 +81,31 @@ fun TagEditDialog(
                         modifier = Modifier.heightIn(max = 200.dp)
                     ) {
                         allTags.forEach { tag ->
+                            val isSelected = tag in selectedTags
                             DropdownMenuItem(
-                                text = { Text(tag) },
-                                onClick = {
-                                    val currentTags = tags.split(',').map { it.trim() }.filter { it.isNotEmpty() }.toMutableSet()
-                                    if (currentTags.add(tag)) {
-                                        tags = currentTags.joinToString(", ")
+                                text = {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Checkbox(
+                                            checked = isSelected,
+                                            onCheckedChange = null // Click handled by DropdownMenuItem
+                                        )
+                                        Text(
+                                            text = tag,
+                                            modifier = Modifier.padding(start = 8.dp)
+                                        )
                                     }
-                                    expanded = false
+                                },
+                                onClick = {
+                                    val newTags = selectedTags.toMutableSet()
+                                    if (isSelected) {
+                                        newTags.remove(tag)
+                                    } else {
+                                        newTags.add(tag)
+                                    }
+                                    // Reconstruct the string from the set to update the text field
+                                    tagsText = newTags.joinToString(", ")
                                     if (isVibrationEnabled(context)) performVibration(context)
+                                    // Keep the menu open by not setting expanded = false
                                 }
                             )
                         }
@@ -92,8 +115,7 @@ fun TagEditDialog(
         },
         confirmButton = {
             Button(onClick = {
-                val tagSet = tags.split(',').map { it.trim() }.filter { it.isNotEmpty() }.toSet()
-                onSave(tagSet)
+                onSave(selectedTags) // selectedTags is derived from tagsText
                 if (isVibrationEnabled(context)) performVibration(context)
             }) {
                 Text(stringResource(id = R.string.save_button))

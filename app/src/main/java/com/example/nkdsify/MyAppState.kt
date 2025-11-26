@@ -7,7 +7,6 @@ import android.net.Uri
 import android.os.Build
 import android.os.Environment
 import android.widget.Toast
-import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -17,23 +16,16 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.ContextCompat
-import com.example.nkdsify.data.AppFontFamily
-import com.example.nkdsify.data.FabAction
 import com.example.nkdsify.data.MediaTypeFilter
-import com.example.nkdsify.data.Language
 import com.example.nkdsify.data.MediaFolder
 import com.example.nkdsify.data.MediaItem
 import com.example.nkdsify.data.MediaViewerState
 import com.example.nkdsify.data.Screen
 import com.example.nkdsify.data.SortType
-import com.example.nkdsify.data.Theme
-import com.example.nkdsify.data.ZoomType
 import com.example.nkdsify.ui.utils.GithubUpdateChecker
 import com.example.nkdsify.ui.utils.SettingsRepository
 import com.example.nkdsify.ui.utils.TagsRepository
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 @Composable

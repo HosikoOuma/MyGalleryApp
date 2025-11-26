@@ -238,5 +238,10 @@
     <string name="details_item_count">Кол-во хуйни</string>
     <string name="selection_details_text">Выбрано: %1$d\nХуев в дыр очке: %2$s</string>
     <string name="theme_gruvbox">Gruvbox</string>
+    <string name="remove_tag_content_description">Ёбнуть тег</string>
+    <string name="add_tag_placeholder">Адд тег</string>
+    <string name="about_me_text">Привет. Я NKDS. Он же - Хосико Оума. Это приложение - лишь эксперимент, созданный для личного пользования. Всё началось лишь в простого запроса к ИИ с просьбой написать мне простенькую галлерею. А затем всё пришло к тому, что я имею сейчас.</string>
+    <string name="about_me_telegram">ТГ - @NDhub</string>
+    <string name="theme_amoled">Amoled</string>
 
 </resources>

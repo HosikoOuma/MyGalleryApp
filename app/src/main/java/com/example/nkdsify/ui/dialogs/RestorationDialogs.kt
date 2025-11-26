@@ -61,7 +61,7 @@ fun RestorationDialogs(myAppState: MyAppState, isVibrationEnabled: Boolean) {
                 if (isVibrationEnabled) com.example.nkdsify.ui.utils.performVibration(context)
 
                 if (isRestoringFromViewer) {
-                    val originalIndex = currentViewerState!!.items.indexOfFirst { it.uri in urisToRestore }
+                    val originalIndex = currentViewerState.items.indexOfFirst { it.uri in urisToRestore }
                     val newItems = currentViewerState.items.filterNot { it.uri in urisToRestore }
                     if (newItems.isEmpty()) {
                         myAppState.viewerState = null

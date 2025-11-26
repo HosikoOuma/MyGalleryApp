@@ -50,7 +50,7 @@ fun AlbumDetailsDialog(details: AlbumDetails, onDismiss: () -> Unit) {
             )
 
             if (!details.path.isNullOrEmpty()) {
-                DetailItem(stringResource(id = R.string.details_path), details.path!!)
+                DetailItem(stringResource(id = R.string.details_path_label), details.path)
             }
             DetailItem(stringResource(id = R.string.details_total_size), android.text.format.Formatter.formatShortFileSize(context, details.totalSize))
             if (details.dateRange != null) {
