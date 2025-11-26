@@ -23,6 +23,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DragIndicator
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -70,132 +71,106 @@ fun TagManagementScreen(
     var showEditDialog by remember { mutableStateOf<String?>(null) }
     var tagToDelete by remember { mutableStateOf<String?>(null) }
 
-    // --- DIALOGS LOGIC --- 
+    // --- DIALOGS LOGIC ---
     if (showEditDialog != null) {
         val oldTag = showEditDialog!!
         var newTag by remember(oldTag) { mutableStateOf(oldTag) }
         val isError = newTag.isNotBlank() && newTag != oldTag && newTag in allTags
-        val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
-        ModalBottomSheet(
+        AlertDialog(
             onDismissRequest = { showEditDialog = null },
-            sheetState = sheetState
-        ) {
-            Column(
-                modifier = Modifier
-                    .padding(horizontal = 24.dp)
-                    .navigationBarsPadding()
-                    .padding(bottom = 16.dp)
-            ) {
-                Text(
-                    text = stringResource(id = R.string.edit_tag_dialog_title),
-                    style = MaterialTheme.typography.headlineSmall,
-                    modifier = Modifier.padding(bottom = 16.dp)
-                )
-                TextField(
-                    value = newTag,
-                    onValueChange = { newTag = it },
-                    label = { Text(stringResource(id = R.string.new_tag_name_label)) },
-                    isError = isError,
-                    modifier = Modifier.fillMaxWidth()
-                )
-                if (isError) {
-                    Text(
-                        stringResource(R.string.tag_already_exists),
-                        color = MaterialTheme.colorScheme.error,
-                        modifier = Modifier.padding(top = 4.dp)
+            title = { Text(text = stringResource(id = R.string.edit_tag_dialog_title)) },
+            text = {
+                Column {
+                    TextField(
+                        value = newTag,
+                        onValueChange = { newTag = it },
+                        label = { Text(stringResource(id = R.string.new_tag_name_label)) },
+                        isError = isError,
+                        modifier = Modifier.fillMaxWidth()
                     )
+                    if (isError) {
+                        Text(
+                            stringResource(R.string.tag_already_exists),
+                            color = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.padding(top = 4.dp)
+                        )
+                    }
                 }
-                Spacer(Modifier.height(24.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.End
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        onEditTag(oldTag, newTag)
+                        showEditDialog = null
+                        if (isVibrationEnabled(context)) performVibration(context)
+                    },
+                    enabled = newTag.isNotBlank() && !isError
                 ) {
-                    TextButton(
-                        onClick = {
-                            showEditDialog = null
-                            if (isVibrationEnabled(context)) performVibration(context)
-                        },
-                        modifier = Modifier.padding(end = 8.dp)
-                    ) {
-                        Text(stringResource(id = R.string.dialog_cancel))
+                    Text(stringResource(id = R.string.save_button))
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        showEditDialog = null
+                        if (isVibrationEnabled(context)) performVibration(context)
                     }
-                    Button(
-                        onClick = {
-                            onEditTag(oldTag, newTag)
-                            showEditDialog = null
-                            if (isVibrationEnabled(context)) performVibration(context)
-                        },
-                        enabled = newTag.isNotBlank() && !isError
-                    ) {
-                        Text(stringResource(id = R.string.save_button))
-                    }
+                ) {
+                    Text(stringResource(id = R.string.dialog_cancel))
                 }
             }
-        }
+        )
     }
 
     if (showAddDialog) {
         var newTag by remember { mutableStateOf("") }
         val isError = newTag.isNotBlank() && newTag in allTags
-        val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
-        ModalBottomSheet(
+        AlertDialog(
             onDismissRequest = onDismissAddDialog,
-            sheetState = sheetState,
-        ) {
-            Column(
-                modifier = Modifier
-                    .padding(horizontal = 24.dp)
-                    .navigationBarsPadding()
-                    .padding(bottom = 16.dp),
-            ) {
-                Text(
-                    text = stringResource(id = R.string.add_tag_dialog_title),
-                    style = MaterialTheme.typography.headlineSmall,
-                    modifier = Modifier.padding(bottom = 16.dp)
-                )
-                TextField(
-                    value = newTag,
-                    onValueChange = { newTag = it },
-                    label = { Text(stringResource(id = R.string.tag_name_label)) },
-                    isError = isError,
-                    modifier = Modifier.fillMaxWidth()
-                )
-                if (isError) {
-                    Text(
-                        stringResource(R.string.tag_already_exists),
-                        color = MaterialTheme.colorScheme.error,
-                        modifier = Modifier.padding(top = 4.dp)
+            title = { Text(text = stringResource(id = R.string.add_tag_dialog_title)) },
+            text = {
+                Column {
+                    TextField(
+                        value = newTag,
+                        onValueChange = { newTag = it },
+                        label = { Text(stringResource(id = R.string.tag_name_label)) },
+                        isError = isError,
+                        modifier = Modifier.fillMaxWidth()
                     )
+                    if (isError) {
+                        Text(
+                            stringResource(R.string.tag_already_exists),
+                            color = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.padding(top = 4.dp)
+                        )
+                    }
                 }
-                Spacer(Modifier.height(24.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.End
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        onAddNewTag(newTag)
+                        onDismissAddDialog()
+                        if (isVibrationEnabled(context)) performVibration(context)
+                    },
+                    enabled = newTag.isNotBlank() && !isError
                 ) {
-                    TextButton(
-                        onClick = {
-                            onDismissAddDialog()
-                            if (isVibrationEnabled(context)) performVibration(context)
-                        },
-                        modifier = Modifier.padding(end = 8.dp)
-                    ) {
-                        Text(stringResource(id = R.string.dialog_cancel))
+                    Text(stringResource(id = R.string.add_button))
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        onDismissAddDialog()
+                        if (isVibrationEnabled(context)) performVibration(context)
                     }
-                    Button(
-                        onClick = {
-                            onAddNewTag(newTag)
-                            onDismissAddDialog()
-                            if (isVibrationEnabled(context)) performVibration(context)
-                        },
-                        enabled = newTag.isNotBlank() && !isError
-                    ) {
-                        Text(stringResource(id = R.string.add_button))
-                    }
+                ) {
+                    Text(stringResource(id = R.string.dialog_cancel))
                 }
             }
-        }
+        )
     }
 
     if (tagToDelete != null) {

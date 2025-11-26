@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
@@ -704,55 +705,42 @@ fun RenameDialog(
     val context = LocalContext.current
     val isVibrationEnabled by remember { mutableStateOf(SettingsRepository.isVibrationEnabled(context)) }
     var newName by remember { mutableStateOf(currentName) }
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
-    ModalBottomSheet(
+    AlertDialog(
         onDismissRequest = onDismiss,
-        sheetState = sheetState,
-    ) {
-        Column(
-            modifier = Modifier
-                .padding(horizontal = 24.dp)
-                .navigationBarsPadding() // Handle system navigation bar
-                .padding(bottom = 16.dp), // Padding for buttons at the bottom
-        ) {
-            Text(
-                text = stringResource(id = R.string.rename_dialog_title),
-                style = MaterialTheme.typography.headlineSmall,
-                modifier = Modifier.padding(bottom = 16.dp)
-            )
+        title = {
+            Text(stringResource(id = R.string.rename_dialog_title))
+        },
+        text = {
             TextField(
                 value = newName,
                 onValueChange = { newName = it },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth()
             )
-            Spacer(Modifier.height(24.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    if (isVibrationEnabled) performVibration(context)
+                    onRename(newName)
+                },
+                enabled = newName.isNotBlank()
             ) {
-                TextButton(
-                    onClick = {
-                        if (isVibrationEnabled) performVibration(context)
-                        onDismiss()
-                    },
-                    modifier = Modifier.padding(end = 8.dp)
-                ) {
-                    Text(stringResource(id = R.string.dialog_cancel))
+                Text(stringResource(id = R.string.rename_button))
+            }
+        },
+        dismissButton = {
+            TextButton(
+                onClick = {
+                    if (isVibrationEnabled) performVibration(context)
+                    onDismiss()
                 }
-                Button(
-                    onClick = {
-                        if (isVibrationEnabled) performVibration(context)
-                        onRename(newName)
-                    },
-                    enabled = newName.isNotBlank()
-                ) {
-                    Text(stringResource(id = R.string.rename_button))
-                }
+            ) {
+                Text(stringResource(id = R.string.dialog_cancel))
             }
         }
-    }
+    )
 }
 
 fun renameMedia(context: Context, uri: Uri, newName: String) {
