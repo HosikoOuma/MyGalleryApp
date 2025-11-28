@@ -121,3 +121,13 @@ enum class Language(val code: String) {
     RUSSIAN("ru"),
     SPECIAL("xx")
 }
+
+enum class BlurType {
+    BLUR, PLACEHOLDER
+}
+
+enum class FabAction {
+    SHUFFLE,
+    CAMERA
+}
+

@@ -1,15 +1,12 @@
 package com.example.nkdsify.ui.screens
+
 import android.content.Intent
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
@@ -17,7 +14,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.filled.Label
 import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.Info
@@ -25,17 +21,10 @@ import androidx.compose.material.icons.filled.Photo
 import androidx.compose.material.icons.filled.PrivacyTip
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -49,192 +38,36 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import com.example.nkdsify.R
-import com.example.nkdsify.data.AppFontFamily
-import com.example.nkdsify.data.BlurType
-import com.example.nkdsify.data.FabAction
 import com.example.nkdsify.data.Language
-import com.example.nkdsify.data.Theme
-import com.example.nkdsify.data.ZoomType
+import com.example.nkdsify.ui.dialogs.SpecialLanguageDialog
 import com.example.nkdsify.ui.utils.BiometricUtils
 import com.example.nkdsify.ui.utils.SettingsRepository
+import com.example.nkdsify.ui.utils.getDisplayName
 import com.example.nkdsify.ui.utils.performVibration
-
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
-    isBlurEnabled: Boolean,
-    onBlurEnabledChange: (Boolean) -> Unit,
-    isBlurInFolderEnabled: Boolean,
-    onBlurInFolderEnabledChange: (Boolean) -> Unit,
-    isTrashBlurEnabled: Boolean,
-    onTrashBlurEnabledChange: (Boolean) -> Unit,
-    isMuteVideoByDefault: Boolean,
-    onMuteVideoByDefaultChange: (Boolean) -> Unit,
-    isBlurAllMediaEnabled: Boolean,
-    onBlurAllMediaEnabledChange: (Boolean) -> Unit,
-    onEasterEggClick: () -> Unit,
-    selectedTheme: Theme,
-    onThemeChange: (Theme) -> Unit,
-    onManageHiddenFoldersClick: () -> Unit,
-    selectedZoomType: ZoomType,
-    onZoomTypeChange: (ZoomType) -> Unit,
-    onManageTagsClick: () -> Unit,
-    onBackupAndRestoreClick: () -> Unit,
-    onGoToSecretStorage: () -> Unit,
-    isVibrationEnabled: Boolean,
-    onVibrationEnabledChange: (Boolean) -> Unit,
-    isShowFileCountEnabled: Boolean,
-    onShowFileCountChange: (Boolean) -> Unit,
-    isShuffleButtonVisible: Boolean,
-    onShuffleButtonVisibleChange: (Boolean) -> Unit,
-    isShakeToBlurEnabled: Boolean,
-    onShakeToBlurEnabledChange: (Boolean) -> Unit,
-    isLoopVideoEnabled: Boolean,
-    onLoopVideoEnabledChange: (Boolean) -> Unit,
-    selectedBlurType: BlurType,
-    onBlurTypeChange: (BlurType) -> Unit,
-    isSwipeToDismissEnabled: Boolean,
-    onSwipeToDismissEnabledChange: (Boolean) -> Unit,
-    useLargeFab: Boolean,
-    onUseLargeFabChange: (Boolean) -> Unit,
-    autoDeleteTrashEnabled: Boolean,
-    onAutoDeleteTrashEnabledChange: (Boolean) -> Unit,
-    autoDeleteTrashDays: Int,
-    onAutoDeleteTrashDaysChange: (Int) -> Unit,
-    selectedLanguage: Language,
-    onLanguageChange: (Language) -> Unit,
-    onCheckForUpdates: () -> Unit,
-    currentVersion: String,
-    selectedFabAction: FabAction,
-    onFabActionChange: (FabAction) -> Unit,
-    onViewHistoryClick: () -> Unit,
-    onAboutClick:() -> Unit,
-    selectedFontFamily: AppFontFamily,
-    onFontFamilyChange: (AppFontFamily) -> Unit
+    state: SettingsState,
+    actions: SettingsActions
 ) {
     val context = LocalContext.current
-    var themeMenuExpanded by remember { mutableStateOf(false) }
-    var zoomTypeMenuExpanded by remember { mutableStateOf(false) }
-    var blurTypeMenuExpanded by remember { mutableStateOf(false) }
-    var languageMenuExpanded by remember { mutableStateOf(false) }
-    var fabActionMenuExpanded by remember { mutableStateOf(false) }
     var showSpecialLanguageDialog by remember { mutableStateOf(false) }
     val scrollState = rememberScrollState()
     var specialLanguageUnlocked by remember { mutableStateOf(SettingsRepository.isSpecialLanguageUnlocked(context)) }
     val isBiometricAvailable = remember { BiometricUtils.isBiometricAvailable(context) }
-    var fontMenuExpanded by remember { mutableStateOf(false) }
 
     val vibrate: () -> Unit = {
-        if (isVibrationEnabled) performVibration(context)
-    }
-
-    @Composable
-    fun getThemeName(theme: Theme): String {
-        return when (theme) {
-            Theme.SYSTEM -> stringResource(id = R.string.theme_system)
-            Theme.LIGHT -> stringResource(id = R.string.theme_light)
-            Theme.DARK -> stringResource(id = R.string.theme_dark)
-            Theme.AMOLED -> stringResource(id = R.string.theme_amoled)
-        }
-    }
-
-    @Composable
-    fun getFabActionName(fabAction: FabAction): String {
-        return when (fabAction) {
-            FabAction.SHUFFLE -> stringResource(id = R.string.fab_action_shuffle)
-            FabAction.CAMERA -> stringResource(id = R.string.fab_action_camera)
-        }
-    }
-    @Composable
-    fun getFontName(fontFamily: AppFontFamily): String {
-        return when (fontFamily) {
-            AppFontFamily.SYSTEM -> stringResource(R.string.font_family_default)
-            AppFontFamily.JETBRAINS_MONO -> stringResource(R.string.font_family_jetbrains_mono)
-            AppFontFamily.GOOGLE_SANS -> stringResource(R.string.font_family_google_sans)
-        }
-    }
-
-    @Composable
-    fun getZoomTypeName(zoomType: ZoomType): String {
-        return when (zoomType) {
-            ZoomType.PINCH -> stringResource(id = R.string.zoom_type_pinch)
-            ZoomType.DOUBLE_TAP -> stringResource(id = R.string.zoom_type_double_tap)
-        }
-    }
-
-    @Composable
-    fun getBlurTypeName(blurType: BlurType): String {
-        return when (blurType) {
-            BlurType.BLUR -> stringResource(id = R.string.blur_type_blur)
-            BlurType.PLACEHOLDER -> stringResource(id = R.string.blur_type_placeholder)
-        }
-    }
-
-    @Composable
-    fun getLanguageName(language: Language): String {
-        return when (language) {
-            Language.SYSTEM -> stringResource(id = R.string.language_system)
-            Language.ENGLISH -> stringResource(id = R.string.language_english)
-            Language.RUSSIAN -> stringResource(id = R.string.language_russian)
-            Language.SPECIAL -> stringResource(id = R.string.language_special)
-        }
+        if (state.isVibrationEnabled) performVibration(context)
     }
 
     if (showSpecialLanguageDialog) {
-        var code by remember { mutableStateOf("") }
-        val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-
-        ModalBottomSheet(
+        SpecialLanguageDialog(
             onDismissRequest = { showSpecialLanguageDialog = false },
-            sheetState = sheetState
-        ) {
-            Column(
-                modifier = Modifier
-                    .padding(horizontal = 24.dp)
-                    .navigationBarsPadding()
-                    .padding(bottom = 16.dp),
-            ) {
-                Text(
-                    text = stringResource(id = R.string.enter_special_language_code_title),
-                    style = MaterialTheme.typography.headlineSmall,
-                    modifier = Modifier.padding(bottom = 16.dp)
-                )
-                TextField(
-                    value = code,
-                    onValueChange = { code = it },
-                    label = { Text(stringResource(id = R.string.special_language_code_label)) },
-                    modifier = Modifier.fillMaxWidth()
-                )
-                Spacer(Modifier.height(24.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.End,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    TextButton(
-                        onClick = {
-                            showSpecialLanguageDialog = false
-                            vibrate()
-                        },
-                        modifier = Modifier.padding(end = 8.dp)
-                    ) {
-                        Text(stringResource(id = R.string.dialog_cancel))
-                    }
-                    Button(onClick = {
-                        if (code == "Трип-МоиПрефиолетовыеВнутренности") {
-                            SettingsRepository.setSpecialLanguageUnlocked(context, true)
-                            specialLanguageUnlocked = true
-                            onLanguageChange(Language.SPECIAL)
-                        }
-                        showSpecialLanguageDialog = false
-                        vibrate()
-                    }) {
-                        Text(stringResource(id = R.string.activate_button))
-                    }
-                }
-            }
-        }
+            onLanguageChange = actions.onLanguageChange,
+            onSpecialLanguageUnlocked = { specialLanguageUnlocked = true },
+            vibrate = vibrate
+        )
     }
 
     Column(
@@ -249,126 +82,55 @@ fun SettingsScreen(
             .fillMaxWidth()
             .padding(bottom = 8.dp)) {
             Column(modifier = Modifier.padding(16.dp)) {
-                SettingsHeader(stringResource(id = R.string.main_section_title), Icons.Default.Build)
-                SettingsRow(title = stringResource(id = R.string.language_label)) {
-                    Box {
-                        TextButton(onClick = {
-                            vibrate()
-                            languageMenuExpanded = true
-                        }) {
-                            Text(getLanguageName(selectedLanguage))
+                SettingsHeader(title = stringResource(id = R.string.main_section_title), icon = Icons.Default.Build)
+                SettingsDropdown(
+                    title = stringResource(id = R.string.language_label),
+                    selectedValue = state.selectedLanguage,
+                    items = Language.entries,
+                    getItemName = { it.getDisplayName() },
+                    onItemSelected = {
+                        if (it == Language.SPECIAL && !specialLanguageUnlocked) {
+                            showSpecialLanguageDialog = true
+                        } else {
+                            actions.onLanguageChange(it)
                         }
-                        DropdownMenu(expanded = languageMenuExpanded, onDismissRequest = { languageMenuExpanded = false }) {
-                            Language.entries.forEach { language ->
-                                if (language == Language.SPECIAL && !specialLanguageUnlocked) {
-                                    DropdownMenuItem(text = { Text(getLanguageName(language)) }, onClick = {
-                                        vibrate()
-                                        showSpecialLanguageDialog = true
-                                        languageMenuExpanded = false
-                                    })
-                                } else {
-                                    DropdownMenuItem(text = { Text(getLanguageName(language)) }, onClick = {
-                                        vibrate()
-                                        onLanguageChange(language)
-                                        languageMenuExpanded = false
-                                    })
-                                }
-                            }
-                        }
-                    }
-                }
-                SettingsRow(title = stringResource(id = R.string.theme_label)) {
-                    Box {
-                        TextButton(onClick = {
-                            vibrate()
-                            themeMenuExpanded = true
-                        }) {
-                            Text(getThemeName(selectedTheme))
-                        }
-                        DropdownMenu(expanded = themeMenuExpanded, onDismissRequest = { themeMenuExpanded = false }) {
-                            Theme.entries.forEach { theme ->
-                                DropdownMenuItem(text = { Text(getThemeName(theme)) }, onClick = {
-                                    vibrate()
-                                    onThemeChange(theme)
-                                    themeMenuExpanded = false
-                                })
-                            }
-                        }
-                    }
-                }
-                SettingsRow(title = stringResource(id = R.string.fab_action_title)) {
-                    Box {
-                        TextButton(onClick = {
-                            vibrate()
-                            fabActionMenuExpanded = true
-                        }) {
-                            Text(getFabActionName(selectedFabAction))
-                        }
-                        DropdownMenu(expanded = fabActionMenuExpanded, onDismissRequest = { fabActionMenuExpanded = false }) {
-                            FabAction.entries.forEach { fabAction ->
-                                DropdownMenuItem(text = { Text(getFabActionName(fabAction)) }, onClick = {
-                                    vibrate()
-                                    onFabActionChange(fabAction)
-                                    fabActionMenuExpanded = false
-                                })
-                            }
-                        }
-                    }
-                }
-                SettingsRow(title = stringResource(id = R.string.settings_item_font_family)) {
-                    Box {
-                        TextButton(onClick = {
-                            vibrate()
-                            fontMenuExpanded = true
-                        }) {
-                            Text(getFontName(selectedFontFamily))
-                        }
-                        DropdownMenu(expanded = fontMenuExpanded, onDismissRequest = { fontMenuExpanded = false }) {
-                            AppFontFamily.entries.forEach { fontFamily ->
-                                DropdownMenuItem(text = { Text(getFontName(fontFamily)) }, onClick = {
-                                    vibrate()
-                                    onFontFamilyChange(fontFamily)
-                                    fontMenuExpanded = false
-                                })
-                            }
-                        }
-                    }
-                }
-                SettingsRow(title = stringResource(id = R.string.auto_delete_trash_label)) {
-                    Switch(checked = autoDeleteTrashEnabled, onCheckedChange = {
-                        vibrate()
-                        onAutoDeleteTrashEnabledChange(it)
-                    })
-                }
-                if (autoDeleteTrashEnabled) {
+                    },
+                    vibrate = vibrate
+                )
+                SettingsDropdown(
+                    title = stringResource(id = R.string.theme_label),
+                    selectedValue = state.selectedTheme,
+                    items = com.example.nkdsify.data.Theme.entries,
+                    getItemName = { it.getDisplayName() },
+                    onItemSelected = actions.onThemeChange,
+                    vibrate = vibrate
+                )
+                SettingsDropdown(
+                    title = stringResource(id = R.string.fab_action_title),
+                    selectedValue = state.selectedFabAction,
+                    items = com.example.nkdsify.data.FabAction.entries,
+                    getItemName = { it.getDisplayName() },
+                    onItemSelected = actions.onFabActionChange,
+                    vibrate = vibrate
+                )
+                SettingsDropdown(
+                    title = stringResource(id = R.string.settings_item_font_family),
+                    selectedValue = state.selectedFontFamily,
+                    items = com.example.nkdsify.data.AppFontFamily.entries,
+                    getItemName = { it.getDisplayName() },
+                    onItemSelected = actions.onFontFamilyChange,
+                    vibrate = vibrate
+                )
+                SettingsSwitch(title = stringResource(id = R.string.auto_delete_trash_label), isChecked = state.autoDeleteTrashEnabled, onCheckedChange = actions.onAutoDeleteTrashEnabledChange, vibrate = vibrate)
+                if (state.autoDeleteTrashEnabled) {
                     SettingsRow(title = stringResource(id = R.string.auto_delete_trash_days_label)) {
-                        TextField(value = autoDeleteTrashDays.toString(), onValueChange = { value -> onAutoDeleteTrashDaysChange(value.filter { it.isDigit() }.toIntOrNull() ?: 0) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.width(80.dp))
+                        TextField(value = state.autoDeleteTrashDays.toString(), onValueChange = { value -> actions.onAutoDeleteTrashDaysChange(value.filter { it.isDigit() }.toIntOrNull() ?: 0) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.width(80.dp))
                     }
                 }
-                SettingsRow(title = stringResource(id = R.string.show_shuffle_button_label)) {
-                    Switch(checked = isShuffleButtonVisible, onCheckedChange = {
-                        vibrate()
-                        onShuffleButtonVisibleChange(it)
-                    })
-                }
-                SettingsRow(title = stringResource(id = R.string.use_large_shuffle_button_label)) {
-                    Switch(checked = useLargeFab, onCheckedChange = {
-                        vibrate()
-                        onUseLargeFabChange(it)
-                    })
-                }
-                SettingsRow(title = stringResource(id = R.string.vibration_label)) {
-                    Switch(checked = isVibrationEnabled, onCheckedChange = {
-                        vibrate()
-                        onVibrationEnabledChange(it)
-                    })
-                }
-                SettingsRow(title = stringResource(id = R.string.show_file_count_in_folders_label)) {
-                    Switch(checked = isShowFileCountEnabled, onCheckedChange = {
-                        vibrate()
-                        onShowFileCountChange(it)
-                    })
-                }
+                SettingsSwitch(title = stringResource(id = R.string.show_shuffle_button_label), isChecked = state.isShuffleButtonVisible, onCheckedChange = actions.onShuffleButtonVisibleChange, vibrate = vibrate)
+                SettingsSwitch(title = stringResource(id = R.string.use_large_shuffle_button_label), isChecked = state.useLargeFab, onCheckedChange = actions.onUseLargeFabChange, vibrate = vibrate)
+                SettingsSwitch(title = stringResource(id = R.string.vibration_label), isChecked = state.isVibrationEnabled, onCheckedChange = actions.onVibrationEnabledChange, vibrate = vibrate)
+                SettingsSwitch(title = stringResource(id = R.string.show_file_count_in_folders_label), isChecked = state.isShowFileCountEnabled, onCheckedChange = actions.onShowFileCountChange, vibrate = vibrate)
             }
         }
 
@@ -376,64 +138,28 @@ fun SettingsScreen(
             .fillMaxWidth()
             .padding(bottom = 8.dp)) {
             Column(modifier = Modifier.padding(16.dp)) {
-                SettingsHeader(stringResource(id = R.string.privacy_section_title), Icons.Default.PrivacyTip)
-                SettingsRow(title = stringResource(id = R.string.blur_folder_previews_label)) {
-                    Switch(checked = isBlurEnabled, onCheckedChange = {
-                        vibrate()
-                        onBlurEnabledChange(it)
-                    })
-                }
-                SettingsRow(title = stringResource(id = R.string.blur_in_folders_label)) {
-                    Switch(checked = isBlurInFolderEnabled, onCheckedChange = {
-                        vibrate()
-                        onBlurInFolderEnabledChange(it)
-                    })
-                }
-                SettingsRow(title = stringResource(id = R.string.blur_media_in_trash_label)) {
-                    Switch(checked = isTrashBlurEnabled, onCheckedChange = {
-                        vibrate()
-                        onTrashBlurEnabledChange(it)
-                    })
-                }
-                SettingsRow(title = stringResource(id = R.string.blur_all_media_label)) {
-                    Switch(checked = isBlurAllMediaEnabled, onCheckedChange = {
-                        vibrate()
-                        onBlurAllMediaEnabledChange(it)
-                    })
-                }
-                SettingsRow(title = stringResource(id = R.string.shake_to_blur_label)) {
-                    Switch(checked = isShakeToBlurEnabled, onCheckedChange = {
-                        vibrate()
-                        onShakeToBlurEnabledChange(it)
-                    })
-                }
-                SettingsRow(title = stringResource(id = R.string.blur_type_label)) {
-                    Box {
-                        TextButton(onClick = {
-                            vibrate()
-                            blurTypeMenuExpanded = true
-                        }) {
-                            Text(getBlurTypeName(selectedBlurType))
-                        }
-                        DropdownMenu(expanded = blurTypeMenuExpanded, onDismissRequest = { blurTypeMenuExpanded = false }) {
-                            BlurType.entries.forEach { blurType ->
-                                DropdownMenuItem(text = { Text(getBlurTypeName(blurType)) }, onClick = {
-                                    vibrate()
-                                    onBlurTypeChange(blurType)
-                                    blurTypeMenuExpanded = false
-                                })
-                            }
-                        }
-                    }
-                }
+                SettingsHeader(title = stringResource(id = R.string.privacy_section_title), icon = Icons.Default.PrivacyTip)
+                SettingsSwitch(title = stringResource(id = R.string.blur_folder_previews_label), isChecked = state.isBlurEnabled, onCheckedChange = actions.onBlurEnabledChange, vibrate = vibrate)
+                SettingsSwitch(title = stringResource(id = R.string.blur_in_folders_label), isChecked = state.isBlurInFolderEnabled, onCheckedChange = actions.onBlurInFolderEnabledChange, vibrate = vibrate)
+                SettingsSwitch(title = stringResource(id = R.string.blur_media_in_trash_label), isChecked = state.isTrashBlurEnabled, onCheckedChange = actions.onTrashBlurEnabledChange, vibrate = vibrate)
+                SettingsSwitch(title = stringResource(id = R.string.blur_all_media_label), isChecked = state.isBlurAllMediaEnabled, onCheckedChange = actions.onBlurAllMediaEnabledChange, vibrate = vibrate)
+                SettingsSwitch(title = stringResource(id = R.string.shake_to_blur_label), isChecked = state.isShakeToBlurEnabled, onCheckedChange = actions.onShakeToBlurEnabledChange, vibrate = vibrate)
+                SettingsDropdown(
+                    title = stringResource(id = R.string.blur_type_label),
+                    selectedValue = state.selectedBlurType,
+                    items = com.example.nkdsify.data.BlurType.entries,
+                    getItemName = { it.getDisplayName() },
+                    onItemSelected = actions.onBlurTypeChange,
+                    vibrate = vibrate
+                )
                 SettingsButtonRow(onClick = {
                     vibrate()
-                    onManageHiddenFoldersClick()
+                    actions.onManageHiddenFoldersClick()
                 }, text = stringResource(id = R.string.manage_hidden_folders_button))
                 SettingsButtonRow(
                     onClick = {
                         vibrate()
-                        onViewHistoryClick()
+                        actions.onViewHistoryClick()
                     },
                     text = stringResource(id = R.string.view_history_title)
                 )
@@ -441,7 +167,7 @@ fun SettingsScreen(
                     Button(
                         onClick = {
                             vibrate()
-                            onGoToSecretStorage()
+                            actions.onGoToSecretStorage()
                         },
                         shape = RoundedCornerShape(12.dp),
                         modifier = Modifier
@@ -458,44 +184,18 @@ fun SettingsScreen(
             .fillMaxWidth()
             .padding(bottom = 8.dp)) {
             Column(modifier = Modifier.padding(16.dp)) {
-                SettingsHeader(stringResource(id = R.string.media_section_title), Icons.Default.Photo)
-                SettingsRow(title = stringResource(id = R.string.mute_video_by_default_label)) {
-                    Switch(checked = isMuteVideoByDefault, onCheckedChange = {
-                        vibrate()
-                        onMuteVideoByDefaultChange(it)
-                    })
-                }
-                SettingsRow(title = stringResource(id = R.string.loop_video_label)) {
-                    Switch(checked = isLoopVideoEnabled, onCheckedChange = {
-                        vibrate()
-                        onLoopVideoEnabledChange(it)
-                    })
-                }
-                SettingsRow(title = stringResource(id = R.string.swipe_to_dismiss_label)) {
-                    Switch(checked = isSwipeToDismissEnabled, onCheckedChange = {
-                        vibrate()
-                        onSwipeToDismissEnabledChange(it)
-                    })
-                }
-                SettingsRow(title = stringResource(id = R.string.zoom_gesture_label)) {
-                    Box {
-                        TextButton(onClick = {
-                            vibrate()
-                            zoomTypeMenuExpanded = true
-                        }) {
-                            Text(getZoomTypeName(selectedZoomType))
-                        }
-                        DropdownMenu(expanded = zoomTypeMenuExpanded, onDismissRequest = { zoomTypeMenuExpanded = false }) {
-                            ZoomType.entries.forEach { zoomType ->
-                                DropdownMenuItem(text = { Text(getZoomTypeName(zoomType)) }, onClick = {
-                                    vibrate()
-                                    onZoomTypeChange(zoomType)
-                                    zoomTypeMenuExpanded = false
-                                })
-                            }
-                        }
-                    }
-                }
+                SettingsHeader(title = stringResource(id = R.string.media_section_title), icon = Icons.Default.Photo)
+                SettingsSwitch(title = stringResource(id = R.string.mute_video_by_default_label), isChecked = state.isMuteVideoByDefault, onCheckedChange = actions.onMuteVideoByDefaultChange, vibrate = vibrate)
+                SettingsSwitch(title = stringResource(id = R.string.loop_video_label), isChecked = state.isLoopVideoEnabled, onCheckedChange = actions.onLoopVideoEnabledChange, vibrate = vibrate)
+                SettingsSwitch(title = stringResource(id = R.string.swipe_to_dismiss_label), isChecked = state.isSwipeToDismissEnabled, onCheckedChange = actions.onSwipeToDismissEnabledChange, vibrate = vibrate)
+                SettingsDropdown(
+                    title = stringResource(id = R.string.zoom_gesture_label),
+                    selectedValue = state.selectedZoomType,
+                    items = com.example.nkdsify.data.ZoomType.entries,
+                    getItemName = { it.getDisplayName() },
+                    onItemSelected = actions.onZoomTypeChange,
+                    vibrate = vibrate
+                )
             }
         }
 
@@ -503,14 +203,14 @@ fun SettingsScreen(
             .fillMaxWidth()
             .padding(bottom = 8.dp)) {
             Column(modifier = Modifier.padding(16.dp)) {
-                SettingsHeader(stringResource(id = R.string.tags_string), Icons.AutoMirrored.Filled.Label)
+                SettingsHeader(title = stringResource(id = R.string.tags_string), icon = Icons.AutoMirrored.Filled.Label)
                 SettingsButtonRow(onClick = {
                     vibrate()
-                    onManageTagsClick()
+                    actions.onManageTagsClick()
                 }, text = stringResource(id = R.string.manage_tags_button))
                 SettingsButtonRow(onClick = {
                     vibrate()
-                    onBackupAndRestoreClick()
+                    actions.onBackupAndRestoreClick()
                 }, text = stringResource(id = R.string.backup_and_restore_button))
             }
         }
@@ -519,7 +219,7 @@ fun SettingsScreen(
             .fillMaxWidth()
             .padding(bottom = 8.dp)) {
             Column(modifier = Modifier.padding(16.dp)) {
-                SettingsHeader(stringResource(id = R.string.about_section_title), Icons.Default.Info)
+                SettingsHeader(title = stringResource(id = R.string.about_section_title), icon = Icons.Default.Info)
                 SettingsButtonRow(onClick = {
                     vibrate()
                     val intent = Intent(Intent.ACTION_VIEW, "https://github.com/HosikoOuma/MyGalleryApp".toUri())
@@ -527,11 +227,11 @@ fun SettingsScreen(
                 }, text = stringResource(id = R.string.github_button))
                 SettingsButtonRow(onClick = {
                     vibrate()
-                    onCheckForUpdates()
+                    actions.onCheckForUpdates()
                 }, text = stringResource(id = R.string.check_for_updates_button))
                 Spacer(modifier = Modifier.height(16.dp))
                 Text(
-                    text = stringResource(id = R.string.version_label, currentVersion),
+                    text = stringResource(id = R.string.version_label, state.currentVersion),
                     modifier = Modifier.align(Alignment.CenterHorizontally),
                     style = MaterialTheme.typography.bodySmall
                 )
@@ -539,21 +239,11 @@ fun SettingsScreen(
         }
 
         Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
-            Spacer(modifier = Modifier.height(16.dp))
-            Button(
-                onClick = {
-                    vibrate()
-                    onEasterEggClick()
-                },
-                shape = RoundedCornerShape(12.dp)
-            ) {
-                Text(stringResource(id = R.string.easter_egg_button))
-            }
             Spacer(modifier = Modifier.width(16.dp))
             Button(
                 onClick = {
                     vibrate()
-                    onAboutClick()
+                    actions.onAboutClick()
                 },
                 shape = RoundedCornerShape(12.dp)
             ) {
@@ -561,51 +251,5 @@ fun SettingsScreen(
             }
             Spacer(modifier = Modifier.height(16.dp))
         }
-    }
-}
-
-@Composable
-private fun SettingsHeader(title: String, icon: androidx.compose.ui.graphics.vector.ImageVector) {
-    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(bottom = 8.dp)) {
-        Icon(icon, contentDescription = null, modifier = Modifier.padding(end = 8.dp))
-        Text(title, style = MaterialTheme.typography.titleLarge)
-    }
-}
-
-@Composable
-private fun SettingsRow(
-    title: String,
-    content: @Composable () -> Unit
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 4.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text(
-            text = title,
-            modifier = Modifier.weight(1f)
-        )
-        content()
-    }
-}
-
-
-@Composable
-private fun SettingsButtonRow(onClick: () -> Unit, text: String) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(
-                interactionSource = remember { MutableInteractionSource() },
-                indication = null, // Fix for ripple crash
-                onClick = onClick
-            )
-            .padding(vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(text, modifier = Modifier.weight(1f))
-        Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null)
     }
 }

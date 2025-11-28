@@ -520,6 +520,10 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
                             onFontFamilyChange = {
                                 myAppState.selectedFontFamily = it
                                 SettingsRepository.setFontFamily(context, it)
+                            },
+                            onFabActionChange = {
+                                myAppState.selectedFabAction = it
+                                SettingsRepository.setFabAction(context, it)
                             }
                         )
 

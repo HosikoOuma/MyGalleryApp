@@ -18,6 +18,7 @@ import androidx.compose.ui.platform.SoftwareKeyboardController
 import coil.ImageLoader
 import com.example.nkdsify.MyAppState
 import com.example.nkdsify.data.AppFontFamily
+import com.example.nkdsify.data.FabAction
 import com.example.nkdsify.data.MediaItem
 import com.example.nkdsify.data.MediaTypeFilter
 import com.example.nkdsify.data.MediaViewerState
@@ -27,7 +28,9 @@ import com.example.nkdsify.ui.screens.AboutScreen
 import com.example.nkdsify.ui.screens.FavoritesScreen
 import com.example.nkdsify.ui.screens.FoldersGrid
 import com.example.nkdsify.ui.screens.SecretStorageScreen
+import com.example.nkdsify.ui.screens.SettingsActions
 import com.example.nkdsify.ui.screens.SettingsScreen
+import com.example.nkdsify.ui.screens.SettingsState
 import com.example.nkdsify.ui.screens.TagManagementScreen
 import com.example.nkdsify.ui.screens.TrashScreen
 import com.example.nkdsify.ui.screens.ViewHistoryScreen
@@ -78,7 +81,8 @@ fun MyAppNavigation(
     autoDeleteTrashDays: Int,
     onAutoDeleteTrashDaysChange: (Int) -> Unit,
     selectedFontFamily: AppFontFamily,
-    onFontFamilyChange: (AppFontFamily) -> Unit
+    onFontFamilyChange: (AppFontFamily) -> Unit,
+    onFabActionChange: (FabAction) -> Unit
 ) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
@@ -227,33 +231,47 @@ fun MyAppNavigation(
             }
 
             is Screen.Settings -> {
-                SettingsScreen(
-                    selectedFontFamily = selectedFontFamily,
-                    onFontFamilyChange = onFontFamilyChange,
-                    onAboutClick = {
-                        myAppState.currentScreen = Screen.About
-                    },
+                val settingsState = SettingsState(
                     isBlurEnabled = isBlurEnabled,
+                    isBlurInFolderEnabled = isBlurInFolderEnabled,
+                    isTrashBlurEnabled = isTrashBlurEnabled,
+                    isMuteVideoByDefault = myAppState.isMuteVideoByDefault,
+                    isBlurAllMediaEnabled = isBlurAllMediaEnabled,
+                    selectedTheme = myAppState.selectedTheme,
+                    selectedZoomType = myAppState.selectedZoomType,
+                    isVibrationEnabled = isVibrationEnabled,
+                    isShowFileCountEnabled = myAppState.isShowFileCountEnabled,
+                    isShuffleButtonVisible = myAppState.isShuffleButtonVisible,
+                    isShakeToBlurEnabled = isShakeToBlurEnabled,
+                    isLoopVideoEnabled = isLoopVideoEnabled,
+                    selectedBlurType = myAppState.selectedBlurType,
+                    isSwipeToDismissEnabled = isSwipeToDismissEnabled,
+                    useLargeFab = useLargeFab,
+                    autoDeleteTrashEnabled = autoDeleteTrashEnabled,
+                    autoDeleteTrashDays = autoDeleteTrashDays,
+                    selectedLanguage = myAppState.selectedLanguage,
+                    currentVersion = myAppState.currentVersion,
+                    selectedFabAction = myAppState.selectedFabAction,
+                    selectedFontFamily = selectedFontFamily
+                )
+
+                val settingsActions = SettingsActions(
                     onBlurEnabledChange = {
                         onBlurEnabledChange(it)
                         SettingsRepository.setBlurEnabled(context, it)
                     },
-                    isBlurInFolderEnabled = isBlurInFolderEnabled,
                     onBlurInFolderEnabledChange = {
                         onBlurInFolderEnabledChange(it)
                         SettingsRepository.setBlurInFolderEnabled(context, it)
                     },
-                    isTrashBlurEnabled = isTrashBlurEnabled,
                     onTrashBlurEnabledChange = {
                         onTrashBlurEnabledChange(it)
                         SettingsRepository.setTrashBlurEnabled(context, it)
                     },
-                    isMuteVideoByDefault = myAppState.isMuteVideoByDefault,
                     onMuteVideoByDefaultChange = {
                         myAppState.isMuteVideoByDefault = it
                         SettingsRepository.setMuteVideoByDefault(context, it)
                     },
-                    isBlurAllMediaEnabled = isBlurAllMediaEnabled,
                     onBlurAllMediaEnabledChange = {
                         onBlurAllMediaEnabledChange(it)
                         SettingsRepository.setBlurAllMediaEnabled(context, it)
@@ -269,7 +287,6 @@ fun MyAppNavigation(
                             mediaPlayer.start()
                         }
                     },
-                    selectedTheme = myAppState.selectedTheme,
                     onThemeChange = { theme ->
                         myAppState.selectedTheme = theme
                         SettingsRepository.setTheme(context, theme)
@@ -278,7 +295,6 @@ fun MyAppNavigation(
                         if (isVibrationEnabled) performVibration(context)
                         myAppState.showHiddenFoldersDialog = true
                     },
-                    selectedZoomType = myAppState.selectedZoomType,
                     onZoomTypeChange = {
                         myAppState.selectedZoomType = it
                         SettingsRepository.setZoomType(context, it)
@@ -300,70 +316,61 @@ fun MyAppNavigation(
                         )
                     },
                     onViewHistoryClick = { myAppState.currentScreen = Screen.ViewHistory },
-                    isVibrationEnabled = isVibrationEnabled,
                     onVibrationEnabledChange = {
                         onVibrationEnabledChange(it)
                         SettingsRepository.setVibrationEnabled(context, it)
                     },
-                    isShowFileCountEnabled = myAppState.isShowFileCountEnabled,
                     onShowFileCountChange = {
                         myAppState.isShowFileCountEnabled = it
                         SettingsRepository.setShowFileCount(context, it)
                     },
-                    isShuffleButtonVisible = myAppState.isShuffleButtonVisible,
                     onShuffleButtonVisibleChange = {
                         myAppState.isShuffleButtonVisible = it
                         SettingsRepository.setShuffleButtonVisible(context, it)
                     },
-                    isShakeToBlurEnabled = isShakeToBlurEnabled,
                     onShakeToBlurEnabledChange = {
                         onShakeToBlurEnabledChange(it)
                         SettingsRepository.setShakeToBlurEnabled(context, it)
                     },
-                    isLoopVideoEnabled = isLoopVideoEnabled,
                     onLoopVideoEnabledChange = {
                         onLoopVideoEnabledChange(it)
                         SettingsRepository.setLoopVideoEnabled(context, it)
                     },
-                    selectedBlurType = myAppState.selectedBlurType,
                     onBlurTypeChange = {
                         myAppState.selectedBlurType = it
                         SettingsRepository.setBlurType(context, it)
                     },
-                    isSwipeToDismissEnabled = isSwipeToDismissEnabled,
                     onSwipeToDismissEnabledChange = {
                         onSwipeToDismissEnabledChange(it)
                         SettingsRepository.setSwipeToDismissEnabled(context, it)
                     },
-                    useLargeFab = useLargeFab,
                     onUseLargeFabChange = {
                         onUseLargeFabChange(it)
                         SettingsRepository.setUseLargeFab(context, it)
                     },
-                    autoDeleteTrashEnabled = autoDeleteTrashEnabled,
                     onAutoDeleteTrashEnabledChange = {
                         onAutoDeleteTrashEnabledChange(it)
                         SettingsRepository.setAutoDeleteTrashEnabled(context, it)
                     },
-                    autoDeleteTrashDays = autoDeleteTrashDays,
                     onAutoDeleteTrashDaysChange = {
                         onAutoDeleteTrashDaysChange(it)
                         SettingsRepository.setAutoDeleteTrashDays(context, it)
                     },
-                    selectedLanguage = myAppState.selectedLanguage,
                     onLanguageChange = { language -> myAppState.selectedLanguage = language },
                     onCheckForUpdates = {
                         coroutineScope.launch {
                             myAppState.checkForUpdates(true)
                         }
                     },
-                    currentVersion = myAppState.currentVersion,
-                    selectedFabAction = myAppState.selectedFabAction,
+                    onAboutClick = { myAppState.currentScreen = Screen.About },
+                    onFontFamilyChange = onFontFamilyChange,
                     onFabActionChange = {
-                        myAppState.selectedFabAction = it
+                        onFabActionChange(it)
                         SettingsRepository.setFabAction(context, it)
                     }
                 )
+
+                SettingsScreen(state = settingsState, actions = settingsActions)
             }
 
             is Screen.TagManagement -> {

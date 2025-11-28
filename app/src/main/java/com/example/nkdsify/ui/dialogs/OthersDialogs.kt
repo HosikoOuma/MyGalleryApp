@@ -17,7 +17,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import com.example.nkdsify.MyAppState
 import com.example.nkdsify.R
-import com.example.nkdsify.ui.components.EasterEggDialog
 import com.example.nkdsify.ui.components.UpdateDialog
 import com.example.nkdsify.ui.utils.SettingsRepository
 
@@ -46,10 +45,6 @@ fun OthersDialogs(myAppState: MyAppState) {
             },
             latestVersion = myAppState.latestVersion!!
         )
-    }
-
-    if (myAppState.showEasterEggDialog) {
-        EasterEggDialog(onDismiss = { myAppState.showEasterEggDialog = false })
     }
 
     if (myAppState.showDatePicker) {
