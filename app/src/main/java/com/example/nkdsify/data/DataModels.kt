@@ -9,7 +9,7 @@ import com.example.nkdsify.R
 
 sealed class Screen {
     data object Folders : Screen()
-    data class FolderContent(val folder: MediaFolder) : Screen()
+    data class FolderContent(val folder: MediaFolder, val scrollToItemUri: Uri? = null) : Screen()
     data class Favorites(val openAlbumName: String? = null) : Screen()
     data object Settings : Screen()
     data object TagManagement : Screen()

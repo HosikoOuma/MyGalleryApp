@@ -55,6 +55,7 @@ import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Wallpaper
+import androidx.compose.material.icons.outlined.FindInPage
 import androidx.compose.material3.Icon
 import androidx.exifinterface.media.ExifInterface
 
@@ -563,7 +564,8 @@ fun MediaDetailsDialog(
     onCopy: () -> Unit,
     onMove: () -> Unit,
     onRename: () -> Unit,
-    onMoveToSecret: () -> Unit
+    onMoveToSecret: () -> Unit,
+    onFind: () -> Unit
 ) {
     val context = LocalContext.current
     val isVibrationEnabled by remember { mutableStateOf(SettingsRepository.isVibrationEnabled(context)) }
@@ -622,6 +624,9 @@ fun MediaDetailsDialog(
                 } }
                 item { TextButton(onClick = { vibrate(); onMoveToSecret() }) { 
                     Icon(Icons.Default.Lock, contentDescription = stringResource(id = R.string.move_to_secret_storage_content_description))
+                } }
+                 item { TextButton(onClick = { vibrate(); onFind() }) { 
+                    Icon(Icons.Outlined.FindInPage, contentDescription = stringResource(id = R.string.find_in_page_content_description))
                 } }
             }
 

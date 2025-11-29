@@ -272,7 +272,15 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
             FavoritesRepository.saveFavorites(context, favoriteStrings)
         }
         LaunchedEffect(myAppState.currentScreen) {
-            if (myAppState.currentScreen is Screen.FolderContent) {
+            val screen = myAppState.currentScreen as? Screen.FolderContent
+            if (screen?.scrollToItemUri != null) {
+                val index = screen.folder.items.indexOfFirst { it.uri == screen.scrollToItemUri }
+                if (index != -1) {
+                    coroutineScope.launch {
+                        folderContentGridState.scrollToItem(index)
+                    }
+                }
+            } else if (myAppState.currentScreen is Screen.FolderContent) {
                 coroutineScope.launch {
                     folderContentGridState.scrollToItem(0)
                 }
@@ -428,7 +436,21 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
                 }
             }
         }
-        InfoDialogs(myAppState = myAppState, screenWidth = screenWidth, screenHeight = screenHeight)
+        InfoDialogs(    myAppState = myAppState,
+            screenWidth = screenWidth,
+            screenHeight = screenHeight,
+            onFind = {
+                myAppState.showDetailsDialog?.let { uri ->
+                    val folder = myAppState.allFolders.find { it.items.any { item -> item.uri == uri } }
+                    if (folder != null) {
+                        myAppState.previousViewerState = myAppState.viewerState
+                        myAppState.viewerState = null
+                        myAppState.currentScreen = Screen.FolderContent(folder, scrollToItemUri = uri)
+                        myAppState.showDetailsDialog = null
+                    }
+                }
+            }
+        )
         FolderDialogs(myAppState = myAppState)
         TagDialogs(
             myAppState = myAppState,
@@ -441,6 +463,7 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
 
 
         Box(Modifier.fillMaxSize()) {
+
             MyAppBackHandler(myAppState = myAppState)
             Scaffold(
                 topBar = {

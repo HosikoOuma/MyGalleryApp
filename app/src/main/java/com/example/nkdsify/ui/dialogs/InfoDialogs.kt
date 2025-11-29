@@ -3,7 +3,6 @@ package com.example.nkdsify.ui.dialogs
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource
 import com.canhub.cropper.CropImageContract
 import com.canhub.cropper.CropImageContractOptions
 import com.canhub.cropper.CropImageOptions
@@ -19,9 +18,10 @@ import com.example.nkdsify.ui.utils.RenameDialog
 import com.example.nkdsify.ui.utils.getMediaDetails
 import com.example.nkdsify.ui.utils.renameMedia
 import com.example.nkdsify.ui.utils.SelectionDetailsDialog
+import androidx.compose.ui.res.stringResource
 
 @Composable
-fun InfoDialogs(myAppState: MyAppState, screenWidth: Int, screenHeight: Int) {
+fun InfoDialogs(myAppState: MyAppState, screenWidth: Int, screenHeight: Int, onFind: () -> Unit) {
     val context = LocalContext.current
     val cropImageLauncher = rememberLauncherForActivityResult(contract = CropImageContract()) { result ->
         if (result.isSuccessful) {
@@ -91,6 +91,7 @@ fun InfoDialogs(myAppState: MyAppState, screenWidth: Int, screenHeight: Int) {
                 onMoveToSecret = {
                     myAppState.showConfirmMoveToSecretDialog = true
                 },
+                onFind = onFind
             )
         }
     }
