@@ -31,18 +31,23 @@ import androidx.compose.ui.unit.dp
 
 @Composable
 fun SettingsRow(
-    title: String,
-    content: @Composable () -> Unit
+    title: @Composable () -> Unit,
+    content: @Composable (() -> Unit)? = null
 ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 8.dp),
+            .padding(vertical = 2.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(text = title)
-        content()
+        Box(modifier = Modifier.weight(1f)) {
+            title()
+        }
+        if (content != null) {
+            Spacer(modifier = Modifier.width(16.dp))
+            content()
+        }
     }
 }
 
@@ -65,7 +70,9 @@ fun SettingsSwitch(
     onCheckedChange: (Boolean) -> Unit,
     vibrate: () -> Unit
 ) {
-    SettingsRow(title = title) {
+    SettingsRow(
+        title = { Text(text = title) }
+    ) {
         Switch(
             checked = isChecked,
             onCheckedChange = {
@@ -87,7 +94,9 @@ fun <T> SettingsDropdown(
 ) {
     var expanded by remember { mutableStateOf(false) }
 
-    SettingsRow(title = title) {
+    SettingsRow(
+        title = { Text(text = title) }
+    ) {
         Box {
             TextButton(onClick = {
                 vibrate()
@@ -116,7 +125,7 @@ fun SettingsButtonRow(onClick: () -> Unit, text: String) {
             .fillMaxWidth()
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
-                indication = null, // Fix for ripple crash
+                indication = null,
                 onClick = onClick
             )
             .padding(vertical = 12.dp),

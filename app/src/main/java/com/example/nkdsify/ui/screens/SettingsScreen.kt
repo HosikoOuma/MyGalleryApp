@@ -123,9 +123,7 @@ fun SettingsScreen(
                 )
                 SettingsSwitch(title = stringResource(id = R.string.auto_delete_trash_label), isChecked = state.autoDeleteTrashEnabled, onCheckedChange = actions.onAutoDeleteTrashEnabledChange, vibrate = vibrate)
                 if (state.autoDeleteTrashEnabled) {
-                    SettingsRow(title = stringResource(id = R.string.auto_delete_trash_days_label)) {
-                        TextField(value = state.autoDeleteTrashDays.toString(), onValueChange = { value -> actions.onAutoDeleteTrashDaysChange(value.filter { it.isDigit() }.toIntOrNull() ?: 0) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.width(80.dp))
-                    }
+                    SettingsRow(    title = { Text(text = stringResource(id = R.string.auto_delete_trash_days_label)) })
                 }
                 SettingsSwitch(title = stringResource(id = R.string.show_shuffle_button_label), isChecked = state.isShuffleButtonVisible, onCheckedChange = actions.onShuffleButtonVisibleChange, vibrate = vibrate)
                 SettingsSwitch(title = stringResource(id = R.string.use_large_shuffle_button_label), isChecked = state.useLargeFab, onCheckedChange = actions.onUseLargeFabChange, vibrate = vibrate)
