@@ -66,12 +66,31 @@ fun MyAppTopBar(
         onEditTags = { myAppState.showBulkTagDialog = true },
         onShare = {
             val currentSelected = myAppState.selectedItems.toList()
-            val shareIntent = Intent().apply {
-                action = Intent.ACTION_SEND_MULTIPLE
-                putParcelableArrayListExtra(Intent.EXTRA_STREAM, ArrayList(currentSelected))
-                type = "*/*"
+            val uris = ArrayList(currentSelected)
+            if (uris.isEmpty()) {
+                return@TopBar
             }
-            context.startActivity(Intent.createChooser(shareIntent, null))
+
+            val intent = Intent().addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+
+            if (uris.size == 1) {
+                val uri = uris.first()
+                intent.action = Intent.ACTION_SEND
+                intent.putExtra(Intent.EXTRA_STREAM, uri)
+                intent.type = context.contentResolver.getType(uri) ?: "*/*"
+            } else {
+                val areAllImages = uris.all { uri -> context.contentResolver.getType(uri)?.startsWith("image/") == true }
+                val areAllVideos = uris.all { uri -> context.contentResolver.getType(uri)?.startsWith("video/") == true }
+
+                intent.action = Intent.ACTION_SEND_MULTIPLE
+                intent.putParcelableArrayListExtra(Intent.EXTRA_STREAM, uris)
+                intent.type = when {
+                    areAllImages -> "image/*"
+                    areAllVideos -> "video/*"
+                    else -> "*/*"
+                }
+            }
+            context.startActivity(Intent.createChooser(intent, null))
         },
         onTrash = {
             myAppState.itemsToTrash = myAppState.selectedItems.toList()

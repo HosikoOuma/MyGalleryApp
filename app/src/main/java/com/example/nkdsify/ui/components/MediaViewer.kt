@@ -77,6 +77,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.core.content.FileProvider
 import androidx.core.view.WindowCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -352,12 +353,14 @@ fun MediaViewer(
 
                             IconButton(onClick = {
                                 if (isVibrationEnabled) performVibration(context)
-                                val shareIntent = Intent().apply {
+                                val uri = currentItem.uri
+                                val intent = Intent().apply {
                                     action = Intent.ACTION_SEND
-                                    putExtra(Intent.EXTRA_STREAM, currentItem.uri)
-                                    type = if (currentItem.isVideo) "video/*" else "image/*"
+                                    putExtra(Intent.EXTRA_STREAM, uri)
+                                    type = context.contentResolver.getType(uri) ?: if (currentItem.isVideo) "video/*" else "image/*"
+                                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                                 }
-                                context.startActivity(Intent.createChooser(shareIntent, null))
+                                context.startActivity(Intent.createChooser(intent, null))
                             }) {
                                 Icon(Icons.Filled.Share, contentDescription = "Share", tint = Color.White)
                             }
