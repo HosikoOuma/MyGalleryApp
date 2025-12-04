@@ -82,6 +82,7 @@ import com.example.nkdsify.data.loadMediaFolders
 import com.example.nkdsify.data.loadTrashedMediaItems
 import com.example.nkdsify.ui.MyAppFAB
 import com.example.nkdsify.ui.components.MediaViewer
+import com.example.nkdsify.ui.components.utils.rememberCoilImageLoader
 import com.example.nkdsify.ui.dialogs.DeletionDialogs
 import com.example.nkdsify.ui.theme.NkdsifyAppTheme
 import com.example.nkdsify.ui.utils.EncryptedImageDecoder
@@ -172,16 +173,19 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
                 TagsRepository.saveAllTags(context, mutableTags)
             }
         }
-        val imageLoader = remember(context) {
-            ImageLoader.Builder(context)
-                .components {
-                    add(EncryptedImageDecoder.Factory(context))
-                    add(ImageDecoderDecoder.Factory())
-                    add(GifDecoder.Factory())
-                    add(VideoFrameDecoder.Factory())
-                }
-                .build()
-        }
+        val imageLoader = rememberCoilImageLoader(
+            context = context,
+            gridState = when (myAppState.currentScreen) {
+                is Screen.Folders -> foldersGridState
+                is Screen.FolderContent -> folderContentGridState
+                is Screen.Favorites -> favoritesGridState
+                is Screen.Trash -> trashGridState
+                is Screen.AllMedia -> allMediaGridState
+                is Screen.SecretStorage -> secretGridState
+                is Screen.ViewHistory -> viewHistoryGridState
+                else -> rememberLazyGridState()
+            }
+        )
         val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { permissions ->
             myAppState.hasPermissions = permissions.values.all { it }
         }
