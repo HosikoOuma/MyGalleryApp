@@ -19,6 +19,7 @@ import com.example.nkdsify.ui.utils.getMediaDetails
 import com.example.nkdsify.ui.utils.renameMedia
 import com.example.nkdsify.ui.utils.SelectionDetailsDialog
 import androidx.compose.ui.res.stringResource
+import kotlinx.collections.immutable.persistentListOf
 
 @Composable
 fun InfoDialogs(myAppState: MyAppState, screenWidth: Int, screenHeight: Int, onFind: () -> Unit) {
@@ -73,13 +74,13 @@ fun InfoDialogs(myAppState: MyAppState, screenWidth: Int, screenHeight: Int, onF
                     cropImageLauncher.launch(cropOptions)
                 },
                 onCopy = {
-                    myAppState.filesToProcess = listOf(uri)
+                    myAppState.filesToProcess = persistentListOf(uri)
                     myAppState.currentFileOperation = FileOperation.COPY
                     myAppState.showFolderSelectionDialog = true
                     myAppState.showDetailsDialog = null
                 },
                 onMove = {
-                    myAppState.filesToProcess = listOf(uri)
+                    myAppState.filesToProcess = persistentListOf(uri)
                     myAppState.currentFileOperation = FileOperation.MOVE
                     myAppState.showFolderSelectionDialog = true
                     myAppState.showDetailsDialog = null

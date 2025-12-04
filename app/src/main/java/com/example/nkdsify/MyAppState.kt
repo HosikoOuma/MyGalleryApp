@@ -25,6 +25,8 @@ import com.example.nkdsify.data.SortType
 import com.example.nkdsify.ui.utils.GithubUpdateChecker
 import com.example.nkdsify.ui.utils.SettingsRepository
 import com.example.nkdsify.ui.utils.TagsRepository
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -55,7 +57,7 @@ class MyAppState(
     var showSelectionDetailsDialog by mutableStateOf(false)
     var selectionDetails by mutableStateOf("")
     var showClearHistoryDialog by mutableStateOf(false)
-    var viewHistory by mutableStateOf<List<MediaItem>>(emptyList())
+    var viewHistory by mutableStateOf<ImmutableList<MediaItem>>(persistentListOf())
 
     var showUpdateDialog by mutableStateOf(false)
     var latestVersion by mutableStateOf<String?>(null)
@@ -69,12 +71,12 @@ class MyAppState(
     }
     var hasPermissions by mutableStateOf(permissionsToRequest.all { ContextCompat.checkSelfPermission(context, it) == PackageManager.PERMISSION_GRANTED })
     var hasManageStoragePermission by mutableStateOf(if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) Environment.isExternalStorageManager() else true)
-    var allFolders by mutableStateOf<List<MediaFolder>>(emptyList())
-    var allMedia by mutableStateOf<List<MediaItem>>(emptyList())
+    var allFolders by mutableStateOf<ImmutableList<MediaFolder>>(persistentListOf())
+    var allMedia by mutableStateOf<ImmutableList<MediaItem>>(persistentListOf())
     var viewerState by mutableStateOf<MediaViewerState?>(null)
     var previousViewerState by mutableStateOf<MediaViewerState?>(null)
     var currentScreen by mutableStateOf<Screen>(Screen.Folders)
-    val sanitizedFoldersState = mutableStateOf<List<MediaFolder>>(allFolders)
+    val sanitizedFoldersState = mutableStateOf<ImmutableList<MediaFolder>>(persistentListOf())
     var sortType by mutableStateOf(SortType.DATE_MODIFIED)
     var sortAscending by mutableStateOf(false)
     var selectedDate by mutableStateOf<Long?>(null)
@@ -86,7 +88,7 @@ class MyAppState(
     var showDetailsDialog by mutableStateOf<Uri?>(null)
     var showAlbumDetailsDialog by mutableStateOf(false)
     var showConfirmDeleteDialog by mutableStateOf(false)
-    var itemsToDeleteFromSecret by mutableStateOf<List<Uri>>(emptyList())
+    var itemsToDeleteFromSecret by mutableStateOf<ImmutableList<Uri>>(persistentListOf())
     var showConfirmDeleteFromSecretDialog by mutableStateOf(false)
     var showConfirmTrashDialog by mutableStateOf(false)
     var showConfirmRestoreDialog by mutableStateOf(false)
@@ -95,25 +97,25 @@ class MyAppState(
     var showBackupAndRestoreDialog by mutableStateOf(false)
     var showFolderSelectionDialog by mutableStateOf(false)
     var showRenameDialog by mutableStateOf<Uri?>(null)
-    var filesToProcess by mutableStateOf<List<Uri>>(emptyList())
+    var filesToProcess by mutableStateOf<ImmutableList<Uri>>(persistentListOf())
     var currentFileOperation by mutableStateOf<FileOperation?>(null)
     var showDatePicker by mutableStateOf(false)
     var easterEggTapCount by mutableIntStateOf(0)
-    var itemsToDelete by mutableStateOf<List<Uri>>(emptyList())
+    var itemsToDelete by mutableStateOf<ImmutableList<Uri>>(persistentListOf())
     var isClearingTrash by mutableStateOf(false)
-    var itemsToTrash by mutableStateOf<List<Uri>>(emptyList())
-    var secretItems by mutableStateOf<List<MediaItem>>(emptyList())
+    var itemsToTrash by mutableStateOf<ImmutableList<Uri>>(persistentListOf())
+    var secretItems by mutableStateOf<ImmutableList<MediaItem>>(persistentListOf())
     var secretViewerState by mutableStateOf<MediaViewerState?>(null)
-    var itemsToRestore by mutableStateOf<List<Uri>>(emptyList())
-    var itemsToRestoreFromSecret by mutableStateOf<List<Uri>>(emptyList())
+    var itemsToRestore by mutableStateOf<ImmutableList<Uri>>(persistentListOf())
+    var itemsToRestoreFromSecret by mutableStateOf<ImmutableList<Uri>>(persistentListOf())
     var showConfirmRestoreFromSecretDialog by mutableStateOf(false)
     var showConfirmMoveToSecretDialog by mutableStateOf(false)
     var isSettingWallpaper by mutableStateOf(false)
     var showAddDialog by mutableStateOf(false)
-    var favoriteItems by mutableStateOf<List<MediaItem>>(emptyList())
-    var trashedItems by mutableStateOf<List<MediaItem>>(emptyList())
+    var favoriteItems by mutableStateOf<ImmutableList<MediaItem>>(persistentListOf())
+    var trashedItems by mutableStateOf<ImmutableList<MediaItem>>(persistentListOf())
     var tags by mutableStateOf(TagsRepository.getTags(context))
-    var allTags by mutableStateOf<List<String>>(emptyList())
+    var allTags by mutableStateOf<ImmutableList<String>>(persistentListOf())
     val selectedItems = mutableStateListOf<Uri>()
     val isSelectionMode get() = selectedItems.isNotEmpty()
 

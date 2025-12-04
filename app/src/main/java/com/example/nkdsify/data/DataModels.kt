@@ -6,6 +6,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.exifinterface.media.ExifInterface
 import com.example.nkdsify.R
+import kotlinx.collections.immutable.ImmutableList
 
 sealed class Screen {
     data object Folders : Screen()
@@ -48,7 +49,7 @@ enum class MediaTypeFilter {
 data class MediaFolder(
     val id: Long,
     val name: String,
-    val items: List<MediaItem>,
+    val items: ImmutableList<MediaItem>,
     val coverUri: Uri? = null,
     val totalSize: Long,
     val dateRange: Pair<Long, Long>,
@@ -87,7 +88,7 @@ data class MediaDetails(
 
 
 data class MediaViewerState(
-    val items: List<MediaItem>,
+    val items: ImmutableList<MediaItem>,
     val startIndex: Int,
     val isExternal: Boolean = false
 )

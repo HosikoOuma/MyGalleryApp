@@ -6,6 +6,9 @@ import android.net.Uri
 import android.os.Build
 import android.provider.MediaStore
 import com.example.nkdsify.ui.utils.TrashRepository
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.toImmutableList
+import kotlinx.collections.immutable.persistentListOf
 import java.io.File
 import java.util.Calendar
 
@@ -15,7 +18,7 @@ fun loadAllMedia(
     sortAscending: Boolean,
     hiddenFolderIds: Set<String>,
     selectedDate: Long? = null
-): List<MediaItem> {
+): ImmutableList<MediaItem> {
     val mediaItems = mutableListOf<MediaItem>()
 
     val collection = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
@@ -95,7 +98,7 @@ fun loadAllMedia(
         }
     }
 
-    return mediaItems
+    return mediaItems.toImmutableList()
 }
 
 fun loadMediaFolders(
@@ -103,7 +106,7 @@ fun loadMediaFolders(
     sortType: SortType,
     sortAscending: Boolean,
     selectedDate: Long? = null
-): List<MediaFolder> {
+): ImmutableList<MediaFolder> {
     val foldersMap = mutableMapOf<Long, MutableList<MediaItem>>()
     val folderNames = mutableMapOf<Long, String>()
 
@@ -204,11 +207,11 @@ fun loadMediaFolders(
         }
         val coverItem = itemsInFolder.firstOrNull { !it.isVideo } ?: itemsInFolder.firstOrNull()
         if (folderName != null && coverItem != null) {
-            MediaFolder(id = entry.key, name = folderName, items = itemsInFolder, coverUri = coverItem.uri, totalSize = totalSize, dateRange = dateRange, itemCount = itemsInFolder.size)
+            MediaFolder(id = entry.key, name = folderName, items = itemsInFolder.toImmutableList(), coverUri = coverItem.uri, totalSize = totalSize, dateRange = dateRange, itemCount = itemsInFolder.size)
         } else {
             null
         }
-    }.sortedBy { it.name }
+    }.sortedBy { it.name }.toImmutableList()
 }
 
 fun loadFavoriteMediaItems(
@@ -217,10 +220,10 @@ fun loadFavoriteMediaItems(
     sortType: SortType,
     sortAscending: Boolean,
     selectedDate: Long? = null
-): List<MediaItem> {
+): ImmutableList<MediaItem> {
     val contentUris = favoriteUris.filter { it.scheme == "content" }
     if (contentUris.isEmpty()) {
-        return emptyList()
+        return persistentListOf()
     }
 
     val favoriteItems = mutableListOf<MediaItem>()
@@ -293,14 +296,14 @@ fun loadFavoriteMediaItems(
             favoriteItems.add(MediaItem(uri, name, isVideo, size, dateAdded, dateModified))
         }
     }
-    return favoriteItems
+    return favoriteItems.toImmutableList()
 }
 
 fun loadTrashedMediaItems(
     context: Context,
     sortType: SortType,
     sortAscending: Boolean
-): List<MediaItem> {
+): ImmutableList<MediaItem> {
     val trashedUris = TrashRepository.getTrashedUris(context)
     val trashedItems = trashedUris.mapNotNull { uri ->
         uri.path?.let { path ->
@@ -334,5 +337,5 @@ fun loadTrashedMediaItems(
         trashedItems.sortWith(comparator.reversed())
     }
 
-    return trashedItems
+    return trashedItems.toImmutableList()
 }

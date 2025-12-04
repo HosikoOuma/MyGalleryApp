@@ -27,6 +27,7 @@ import com.example.nkdsify.data.FabAction
 import com.example.nkdsify.data.MediaViewerState
 import com.example.nkdsify.data.Screen
 import com.example.nkdsify.ui.utils.performVibration
+import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -88,7 +89,7 @@ fun MyAppFAB(
                             val shuffledItems = withContext(Dispatchers.Default) {
                                 itemsToShuffle.shuffled()
                             }
-                            myAppState.viewerState = MediaViewerState(items = shuffledItems, startIndex = 0)
+                            myAppState.viewerState = MediaViewerState(items = shuffledItems.toImmutableList(), startIndex = 0)
                         }
                     }
                 }

@@ -18,6 +18,7 @@ import com.example.nkdsify.ui.utils.SettingsRepository
 import com.example.nkdsify.ui.utils.copyMediaToFolder
 import com.example.nkdsify.ui.utils.getFolderPathFromUri
 import com.example.nkdsify.ui.utils.moveMediaToFolder
+import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -60,7 +61,7 @@ fun FolderDialogs(myAppState: MyAppState) {
                     }
                     myAppState.refreshTrigger++
                     myAppState.showFolderSelectionDialog = false
-                    myAppState.filesToProcess = emptyList()
+                    myAppState.filesToProcess = persistentListOf()
                     myAppState.currentFileOperation = null
                     myAppState.isProcessing = false
                 }

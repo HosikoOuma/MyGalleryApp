@@ -109,4 +109,5 @@ dependencies {
     androidTestImplementation("androidx.compose.ui:ui-test-junit4")
     debugImplementation("androidx.compose.ui:ui-test-manifest")
     implementation("sh.calvin.reorderable:reorderable:2.4.1")
+    implementation("org.jetbrains.kotlinx:kotlinx-collections-immutable:0.3.7")
 }

@@ -10,6 +10,8 @@ import com.example.nkdsify.ui.utils.ConfirmRestoreDialog
 import com.example.nkdsify.ui.utils.ConfirmRestoreFromSecretDialog
 import com.example.nkdsify.ui.utils.SecretRepository
 import com.example.nkdsify.ui.utils.TrashRepository
+import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -30,10 +32,10 @@ fun RestorationDialogs(myAppState: MyAppState, isVibrationEnabled: Boolean) {
                             myAppState.isProcessing = true
                             SecretRepository.restoreFromSecret(context, myAppState.itemsToRestoreFromSecret)
                             // Обновляем список секретных файлов напрямую
-                            myAppState.secretItems = withContext(Dispatchers.IO) { SecretRepository.getSecretMediaItems(context) }
+                            myAppState.secretItems = withContext(Dispatchers.IO) { SecretRepository.getSecretMediaItems(context).toImmutableList() }
 
                             // Сбрасываем состояния
-                            myAppState.itemsToRestoreFromSecret = emptyList()
+                            myAppState.itemsToRestoreFromSecret = persistentListOf()
                             myAppState.secretViewerState = null
                             myAppState.selectedItems.clear()
                             myAppState.isProcessing = false
@@ -67,12 +69,12 @@ fun RestorationDialogs(myAppState: MyAppState, isVibrationEnabled: Boolean) {
                         myAppState.viewerState = null
                     } else {
                         val newIndex = originalIndex.coerceAtMost(newItems.size - 1)
-                        myAppState.viewerState = currentViewerState.copy(items = newItems, startIndex = newIndex)
+                        myAppState.viewerState = currentViewerState.copy(items = newItems.toImmutableList(), startIndex = newIndex)
                     }
                 } else {
                     myAppState.viewerState = null
                 }
-                myAppState.itemsToRestore = emptyList()
+                myAppState.itemsToRestore = persistentListOf()
             },
             onDismiss = { myAppState.showConfirmRestoreDialog = false
                 if (isVibrationEnabled) com.example.nkdsify.ui.utils.performVibration(context)

@@ -4,6 +4,7 @@ import android.content.Context
 import android.net.Uri
 import android.provider.MediaStore
 import com.example.nkdsify.data.MediaFolder
+import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -21,7 +22,7 @@ suspend fun sanitizeFolders(folders: List<MediaFolder>, context: Context): List<
             val filteredItems = folder.items.filterNot { item ->
                 isPhantomMedia(context, item.uri, item.size, item.dateModified)
             }
-            folder.copy(items = filteredItems)
+            folder.copy(items = filteredItems.toImmutableList())
         }
     }
 }

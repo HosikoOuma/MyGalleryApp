@@ -11,6 +11,7 @@ import com.example.nkdsify.R
 import com.example.nkdsify.data.Screen
 import com.example.nkdsify.ui.utils.getMediaDetails
 import com.example.nkdsify.ui.utils.performVibration
+import kotlinx.collections.immutable.toImmutableList
 
 @Composable
 fun MyAppTopBar(
@@ -56,16 +57,16 @@ fun MyAppTopBar(
             }
         },
         onRestore = {
-            myAppState.itemsToRestore = myAppState.selectedItems.toList()
+            myAppState.itemsToRestore = myAppState.selectedItems.toImmutableList()
             myAppState.showConfirmRestoreDialog = true
         },
         onDeletePermanently = {
-            myAppState.itemsToDelete = myAppState.selectedItems.toList()
+            myAppState.itemsToDelete = myAppState.selectedItems.toImmutableList()
             myAppState.showConfirmDeleteDialog = true
         },
         onEditTags = { myAppState.showBulkTagDialog = true },
         onShare = {
-            val currentSelected = myAppState.selectedItems.toList()
+            val currentSelected = myAppState.selectedItems.toImmutableList()
             val uris = ArrayList(currentSelected)
             if (uris.isEmpty()) {
                 return@TopBar
@@ -93,7 +94,7 @@ fun MyAppTopBar(
             context.startActivity(Intent.createChooser(intent, null))
         },
         onTrash = {
-            myAppState.itemsToTrash = myAppState.selectedItems.toList()
+            myAppState.itemsToTrash = myAppState.selectedItems.toImmutableList()
             myAppState.showConfirmTrashDialog = true
         },
         onToggleFavorite = {
@@ -131,12 +132,12 @@ fun MyAppTopBar(
         context = context,
         isVibrationEnabled = isVibrationEnabled,
         onCopy = {
-            myAppState.filesToProcess = myAppState.selectedItems.toList()
+            myAppState.filesToProcess = myAppState.selectedItems.toImmutableList()
             myAppState.currentFileOperation = FileOperation.COPY
             myAppState.showFolderSelectionDialog = true
         },
         onMove = {
-            myAppState.filesToProcess = myAppState.selectedItems.toList()
+            myAppState.filesToProcess = myAppState.selectedItems.toImmutableList()
             myAppState.currentFileOperation = FileOperation.MOVE
             myAppState.showFolderSelectionDialog = true
         },
@@ -144,11 +145,11 @@ fun MyAppTopBar(
             myAppState.showConfirmMoveToSecretDialog = true
         },
         onRestoreFromSecret = {
-            myAppState.itemsToRestoreFromSecret = myAppState.selectedItems.toList()
+            myAppState.itemsToRestoreFromSecret = myAppState.selectedItems.toImmutableList()
             myAppState.showConfirmRestoreFromSecretDialog = true
         },
         onDeleteFromSecret = {
-            myAppState.itemsToDeleteFromSecret = myAppState.selectedItems.toList()
+            myAppState.itemsToDeleteFromSecret = myAppState.selectedItems.toImmutableList()
             myAppState.showConfirmDeleteFromSecretDialog = true
         },
         onAddNewTag = {

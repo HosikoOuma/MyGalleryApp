@@ -94,6 +94,8 @@ import com.example.nkdsify.ui.utils.ViewHistoryRepository
 import com.example.nkdsify.ui.utils.getMediaDetails
 import com.example.nkdsify.ui.utils.performVibration
 import com.example.nkdsify.ui.utils.sanitizeFolders
+import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -155,18 +157,18 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
             val initialFavorites = FavoritesRepository.getFavorites(context).map { it.toUri() }
             mutableStateListOf(*initialFavorites.toTypedArray())
         }
-        myAppState.allTags = TagsRepository.getAllTags(context)
+        myAppState.allTags = TagsRepository.getAllTags(context).toImmutableList()
         val onAddNewTag: (String) -> Unit = { newTag ->
             if (isVibrationEnabled) performVibration(context)
             TagsRepository.addNewTag(context, newTag)
-            myAppState.allTags = TagsRepository.getAllTags(context)
+            myAppState.allTags = TagsRepository.getAllTags(context).toImmutableList()
         }
         val onMoveTag: (Int, Int) -> Unit = { from, to ->
             if (from in myAppState.allTags.indices && to in myAppState.allTags.indices) {
                 val mutableTags = myAppState.allTags.toMutableList()
                 val movedTag = mutableTags.removeAt(from)
                 mutableTags.add(to, movedTag)
-                myAppState.allTags = mutableTags
+                myAppState.allTags = mutableTags.toImmutableList()
                 TagsRepository.saveAllTags(context, mutableTags)
             }
         }
@@ -194,7 +196,7 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
             }
         }
         LaunchedEffect(myAppState.allFolders) {
-            myAppState.sanitizedFoldersState.value = sanitizeFolders(myAppState.allFolders, context)
+            myAppState.sanitizedFoldersState.value = sanitizeFolders(myAppState.allFolders, context).toImmutableList()
         }
         LaunchedEffect(Unit) {
             coroutineScope.launch(Dispatchers.IO) {
@@ -206,7 +208,7 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
         }
         LaunchedEffect(myAppState.currentScreen, myAppState.refreshTrigger) {
             if (myAppState.currentScreen is Screen.SecretStorage) {
-                myAppState.secretItems = SecretRepository.getSecretMediaItems(context)
+                myAppState.secretItems = SecretRepository.getSecretMediaItems(context).toImmutableList()
             }
             if (myAppState.currentScreen is Screen.ViewHistory) {
                 // Get history, which is already sorted by timestamp descending
@@ -216,7 +218,7 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
                 // Map the sorted history URIs to MediaItem objects, preserving the chronological order
                 myAppState.viewHistory = historyWithTimestamps.mapNotNull { historyItem ->
                     allMediaMap[historyItem.uri]
-                }
+                }.toImmutableList()
             }
         }
         val filteredViewHistory by remember(myAppState.viewHistory, myAppState.searchQuery, myAppState.isSearchActive) {
@@ -262,7 +264,7 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
                         val details = getMediaDetails(context, initialUri)
                         val name = details?.name ?: ""
                         val isVideo = context.contentResolver.getType(initialUri)?.startsWith("video/") == true
-                        myAppState.viewerState = MediaViewerState(listOf(MediaItem(initialUri, name, isVideo, 0, 0, 0)), 0, isExternal = true)
+                        myAppState.viewerState = MediaViewerState(  persistentListOf(MediaItem(initialUri, name, isVideo, 0, 0, 0)), 0, isExternal = true)
                     }
                 }
             }
@@ -425,7 +427,7 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
                         Button(
                             onClick = {
                                 ViewHistoryRepository.clearHistory(context)
-                                myAppState.viewHistory = emptyList()
+                                myAppState.viewHistory = persistentListOf()
                                 myAppState.showClearHistoryDialog = false
                             },
                             colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
@@ -597,15 +599,15 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
                     isTrashMode = isTrashViewing,
                     onDelete = { uris ->
                         if (isTrashViewing) {
-                            myAppState.itemsToDelete = uris
+                            myAppState.itemsToDelete = uris.toImmutableList()
                             myAppState.showConfirmDeleteDialog = true
                         } else {
-                            myAppState.itemsToTrash = uris
+                            myAppState.itemsToTrash = uris.toImmutableList()
                             myAppState.showConfirmTrashDialog = true
                         }
                     },
                     onRestore = { uris ->
-                        myAppState.itemsToRestore = uris
+                        myAppState.itemsToRestore = uris.toImmutableList()
                         myAppState.showConfirmRestoreDialog = true
                     },
                     onShowTagDialog = { uri -> myAppState.showTagDialog = uri },
@@ -633,11 +635,11 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
                     imageLoader = imageLoader,
                     isSecretMode = true,
                     onRestore = { uris ->
-                        myAppState.itemsToRestoreFromSecret = uris
+                        myAppState.itemsToRestoreFromSecret = uris.toImmutableList()
                         myAppState.showConfirmRestoreFromSecretDialog = true
                     },
                     onDelete = { uris ->
-                        myAppState.itemsToDeleteFromSecret = uris
+                        myAppState.itemsToDeleteFromSecret = uris.toImmutableList()
                         myAppState.showConfirmDeleteFromSecretDialog = true
                     },
 

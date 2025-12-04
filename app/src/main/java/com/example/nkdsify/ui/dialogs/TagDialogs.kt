@@ -13,6 +13,7 @@ import com.example.nkdsify.ui.components.TagEditDialog
 import com.example.nkdsify.ui.utils.TagsRepository
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
+import kotlinx.collections.immutable.toImmutableList
 
 // Data class to hold both the ordered list of all tags and the tag-to-file assignments
 data class TagsBackup(val allTags: List<String>, val tagsMap: Map<String, Set<String>>)
@@ -77,7 +78,7 @@ fun TagDialogs(
 
                     // 5. Reload state in the app
                     myAppState.tags = currentTagsMap
-                    myAppState.allTags = currentAllTags
+                    myAppState.allTags = currentAllTags.toImmutableList()
                     myAppState.refreshTrigger++
                     android.widget.Toast.makeText(context, context.getString(R.string.tags_imported_successfully), android.widget.Toast.LENGTH_SHORT).show()
                 }
@@ -96,7 +97,7 @@ fun TagDialogs(
             onSave = { tagSet ->
                 TagsRepository.setTagsForItem(context, uri, tagSet)
                 myAppState.tags = TagsRepository.getTags(context)
-                myAppState.allTags = TagsRepository.getAllTags(context) .toList()
+                myAppState.allTags = TagsRepository.getAllTags(context) .toImmutableList()
                 myAppState.showTagDialog = null
             })
     }
@@ -121,7 +122,7 @@ fun TagDialogs(
                     TagsRepository.setTagsForItem(context, uri, currentTags)
                 }
                 myAppState.tags = TagsRepository.getTags(context)
-                myAppState.allTags = TagsRepository.getAllTags(context).toList()
+                myAppState.allTags = TagsRepository.getAllTags(context).toImmutableList()
                 myAppState.showBulkTagDialog = false
                 myAppState.selectedItems.clear()
             }

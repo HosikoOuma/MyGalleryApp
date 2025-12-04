@@ -13,6 +13,8 @@ import com.example.nkdsify.ui.utils.ConfirmDeleteFromSecretDialog
 import com.example.nkdsify.ui.utils.ConfirmTrashDialog
 import com.example.nkdsify.ui.utils.SecretRepository
 import com.example.nkdsify.ui.utils.TrashRepository
+import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -45,7 +47,7 @@ fun DeletionDialogs(
                 urisToDelete = urisToDelete,
                 setViewerState = { myAppState.viewerState = it }
             )
-            myAppState.itemsToDelete = emptyList()
+            myAppState.itemsToDelete = persistentListOf()
         }, onDismiss = { myAppState.showConfirmDeleteDialog = false })
     }
 
@@ -60,11 +62,11 @@ fun DeletionDialogs(
                             val currentViewerState = myAppState.secretViewerState
 
                             SecretRepository.deleteFromSecret(context, urisToDelete)
-                            myAppState.secretItems = withContext(Dispatchers.IO) { SecretRepository.getSecretMediaItems(context) }
+                            myAppState.secretItems = withContext(Dispatchers.IO) { SecretRepository.getSecretMediaItems(context).toImmutableList() }
 
                             withContext(Dispatchers.Main) {
                                 myAppState.showConfirmDeleteFromSecretDialog = false
-                                myAppState.itemsToDeleteFromSecret = emptyList()
+                                myAppState.itemsToDeleteFromSecret = persistentListOf()
                                 myAppState.selectedItems.clear()
 
                                 updateViewerStateAfterDeletion(
@@ -109,7 +111,7 @@ fun DeletionDialogs(
                 }
                 if (isVibrationEnabled) com.example.nkdsify.ui.utils.performVibration(context)
                 myAppState.selectedItems.clear()
-                myAppState.itemsToTrash = emptyList()
+                myAppState.itemsToTrash = persistentListOf()
                 myAppState.showConfirmTrashDialog = false
 
                 updateViewerStateAfterDeletion(
@@ -139,6 +141,6 @@ private fun updateViewerStateAfterDeletion(
         setViewerState(null)
     } else {
         val newIndex = originalIndex.coerceAtMost(newItems.size - 1)
-        setViewerState(viewerState.copy(items = newItems, startIndex = newIndex))
+        setViewerState(viewerState.copy(items = newItems.toImmutableList(), startIndex = newIndex))
     }
 }

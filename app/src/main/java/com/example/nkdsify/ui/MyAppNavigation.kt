@@ -38,6 +38,7 @@ import com.example.nkdsify.ui.utils.BiometricUtils
 import com.example.nkdsify.ui.utils.SettingsRepository
 import com.example.nkdsify.ui.utils.TagsRepository
 import com.example.nkdsify.ui.utils.performVibration
+import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalComposeUiApi::class)
@@ -93,7 +94,7 @@ fun MyAppNavigation(
             folders.mapNotNull { folder ->
                 val filteredItems = folder.items.filter { it.name.contains(myAppState.searchQuery, ignoreCase = true) }
                 if (filteredItems.isNotEmpty()) {
-                    folder.copy(items = filteredItems)
+                    folder.copy(items = filteredItems.toImmutableList())
                 } else {
                     null
                 }
@@ -182,7 +183,7 @@ fun MyAppNavigation(
                     isBlurEnabled = isBlurInFolderEnabled,
                     onItemClick = { item ->
                         keyboardController?.hide()
-                        myAppState.viewerState = MediaViewerState(items = items, startIndex = items.indexOf(item))
+                        myAppState.viewerState = MediaViewerState(items = items.toImmutableList(), startIndex = items.indexOf(item))
                     },
                     onToggleSelection = { item ->
                         if (myAppState.selectedItems.contains(item.uri)) {
@@ -206,7 +207,7 @@ fun MyAppNavigation(
                     tags = myAppState.tags,
                     onItemClick = { items, item ->
                         keyboardController?.hide()
-                        myAppState.viewerState = MediaViewerState(items = items, startIndex = items.indexOf(item))
+                        myAppState.viewerState = MediaViewerState(items = items.toImmutableList(), startIndex = items.indexOf(item))
                     },
                     onToggleSelection = { item ->
                         if (myAppState.selectedItems.contains(item.uri)) {
@@ -379,13 +380,13 @@ fun MyAppNavigation(
                         if (isVibrationEnabled) performVibration(context)
                         TagsRepository.removeTagFromAllItems(context, it)
                         myAppState.tags = TagsRepository.getTags(context)
-                        myAppState.allTags = TagsRepository.getAllTags(context)
+                        myAppState.allTags = TagsRepository.getAllTags(context).toImmutableList()
                     },
                     onEditTag = { oldTag, newTag ->
                         if (isVibrationEnabled) performVibration(context)
                         TagsRepository.renameTag(context, oldTag, newTag)
                         myAppState.tags = TagsRepository.getTags(context)
-                        myAppState.allTags = TagsRepository.getAllTags(context)
+                        myAppState.allTags = TagsRepository.getAllTags(context).toImmutableList()
                     },
                     onTagClick = { tag -> myAppState.currentScreen = Screen.MediaByTag(tag) },
                     allTags = myAppState.allTags,
@@ -415,7 +416,7 @@ fun MyAppNavigation(
                     onClearTrash = {
                         if (isVibrationEnabled) performVibration(context)
                         myAppState.isClearingTrash = true
-                        myAppState.itemsToDelete = myAppState.trashedItems.map { it.uri }
+                        myAppState.itemsToDelete = myAppState.trashedItems.map { it.uri }.toImmutableList()
                         myAppState.showConfirmDeleteDialog = true
                     },
                     isTrashBlurEnabled = isTrashBlurEnabled,
@@ -433,7 +434,7 @@ fun MyAppNavigation(
                     isBlurEnabled = isBlurAllMediaEnabled,
                     onItemClick = { item ->
                         keyboardController?.hide()
-                        myAppState.viewerState = MediaViewerState(items = filteredAllMedia, startIndex = filteredAllMedia.indexOf(item))
+                        myAppState.viewerState = MediaViewerState(items = filteredAllMedia.toImmutableList(), startIndex = filteredAllMedia.indexOf(item))
                     },
                     onToggleSelection = { item ->
                         if (myAppState.selectedItems.contains(item.uri)) {
@@ -460,7 +461,7 @@ fun MyAppNavigation(
                     isBlurEnabled = isBlurInFolderEnabled,
                     onItemClick = { item ->
                         keyboardController?.hide()
-                        myAppState.viewerState = MediaViewerState(items = mediaWithTag, startIndex = mediaWithTag.indexOf(item))
+                        myAppState.viewerState = MediaViewerState(items = mediaWithTag.toImmutableList(), startIndex = mediaWithTag.indexOf(item))
                     },
                     onToggleSelection = { item ->
                         if (myAppState.selectedItems.contains(item.uri)) {
@@ -489,7 +490,7 @@ fun MyAppNavigation(
                     onClearSelection = { myAppState.selectedItems.clear() },
                     onItemClick = { items, item ->
                         keyboardController?.hide()
-                        myAppState.secretViewerState = MediaViewerState(items = items, startIndex = items.indexOf(item))
+                        myAppState.secretViewerState = MediaViewerState(items = items.toImmutableList(), startIndex = items.indexOf(item))
                     },
                     isBlurEnabled = isBlurEnabled,
                     blurType = myAppState.selectedBlurType,
@@ -504,7 +505,7 @@ fun MyAppNavigation(
                     imageLoader = imageLoader,
                     onItemClick = { items, item ->
                         keyboardController?.hide()
-                        myAppState.viewerState = MediaViewerState(items = items, startIndex = items.indexOf(item))
+                        myAppState.viewerState = MediaViewerState(items = items.toImmutableList(), startIndex = items.indexOf(item))
                     },
                     onToggleSelection = { item ->
                         if (myAppState.selectedItems.contains(item.uri)) {
