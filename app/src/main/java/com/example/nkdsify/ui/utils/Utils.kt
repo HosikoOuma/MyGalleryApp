@@ -57,6 +57,7 @@ import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Wallpaper
 import androidx.compose.material.icons.outlined.FindInPage
 import androidx.compose.material3.Icon
+import androidx.compose.ui.graphics.Color
 import androidx.exifinterface.media.ExifInterface
 
 fun getMediaDetails(context: Context, uri: Uri): MediaDetails? {
@@ -178,335 +179,154 @@ fun formatDateRange(startMillis: Long, endMillis: Long): String {
         "${formatter.format(startDate)} - ${formatter.format(endDate)}"
     }
 }
+
 @OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun BaseConfirmDialog(
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit,
+    title: String,
+    message: String,
+    confirmButtonText: String,
+    isDestructive: Boolean = false
+) {
+    val context = LocalContext.current
+    val isVibrationEnabled by remember { mutableStateOf(SettingsRepository.isVibrationEnabled(context)) }
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val vibrate = { if (isVibrationEnabled) performVibration(context) }
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+    ) {
+        Column(
+            modifier = Modifier
+                .padding(horizontal = 24.dp)
+                .navigationBarsPadding()
+                .padding(bottom = 16.dp)
+        ) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.headlineSmall,
+                modifier = Modifier.padding(bottom = 8.dp)
+            )
+            Text(
+                text = message,
+                style = MaterialTheme.typography.bodyLarge,
+                modifier = Modifier.padding(bottom = 16.dp)
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                TextButton(
+                    onClick = onDismiss,
+                    modifier = Modifier.padding(end = 8.dp)
+                ) {
+                    Text(stringResource(id = R.string.dialog_cancel))
+                }
+                Button(
+                    onClick = {
+                        vibrate()
+                        onConfirm()
+                    },
+                    colors = if (isDestructive) {
+                        ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                    } else {
+                        ButtonDefaults.buttonColors()
+                    }
+                ) {
+                    Text(confirmButtonText)
+                }
+            }
+        }
+    }
+}
+
 @Composable
 fun ConfirmDeleteDialog(
     onConfirm: () -> Unit,
     onDismiss: () -> Unit
 ) {
-    val context = LocalContext.current
-    val isVibrationEnabled by remember { mutableStateOf(SettingsRepository.isVibrationEnabled(context)) }
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    val vibrate = { if (isVibrationEnabled) performVibration(context) }
-
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        sheetState = sheetState,
-    ) {
-        Column(
-            modifier = Modifier
-                .padding(horizontal = 24.dp)
-                .navigationBarsPadding()
-                .padding(bottom = 16.dp)
-        ) {
-            Text(
-                text = stringResource(id = R.string.confirm_deletion_title),
-                style = MaterialTheme.typography.headlineSmall,
-                modifier = Modifier.padding(bottom = 8.dp)
-            )
-            Text(
-                text = stringResource(id = R.string.confirm_deletion_message),
-                style = MaterialTheme.typography.bodyLarge,
-                modifier = Modifier.padding(bottom = 16.dp)
-            )
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                TextButton(
-                    onClick = onDismiss,
-                    modifier = Modifier.padding(end = 8.dp)
-                ) {
-                    Text(stringResource(id = R.string.dialog_cancel))
-                }
-                Button(
-                    onClick = {
-                        vibrate()
-                        onConfirm()
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
-                ) {
-                    Text(stringResource(id = R.string.delete_button))
-                }
-            }
-        }
-    }
+    BaseConfirmDialog(
+        onConfirm = onConfirm,
+        onDismiss = onDismiss,
+        title = stringResource(id = R.string.confirm_deletion_title),
+        message = stringResource(id = R.string.confirm_deletion_message),
+        confirmButtonText = stringResource(id = R.string.delete_button),
+        isDestructive = true
+    )
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ConfirmTrashDialog(
     onConfirm: () -> Unit,
     onDismiss: () -> Unit
 ) {
-    val context = LocalContext.current
-    val isVibrationEnabled by remember { mutableStateOf(SettingsRepository.isVibrationEnabled(context)) }
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    val vibrate = { if (isVibrationEnabled) performVibration(context) }
-
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        sheetState = sheetState,
-    ) {
-        Column(
-            modifier = Modifier
-                .padding(horizontal = 24.dp)
-                .navigationBarsPadding()
-                .padding(bottom = 16.dp)
-        ) {
-            Text(
-                text = stringResource(id = R.string.confirm_move_to_trash_title),
-                style = MaterialTheme.typography.headlineSmall,
-                modifier = Modifier.padding(bottom = 8.dp)
-            )
-            Text(
-                text = stringResource(id = R.string.confirm_move_to_trash_message),
-                style = MaterialTheme.typography.bodyLarge,
-                modifier = Modifier.padding(bottom = 16.dp)
-            )
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                TextButton(
-                    onClick = onDismiss,
-                    modifier = Modifier.padding(end = 8.dp)
-                ) {
-                    Text(stringResource(id = R.string.dialog_cancel))
-                }
-                Button(
-                    onClick = {
-                        vibrate()
-                        onConfirm()
-                    }
-                ) {
-                    Text(stringResource(id = R.string.move_to_trash_button))
-                }
-            }
-        }
-    }
+    BaseConfirmDialog(
+        onConfirm = onConfirm,
+        onDismiss = onDismiss,
+        title = stringResource(id = R.string.confirm_move_to_trash_title),
+        message = stringResource(id = R.string.confirm_move_to_trash_message),
+        confirmButtonText = stringResource(id = R.string.move_to_trash_button)
+    )
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ConfirmMoveToSecretDialog(
     onConfirm: () -> Unit,
     onDismiss: () -> Unit
 ) {
-    val context = LocalContext.current
-    val isVibrationEnabled by remember { mutableStateOf(SettingsRepository.isVibrationEnabled(context)) }
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    val vibrate = { if (isVibrationEnabled) performVibration(context) }
-
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        sheetState = sheetState,
-    ) {
-        Column(
-            modifier = Modifier
-                .padding(horizontal = 24.dp)
-                .navigationBarsPadding()
-                .padding(bottom = 16.dp)
-        ) {
-            Text(
-                text = stringResource(id = R.string.confirm_move_to_secret_title),
-                style = MaterialTheme.typography.headlineSmall,
-                modifier = Modifier.padding(bottom = 8.dp)
-            )
-            Text(
-                text = stringResource(id = R.string.confirm_move_to_secret_message),
-                style = MaterialTheme.typography.bodyLarge,
-                modifier = Modifier.padding(bottom = 16.dp)
-            )
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                TextButton(
-                    onClick = onDismiss,
-                    modifier = Modifier.padding(end = 8.dp)
-                ) {
-                    Text(stringResource(id = R.string.dialog_cancel))
-                }
-                Button(
-                    onClick = {
-                        vibrate()
-                        onConfirm()
-                    }
-                ) {
-                    Text(stringResource(id = R.string.confirm_move_to_secret_button))
-                }
-            }
-        }
-    }
+    BaseConfirmDialog(
+        onConfirm = onConfirm,
+        onDismiss = onDismiss,
+        title = stringResource(id = R.string.confirm_move_to_secret_title),
+        message = stringResource(id = R.string.confirm_move_to_secret_message),
+        confirmButtonText = stringResource(id = R.string.confirm_move_to_secret_button)
+    )
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ConfirmRestoreFromSecretDialog(
     onConfirm: () -> Unit,
     onDismiss: () -> Unit
 ) {
-    val context = LocalContext.current
-    val isVibrationEnabled by remember { mutableStateOf(SettingsRepository.isVibrationEnabled(context)) }
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    val vibrate = { if (isVibrationEnabled) performVibration(context) }
-
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        sheetState = sheetState,
-    ) {
-        Column(
-            modifier = Modifier
-                .padding(horizontal = 24.dp)
-                .navigationBarsPadding()
-                .padding(bottom = 16.dp)
-        ) {
-            Text(
-                text = stringResource(id = R.string.confirm_restore_from_secret_title),
-                style = MaterialTheme.typography.headlineSmall,
-                modifier = Modifier.padding(bottom = 8.dp)
-            )
-            Text(
-                text = stringResource(id = R.string.confirm_restore_from_secret_message),
-                style = MaterialTheme.typography.bodyLarge,
-                modifier = Modifier.padding(bottom = 16.dp)
-            )
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                TextButton(
-                    onClick = onDismiss,
-                    modifier = Modifier.padding(end = 8.dp)
-                ) {
-                    Text(stringResource(id = R.string.dialog_cancel))
-                }
-                Button(
-                    onClick = {
-                        vibrate()
-                        onConfirm()
-                    }
-                ) {
-                    Text(stringResource(id = R.string.restore_button))
-                }
-            }
-        }
-    }
+    BaseConfirmDialog(
+        onConfirm = onConfirm,
+        onDismiss = onDismiss,
+        title = stringResource(id = R.string.confirm_restore_from_secret_title),
+        message = stringResource(id = R.string.confirm_restore_from_secret_message),
+        confirmButtonText = stringResource(id = R.string.restore_button)
+    )
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ConfirmDeleteFromSecretDialog(
     onConfirm: () -> Unit,
     onDismiss: () -> Unit
 ) {
-    val context = LocalContext.current
-    val isVibrationEnabled by remember { mutableStateOf(SettingsRepository.isVibrationEnabled(context)) }
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    val vibrate = { if (isVibrationEnabled) performVibration(context) }
-
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        sheetState = sheetState,
-    ) {
-        Column(
-            modifier = Modifier
-                .padding(horizontal = 24.dp)
-                .navigationBarsPadding()
-                .padding(bottom = 16.dp)
-        ) {
-            Text(
-                text = stringResource(id = R.string.confirm_delete_from_secret_title),
-                style = MaterialTheme.typography.headlineSmall,
-                modifier = Modifier.padding(bottom = 8.dp)
-            )
-            Text(
-                text = stringResource(id = R.string.confirm_delete_from_secret_message),
-                style = MaterialTheme.typography.bodyLarge,
-                modifier = Modifier.padding(bottom = 16.dp)
-            )
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                TextButton(
-                    onClick = onDismiss,
-                    modifier = Modifier.padding(end = 8.dp)
-                ) {
-                    Text(stringResource(id = R.string.dialog_cancel))
-                }
-                Button(
-                    onClick = {
-                        vibrate()
-                        onConfirm()
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
-                ) {
-                    Text(stringResource(id = R.string.delete_button))
-                }
-            }
-        }
-    }
+    BaseConfirmDialog(
+        onConfirm = onConfirm,
+        onDismiss = onDismiss,
+        title = stringResource(id = R.string.confirm_delete_from_secret_title),
+        message = stringResource(id = R.string.confirm_delete_from_secret_message),
+        confirmButtonText = stringResource(id = R.string.delete_button),
+        isDestructive = true
+    )
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ConfirmRestoreDialog(onConfirm: () -> Unit,
                          onDismiss: () -> Unit
 ) {
-    val context = LocalContext.current
-    val isVibrationEnabled by remember { mutableStateOf(SettingsRepository.isVibrationEnabled(context)) }
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    val vibrate = { if (isVibrationEnabled) performVibration(context) }
-
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        sheetState = sheetState,
-    ) {
-        Column(
-            modifier = Modifier
-                .padding(horizontal = 24.dp)
-                .navigationBarsPadding()
-                .padding(bottom = 16.dp)
-        ) {
-            Text(
-                text = stringResource(id = R.string.confirm_restore_title),
-                style = MaterialTheme.typography.headlineSmall,
-                modifier = Modifier.padding(bottom = 8.dp)
-            )
-            Text(
-                text = stringResource(id = R.string.confirm_restore_message),
-                style = MaterialTheme.typography.bodyLarge,
-                modifier = Modifier.padding(bottom = 16.dp)
-            )
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                TextButton(
-                    onClick = onDismiss,
-                    modifier = Modifier.padding(end = 8.dp)
-                ) {
-                    Text(stringResource(id = R.string.dialog_cancel))
-                }
-                Button(
-                    onClick = {
-                        vibrate()
-                        onConfirm()
-                    }
-                ) {
-                    Text(stringResource(id = R.string.restore_button))
-                }
-            }
-        }
-    }
+    BaseConfirmDialog(
+        onConfirm = onConfirm,
+        onDismiss = onDismiss,
+        title = stringResource(id = R.string.confirm_restore_title),
+        message = stringResource(id = R.string.confirm_restore_message),
+        confirmButtonText = stringResource(id = R.string.restore_button)
+    )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
