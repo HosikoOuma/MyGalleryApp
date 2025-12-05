@@ -28,7 +28,8 @@ data class SettingsState(
     val selectedLanguage: Language,
     val currentVersion: String,
     val selectedFabAction: FabAction,
-    val selectedFontFamily: AppFontFamily
+    val selectedFontFamily: AppFontFamily,
+    val isKeepControlsVisible: Boolean
 )
 
 data class SettingsActions(
@@ -59,5 +60,6 @@ data class SettingsActions(
     val onFabActionChange: (FabAction) -> Unit,
     val onViewHistoryClick: () -> Unit,
     val onAboutClick: () -> Unit,
-    val onFontFamilyChange: (AppFontFamily) -> Unit
+    val onFontFamilyChange: (AppFontFamily) -> Unit,
+    val onKeepControlsVisibleChange: (Boolean) -> Unit
 )

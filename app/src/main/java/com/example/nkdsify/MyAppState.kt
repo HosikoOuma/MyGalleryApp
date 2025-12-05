@@ -58,6 +58,7 @@ class MyAppState(
     var selectionDetails by mutableStateOf("")
     var showClearHistoryDialog by mutableStateOf(false)
     var viewHistory by mutableStateOf<ImmutableList<MediaItem>>(persistentListOf())
+    var isKeepControlsVisible by mutableStateOf(SettingsRepository.isKeepControlsVisible(context))
 
     var showUpdateDialog by mutableStateOf(false)
     var latestVersion by mutableStateOf<String?>(null)

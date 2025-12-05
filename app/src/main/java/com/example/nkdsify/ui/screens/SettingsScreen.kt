@@ -123,7 +123,9 @@ fun SettingsScreen(
                 )
                 SettingsSwitch(title = stringResource(id = R.string.auto_delete_trash_label), isChecked = state.autoDeleteTrashEnabled, onCheckedChange = actions.onAutoDeleteTrashEnabledChange, vibrate = vibrate)
                 if (state.autoDeleteTrashEnabled) {
-                    SettingsRow(    title = { Text(text = stringResource(id = R.string.auto_delete_trash_days_label)) })
+                    SettingsRow(title = { Text(text = stringResource(id = R.string.auto_delete_trash_days_label)) }) {
+                        TextField(value = state.autoDeleteTrashDays.toString(), onValueChange = { value -> actions.onAutoDeleteTrashDaysChange(value.filter { it.isDigit() }.toIntOrNull() ?: 0) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.width(80.dp))
+                    }
                 }
                 SettingsSwitch(title = stringResource(id = R.string.show_shuffle_button_label), isChecked = state.isShuffleButtonVisible, onCheckedChange = actions.onShuffleButtonVisibleChange, vibrate = vibrate)
                 SettingsSwitch(title = stringResource(id = R.string.use_large_shuffle_button_label), isChecked = state.useLargeFab, onCheckedChange = actions.onUseLargeFabChange, vibrate = vibrate)
@@ -185,6 +187,7 @@ fun SettingsScreen(
                 SettingsHeader(title = stringResource(id = R.string.media_section_title), icon = Icons.Default.Photo)
                 SettingsSwitch(title = stringResource(id = R.string.mute_video_by_default_label), isChecked = state.isMuteVideoByDefault, onCheckedChange = actions.onMuteVideoByDefaultChange, vibrate = vibrate)
                 SettingsSwitch(title = stringResource(id = R.string.loop_video_label), isChecked = state.isLoopVideoEnabled, onCheckedChange = actions.onLoopVideoEnabledChange, vibrate = vibrate)
+                SettingsSwitch(title = stringResource(id = R.string.keep_controls_visible_label), isChecked = state.isKeepControlsVisible, onCheckedChange = actions.onKeepControlsVisibleChange, vibrate = vibrate)
                 SettingsSwitch(title = stringResource(id = R.string.swipe_to_dismiss_label), isChecked = state.isSwipeToDismissEnabled, onCheckedChange = actions.onSwipeToDismissEnabledChange, vibrate = vibrate)
                 SettingsDropdown(
                     title = stringResource(id = R.string.zoom_gesture_label),

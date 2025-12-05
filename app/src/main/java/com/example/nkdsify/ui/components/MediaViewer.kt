@@ -89,7 +89,8 @@ fun MediaViewer(
     isMuteVideoByDefault: Boolean,
     zoomType: ZoomType,
     isLoopVideoEnabled: Boolean,
-    isSwipeToDismissEnabled: Boolean
+    isSwipeToDismissEnabled: Boolean,
+    isKeepControlsVisible: Boolean
 ) {
     val pagerState = rememberPagerState(initialPage = startIndex, pageCount = { items.size })
     val context = LocalContext.current
@@ -164,11 +165,17 @@ fun MediaViewer(
 
     // --- Unified Controls Visibility State ---
     var controlsVisible by remember { mutableStateOf(true) }
-    val toggleControls = { controlsVisible = !controlsVisible }
+    val toggleControls = {
+        if (!isKeepControlsVisible) {
+            controlsVisible = !controlsVisible
+        }
+    }
 
     // Auto-hide controls
-    LaunchedEffect(controlsVisible) {
-        if (controlsVisible) {
+    // Auto-hide controls
+    // Auto-hide controls
+    LaunchedEffect(controlsVisible, isKeepControlsVisible) {
+        if (controlsVisible && !isKeepControlsVisible) {
             delay(4000)
             controlsVisible = false
         }

@@ -10,6 +10,8 @@ import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.ExperimentalComposeUiApi
@@ -17,29 +19,17 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.SoftwareKeyboardController
 import coil.ImageLoader
 import com.example.nkdsify.MyAppState
-import com.example.nkdsify.data.AppFontFamily
-import com.example.nkdsify.data.FabAction
-import com.example.nkdsify.data.MediaItem
-import com.example.nkdsify.data.MediaTypeFilter
-import com.example.nkdsify.data.MediaViewerState
-import com.example.nkdsify.data.Screen
+import com.example.nkdsify.data.*
 import com.example.nkdsify.ui.components.MediaGrid
-import com.example.nkdsify.ui.screens.AboutScreen
-import com.example.nkdsify.ui.screens.FavoritesScreen
-import com.example.nkdsify.ui.screens.FoldersGrid
-import com.example.nkdsify.ui.screens.SecretStorageScreen
-import com.example.nkdsify.ui.screens.SettingsActions
-import com.example.nkdsify.ui.screens.SettingsScreen
-import com.example.nkdsify.ui.screens.SettingsState
-import com.example.nkdsify.ui.screens.TagManagementScreen
-import com.example.nkdsify.ui.screens.TrashScreen
-import com.example.nkdsify.ui.screens.ViewHistoryScreen
+import com.example.nkdsify.ui.screens.*
 import com.example.nkdsify.ui.utils.BiometricUtils
 import com.example.nkdsify.ui.utils.SettingsRepository
 import com.example.nkdsify.ui.utils.TagsRepository
 import com.example.nkdsify.ui.utils.performVibration
+import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.launch
+import java.util.*
 
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
@@ -54,7 +44,7 @@ fun MyAppNavigation(
     allMediaGridState: LazyGridState,
     secretGridState: LazyGridState,
     viewHistoryGridState: LazyGridState,
-    filteredViewHistory: List<MediaItem>,
+    filteredViewHistory: ImmutableList<MediaItem>,
     favorites: MutableList<Uri>,
     keyboardController: SoftwareKeyboardController?,
     onMoveTag: (Int, Int) -> Unit,
@@ -88,42 +78,82 @@ fun MyAppNavigation(
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
 
-    val visibleFolders = remember(myAppState.allFolders, myAppState.hiddenFolders, myAppState.isSearchActive, myAppState.searchQuery) {
-        val folders = myAppState.allFolders.filterNot { myAppState.hiddenFolders.contains(it.id.toString()) }
-        if (myAppState.isSearchActive && myAppState.searchQuery.isNotEmpty()) {
-            folders.mapNotNull { folder ->
-                val filteredItems = folder.items.filter { it.name.contains(myAppState.searchQuery, ignoreCase = true) }
-                if (filteredItems.isNotEmpty()) {
-                    folder.copy(items = filteredItems.toImmutableList())
-                } else {
-                    null
-                }
+    val sortComparator by remember(myAppState.sortType, myAppState.sortAscending) {
+        derivedStateOf {
+            val baseComparator: Comparator<MediaItem> = when (myAppState.sortType) {
+                SortType.DATE_MODIFIED -> compareBy { it.dateModified }
+                SortType.DATE_ADDED -> compareBy { it.dateAdded }
+                SortType.ALPHABET -> compareBy(String.CASE_INSENSITIVE_ORDER) { it.name }
+                SortType.SIZE -> compareBy { it.size }
             }
-        } else {
-            folders
+            if (myAppState.sortAscending) baseComparator else baseComparator.reversed()
         }
     }
 
-    val filteredFavoriteItems = remember(myAppState.favoriteItems, myAppState.isSearchActive, myAppState.searchQuery) {
-        if (myAppState.isSearchActive && myAppState.searchQuery.isNotEmpty()) {
-            myAppState.favoriteItems.filter { it.name.contains(myAppState.searchQuery, ignoreCase = true) }
-        } else {
+    val visibleFolders by remember(myAppState.allFolders, myAppState.hiddenFolders, sortComparator) {
+        derivedStateOf {
+            myAppState.allFolders
+                .filterNot { myAppState.hiddenFolders.contains(it.id.toString()) }
+                .map { folder ->
+                    folder.copy(items = folder.items.sortedWith(sortComparator).toImmutableList())
+                }
+                .toImmutableList()
+        }
+    }
+
+    val filteredFavoriteItems by remember(myAppState.favoriteItems, myAppState.searchQuery, myAppState.isSearchActive, sortComparator, myAppState.selectedDate) {
+        derivedStateOf {
             myAppState.favoriteItems
+                .filter { item ->
+                    myAppState.selectedDate?.let {
+                        val calendar = Calendar.getInstance().apply { timeInMillis = it }
+                        val itemCalendar = Calendar.getInstance().apply { timeInMillis = item.dateAdded * 1000 }
+                        calendar.get(Calendar.YEAR) == itemCalendar.get(Calendar.YEAR) &&
+                                calendar.get(Calendar.DAY_OF_YEAR) == itemCalendar.get(Calendar.DAY_OF_YEAR)
+                    } ?: true
+                }
+                .filter { item ->
+                    if (myAppState.isSearchActive && myAppState.searchQuery.isNotEmpty()) {
+                        item.name.contains(myAppState.searchQuery, ignoreCase = true)
+                    } else {
+                        true
+                    }
+                }
+                .sortedWith(sortComparator)
+                .toImmutableList()
         }
     }
 
-    val filteredAllMedia = remember(myAppState.allMedia, myAppState.isSearchActive, myAppState.searchQuery, myAppState.mediaTypeFilter) {
-        val media = when (myAppState.mediaTypeFilter) {
-            MediaTypeFilter.PHOTOS -> myAppState.allMedia.filter { !it.isVideo }
-            MediaTypeFilter.VIDEOS -> myAppState.allMedia.filter { it.isVideo }
-            else -> myAppState.allMedia
-        }
-        if (myAppState.isSearchActive && myAppState.searchQuery.isNotEmpty()) {
-            media.filter { it.name.contains(myAppState.searchQuery, ignoreCase = true) }
-        } else {
-            media
+    val filteredAllMedia by remember(myAppState.allMedia, myAppState.isSearchActive, myAppState.searchQuery, myAppState.mediaTypeFilter, sortComparator, myAppState.selectedDate) {
+        derivedStateOf {
+            myAppState.allMedia
+                .filter { item ->
+                    when (myAppState.mediaTypeFilter) {
+                        MediaTypeFilter.PHOTOS -> !item.isVideo
+                        MediaTypeFilter.VIDEOS -> item.isVideo
+                        else -> true
+                    }
+                }
+                .filter { item ->
+                    myAppState.selectedDate?.let {
+                        val calendar = Calendar.getInstance().apply { timeInMillis = it }
+                        val itemCalendar = Calendar.getInstance().apply { timeInMillis = item.dateAdded * 1000 }
+                        calendar.get(Calendar.YEAR) == itemCalendar.get(Calendar.YEAR) &&
+                                calendar.get(Calendar.DAY_OF_YEAR) == itemCalendar.get(Calendar.DAY_OF_YEAR)
+                    } ?: true
+                }
+                .filter { item ->
+                    if (myAppState.isSearchActive && myAppState.searchQuery.isNotEmpty()) {
+                        item.name.contains(myAppState.searchQuery, ignoreCase = true)
+                    } else {
+                        true
+                    }
+                }
+                .sortedWith(sortComparator)
+                .toImmutableList()
         }
     }
+
 
     AnimatedContent(targetState = myAppState.currentScreen, transitionSpec = {
         fun getScreenOrder(screen: Screen): Int = when (screen) {
@@ -171,7 +201,7 @@ fun MyAppNavigation(
             is Screen.FolderContent -> {
                 val folder = myAppState.allFolders.find { it.id == screen.folder.id } ?: screen.folder
                 val items = if (myAppState.isSearchActive && myAppState.searchQuery.isNotEmpty()) {
-                    folder.items.filter { it.name.contains(myAppState.searchQuery, ignoreCase = true) }
+                    folder.items.filter { it.name.contains(myAppState.searchQuery, ignoreCase = true) }.toImmutableList()
                 } else {
                     folder.items
                 }
@@ -183,7 +213,7 @@ fun MyAppNavigation(
                     isBlurEnabled = isBlurInFolderEnabled,
                     onItemClick = { item ->
                         keyboardController?.hide()
-                        myAppState.viewerState = MediaViewerState(items = items.toImmutableList(), startIndex = items.indexOf(item))
+                        myAppState.viewerState = MediaViewerState(items = items, startIndex = items.indexOf(item))
                     },
                     onToggleSelection = { item ->
                         if (myAppState.selectedItems.contains(item.uri)) {
@@ -253,7 +283,8 @@ fun MyAppNavigation(
                     selectedLanguage = myAppState.selectedLanguage,
                     currentVersion = myAppState.currentVersion,
                     selectedFabAction = myAppState.selectedFabAction,
-                    selectedFontFamily = selectedFontFamily
+                    selectedFontFamily = selectedFontFamily,
+                    isKeepControlsVisible = myAppState.isKeepControlsVisible
                 )
 
                 val settingsActions = SettingsActions(
@@ -368,6 +399,10 @@ fun MyAppNavigation(
                     onFabActionChange = {
                         onFabActionChange(it)
                         SettingsRepository.setFabAction(context, it)
+                    },
+                    onKeepControlsVisibleChange = {
+                        myAppState.isKeepControlsVisible = it
+                        SettingsRepository.setKeepControlsVisible(context, it)
                     }
                 )
 
@@ -451,7 +486,7 @@ fun MyAppNavigation(
             is Screen.MediaByTag -> {
                 val mediaWithTag = remember(myAppState.allMedia, myAppState.tags, screen.tag) {
                     val urisWithTag = myAppState.tags.filter { it.value.contains(screen.tag) }.keys.asSequence().map { Uri.parse(it) }.toSet()
-                    myAppState.allMedia.filter { it.uri in urisWithTag }
+                    myAppState.allMedia.filter { it.uri in urisWithTag }.toImmutableList()
                 }
                 MediaGrid(
                     items = mediaWithTag,
@@ -461,7 +496,7 @@ fun MyAppNavigation(
                     isBlurEnabled = isBlurInFolderEnabled,
                     onItemClick = { item ->
                         keyboardController?.hide()
-                        myAppState.viewerState = MediaViewerState(items = mediaWithTag.toImmutableList(), startIndex = mediaWithTag.indexOf(item))
+                        myAppState.viewerState = MediaViewerState(items = mediaWithTag, startIndex = mediaWithTag.indexOf(item))
                     },
                     onToggleSelection = { item ->
                         if (myAppState.selectedItems.contains(item.uri)) {

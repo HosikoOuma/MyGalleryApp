@@ -244,5 +244,5 @@
     <string name="about_me_telegram">ТГ - @NDhub</string>
     <string name="theme_amoled">Amoled</string>
     <string name="find_in_page_content_description">Ало где</string>
-
+    <string name="keep_controls_visible_label">Оставить вот ту ебаную панель всегда</string>
 </resources>

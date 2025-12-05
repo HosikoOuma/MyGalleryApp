@@ -89,6 +89,7 @@ import com.example.nkdsify.ui.utils.EncryptedImageDecoder
 import com.example.nkdsify.ui.utils.FavoritesRepository
 import com.example.nkdsify.ui.utils.SecretRepository
 import com.example.nkdsify.ui.utils.SettingsRepository
+import com.example.nkdsify.ui.utils.SettingsRepository.isKeepControlsVisible
 import com.example.nkdsify.ui.utils.TagsRepository
 import com.example.nkdsify.ui.utils.TrashRepository
 import com.example.nkdsify.ui.utils.ViewHistoryRepository
@@ -518,7 +519,7 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
                             allMediaGridState = allMediaGridState,
                             secretGridState = secretGridState,
                             viewHistoryGridState = viewHistoryGridState,
-                            filteredViewHistory = filteredViewHistory,
+                            filteredViewHistory = filteredViewHistory.toImmutableList(),
                             favorites = favorites,
                             keyboardController = keyboardController,
                             onMoveTag = onMoveTag,
@@ -553,7 +554,7 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
                             onFabActionChange = {
                                 myAppState.selectedFabAction = it
                                 SettingsRepository.setFabAction(context, it)
-                            }
+                            },
                         )
 
                     } else {
@@ -626,7 +627,8 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
                     isMuteVideoByDefault = myAppState.isMuteVideoByDefault,
                     zoomType = myAppState.selectedZoomType,
                     isLoopVideoEnabled = isLoopVideoEnabled,
-                    isSwipeToDismissEnabled = isSwipeToDismissEnabled
+                    isSwipeToDismissEnabled = isSwipeToDismissEnabled,
+                    isKeepControlsVisible = myAppState.isKeepControlsVisible
                 )
             }
             if (myAppState.secretViewerState != null) {
@@ -655,7 +657,8 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
                     isMuteVideoByDefault = myAppState.isMuteVideoByDefault,
                     zoomType = myAppState.selectedZoomType,
                     isLoopVideoEnabled = isLoopVideoEnabled,
-                    isSwipeToDismissEnabled = isSwipeToDismissEnabled
+                    isSwipeToDismissEnabled = isSwipeToDismissEnabled,
+                    isKeepControlsVisible = myAppState.isKeepControlsVisible
                 )
             }
         }

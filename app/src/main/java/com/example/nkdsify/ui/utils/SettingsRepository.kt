@@ -34,6 +34,7 @@ object SettingsRepository {
     private const val SPECIAL_LANGUAGE_UNLOCKED_KEY = "special_language_unlocked"
     private const val FAB_ACTION_KEY = "fab_action"
     private const val FIRST_LAUNCH_KEY = "first_launch"
+    private const val KEEP_CONTROLS_VISIBLE_KEY = "keep_controls_visible"
 
 
     fun setFontFamily(context: Context, fontFamily: AppFontFamily) {context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit().putString("font_family", fontFamily.name).apply()
@@ -324,4 +325,17 @@ object SettingsRepository {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         return prefs.getBoolean(SHOW_FILE_COUNT_KEY, true)
     }
+
+    fun setKeepControlsVisible(context: Context, enabled: Boolean) {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit {
+            putBoolean(KEEP_CONTROLS_VISIBLE_KEY, enabled)
+        }
+    }
+
+    fun isKeepControlsVisible(context: Context): Boolean {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        return prefs.getBoolean(KEEP_CONTROLS_VISIBLE_KEY, false)
+    }
+
 }
