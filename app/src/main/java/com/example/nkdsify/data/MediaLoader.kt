@@ -219,6 +219,7 @@ fun loadFavoriteMediaItems(
     favoriteUris: Set<Uri>,
     sortType: SortType,
     sortAscending: Boolean,
+    hiddenFolderIds: Set<String>,
     selectedDate: Long? = null
 ): ImmutableList<MediaItem> {
     val contentUris = favoriteUris.filter { it.scheme == "content" }
@@ -239,7 +240,8 @@ fun loadFavoriteMediaItems(
         MediaStore.Files.FileColumns.DISPLAY_NAME,
         MediaStore.Files.FileColumns.SIZE,
         MediaStore.Files.FileColumns.DATE_ADDED,
-        MediaStore.Files.FileColumns.DATE_MODIFIED
+        MediaStore.Files.FileColumns.DATE_MODIFIED,
+        MediaStore.Files.FileColumns.BUCKET_ID
     )
 
     val selectionParts = mutableListOf<String>()
@@ -247,6 +249,11 @@ fun loadFavoriteMediaItems(
 
     selectionParts.add("${MediaStore.Files.FileColumns._ID} IN (${contentUris.joinToString { "?" }})")
     selectionArgs.addAll(contentUris.map { ContentUris.parseId(it).toString() })
+
+    if (hiddenFolderIds.isNotEmpty()) {
+        selectionParts.add("${MediaStore.Files.FileColumns.BUCKET_ID} NOT IN (${hiddenFolderIds.joinToString { "?" }})")
+        selectionArgs.addAll(hiddenFolderIds)
+    }
 
     selectedDate?.let {
         val calendar = Calendar.getInstance()

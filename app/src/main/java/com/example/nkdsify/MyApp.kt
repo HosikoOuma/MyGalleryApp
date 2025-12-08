@@ -342,9 +342,9 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
                 }
             }
         }
-        LaunchedEffect(myAppState.hasPermissions, myAppState.sortType, myAppState.sortAscending, myAppState.selectedDate, favorites.size, myAppState.refreshTrigger) {
+        LaunchedEffect(myAppState.hasPermissions, myAppState.sortType, myAppState.sortAscending, myAppState.selectedDate, favorites.size, myAppState.refreshTrigger, myAppState.hiddenFolders) {
             if (myAppState.hasPermissions) {
-                myAppState.favoriteItems = withContext(Dispatchers.IO) { loadFavoriteMediaItems(context, favorites.toSet(), myAppState.sortType, myAppState.sortAscending, myAppState.selectedDate) }
+                myAppState.favoriteItems = withContext(Dispatchers.IO) { loadFavoriteMediaItems(context, favorites.toSet(), myAppState.sortType, myAppState.sortAscending, myAppState.hiddenFolders, myAppState.selectedDate) }
             }
         }
         DisposableEffect(Unit) {
