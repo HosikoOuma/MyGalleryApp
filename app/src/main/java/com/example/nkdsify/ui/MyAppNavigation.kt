@@ -25,6 +25,7 @@ import com.example.nkdsify.ui.screens.*
 import com.example.nkdsify.ui.utils.BiometricUtils
 import com.example.nkdsify.ui.utils.SettingsRepository
 import com.example.nkdsify.ui.utils.TagsRepository
+import com.example.nkdsify.ui.utils.parseQueryString
 import com.example.nkdsify.ui.utils.performVibration
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
@@ -98,8 +99,10 @@ fun MyAppNavigation(
         }
     }
 
-    val filteredFavoriteItems by remember(myAppState.favoriteItems, myAppState.searchQuery, myAppState.isSearchActive, sortComparator, myAppState.selectedDate) {
+    val filteredFavoriteItems by remember(myAppState.favoriteItems, myAppState.searchQuery, myAppState.isSearchActive, sortComparator, myAppState.selectedDate, myAppState.tags) {
         derivedStateOf {
+            val parsedQuery = parseQueryString(myAppState.searchQuery)
+
             myAppState.favoriteItems
                 .filter { item ->
                     myAppState.selectedDate?.let {
@@ -111,7 +114,12 @@ fun MyAppNavigation(
                 }
                 .filter { item ->
                     if (myAppState.isSearchActive && myAppState.searchQuery.isNotEmpty()) {
-                        item.name.contains(myAppState.searchQuery, ignoreCase = true)
+                        val itemTags = myAppState.tags[item.absolutePath] ?: emptySet()
+                        val includes = parsedQuery.includedTags.isEmpty() || itemTags.containsAll(parsedQuery.includedTags)
+                        val excludes = parsedQuery.excludedTags.isNotEmpty() && itemTags.any { it in parsedQuery.excludedTags }
+                        val textMatch = parsedQuery.searchTerms.isEmpty() || parsedQuery.searchTerms.all { term -> item.name.contains(term, ignoreCase = true) }
+
+                        includes && !excludes && textMatch
                     } else {
                         true
                     }

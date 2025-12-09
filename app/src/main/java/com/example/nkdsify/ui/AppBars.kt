@@ -26,6 +26,7 @@ import com.example.nkdsify.R
 import com.example.nkdsify.data.MediaTypeFilter
 import com.example.nkdsify.data.Screen
 import com.example.nkdsify.data.SortType
+import com.example.nkdsify.ui.components.TagVisualTransformation
 import com.example.nkdsify.ui.utils.performVibration
 import kotlinx.coroutines.launch
 
@@ -227,7 +228,12 @@ fun TopBar(
                             placeholder = { Text(stringResource(id = R.string.search_placeholder)) },
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .focusRequester(focusRequester)
+                                .focusRequester(focusRequester),
+                            visualTransformation = TagVisualTransformation(MaterialTheme.colorScheme.secondaryContainer),
+                            colors = TextFieldDefaults.colors(
+                                unfocusedContainerColor = Color.Transparent,
+                                focusedContainerColor = Color.Transparent
+                            )
                         )
                     } else {
                         Text(title)
