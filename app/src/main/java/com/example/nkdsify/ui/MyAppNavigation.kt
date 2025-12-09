@@ -45,7 +45,7 @@ fun MyAppNavigation(
     secretGridState: LazyGridState,
     viewHistoryGridState: LazyGridState,
     filteredViewHistory: ImmutableList<MediaItem>,
-    favorites: MutableList<Uri>,
+    favorites: MutableList<String>,
     keyboardController: SoftwareKeyboardController?,
     onMoveTag: (Int, Int) -> Unit,
     onAddNewTag: (String) -> Unit,
@@ -90,13 +90,10 @@ fun MyAppNavigation(
         }
     }
 
-    val visibleFolders by remember(myAppState.allFolders, myAppState.hiddenFolders, sortComparator) {
+    val visibleFolders by remember(myAppState.allFolders, myAppState.hiddenFolders) {
         derivedStateOf {
             myAppState.allFolders
                 .filterNot { myAppState.hiddenFolders.contains(it.id.toString()) }
-                .map { folder ->
-                    folder.copy(items = folder.items.sortedWith(sortComparator).toImmutableList())
-                }
                 .toImmutableList()
         }
     }
@@ -200,10 +197,13 @@ fun MyAppNavigation(
 
             is Screen.FolderContent -> {
                 val folder = myAppState.allFolders.find { it.id == screen.folder.id } ?: screen.folder
+                val sortedItems = remember(folder.items, sortComparator) {
+                    folder.items.sortedWith(sortComparator).toImmutableList()
+                }
                 val items = if (myAppState.isSearchActive && myAppState.searchQuery.isNotEmpty()) {
-                    folder.items.filter { it.name.contains(myAppState.searchQuery, ignoreCase = true) }.toImmutableList()
+                    sortedItems.filter { it.name.contains(myAppState.searchQuery, ignoreCase = true) }.toImmutableList()
                 } else {
-                    folder.items
+                    sortedItems
                 }
                 MediaGrid(
                     items = items,
@@ -288,10 +288,7 @@ fun MyAppNavigation(
                 )
 
                 val settingsActions = SettingsActions(
-                    onBlurEnabledChange = {
-                        onBlurEnabledChange(it)
-                        SettingsRepository.setBlurEnabled(context, it)
-                    },
+                    onBlurEnabledChange = onBlurEnabledChange,
                     onBlurInFolderEnabledChange = {
                         onBlurInFolderEnabledChange(it)
                         SettingsRepository.setBlurInFolderEnabled(context, it)
@@ -485,8 +482,8 @@ fun MyAppNavigation(
             }
             is Screen.MediaByTag -> {
                 val mediaWithTag = remember(myAppState.allMedia, myAppState.tags, screen.tag) {
-                    val urisWithTag = myAppState.tags.filter { it.value.contains(screen.tag) }.keys.asSequence().map { Uri.parse(it) }.toSet()
-                    myAppState.allMedia.filter { it.uri in urisWithTag }.toImmutableList()
+                    val urisWithTag = myAppState.tags.filter { it.value.contains(screen.tag) }.keys
+                    myAppState.allMedia.filter { it.absolutePath in urisWithTag }.toImmutableList()
                 }
                 MediaGrid(
                     items = mediaWithTag,

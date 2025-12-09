@@ -83,9 +83,9 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-runtime-compose")
 
     // Coil for image loading (versions are not in Compose BOM)
-    implementation("io.coil-kt:coil-compose:2.7.0")
-    implementation("io.coil-kt:coil-gif:2.7.0")
-    implementation("io.coil-kt:coil-video:2.7.0")
+    implementation(libs.coil.compose)
+    implementation(libs.coil.gif)
+    implementation(libs.coil.video)
     implementation("com.github.yalantis:ucrop:2.2.8")
     implementation("com.vanniktech:android-image-cropper:4.5.0")
 

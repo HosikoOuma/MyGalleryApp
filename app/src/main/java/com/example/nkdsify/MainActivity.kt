@@ -171,10 +171,10 @@ class MainActivity : AppCompatActivity() {
                     isBlurInFolderEnabled = newBlurState
                     isTrashBlurEnabled = newBlurState
                     isBlurAllMediaEnabled = newBlurState
-                    SettingsRepository.setBlurEnabled(this@MainActivity, newBlurState)
-                    SettingsRepository.setBlurInFolderEnabled(this@MainActivity, newBlurState)
-                    SettingsRepository.setTrashBlurEnabled(this@MainActivity, newBlurState)
-                    SettingsRepository.setBlurAllMediaEnabled(this@MainActivity, newBlurState)
+                    SettingsRepository.setBlurEnabled(this, newBlurState)
+                    SettingsRepository.setBlurInFolderEnabled(this, newBlurState)
+                    SettingsRepository.setTrashBlurEnabled(this, newBlurState)
+                    SettingsRepository.setBlurAllMediaEnabled(this, newBlurState)
                 }
             }
         }
@@ -190,5 +190,3 @@ class MainActivity : AppCompatActivity() {
         sensorManager?.unregisterListener(shakeDetector)
     }
 }
-
-

@@ -29,6 +29,7 @@ fun loadAllMedia(
 
     val projection = arrayOf(
         MediaStore.Files.FileColumns._ID,
+        MediaStore.Files.FileColumns.DATA,
         MediaStore.Files.FileColumns.MEDIA_TYPE,
         MediaStore.Files.FileColumns.DISPLAY_NAME,
         MediaStore.Files.FileColumns.BUCKET_ID,
@@ -78,6 +79,7 @@ fun loadAllMedia(
 
     context.contentResolver.query(collection, projection, selection, selectionArgs.toTypedArray(), sortOrder)?.use { cursor ->
         val idColumn = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns._ID)
+        val dataColumn = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.DATA)
         val mediaTypeColumn = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.MEDIA_TYPE)
         val nameColumn = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.DISPLAY_NAME)
         val sizeColumn = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.SIZE)
@@ -86,6 +88,7 @@ fun loadAllMedia(
 
         while (cursor.moveToNext()) {
             val id = cursor.getLong(idColumn)
+            val path = cursor.getString(dataColumn)
             val uri = ContentUris.withAppendedId(collection, id)
             val mediaType = cursor.getInt(mediaTypeColumn)
             val name = cursor.getString(nameColumn)
@@ -94,7 +97,7 @@ fun loadAllMedia(
             val dateModified = cursor.getLong(dateModifiedColumn)
 
             val isVideo = mediaType == MediaStore.Files.FileColumns.MEDIA_TYPE_VIDEO
-            mediaItems.add(MediaItem(uri, name, isVideo, size, dateAdded, dateModified))
+            mediaItems.add(MediaItem(uri, name, path, isVideo, size, dateAdded, dateModified))
         }
     }
 
@@ -165,6 +168,7 @@ fun loadMediaFolders(
 
     context.contentResolver.query(collection, projection, selection, selectionArgs.toTypedArray(), sortOrder)?.use { cursor ->
         val idColumn = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns._ID)
+        val dataColumn = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.DATA)
         val bucketIdColumn = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.BUCKET_ID)
         val bucketNameColumn = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.BUCKET_DISPLAY_NAME)
         val mediaTypeColumn = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.MEDIA_TYPE)
@@ -175,6 +179,7 @@ fun loadMediaFolders(
 
         while (cursor.moveToNext()) {
             val id = cursor.getLong(idColumn)
+            val path = cursor.getString(dataColumn)
             val uri = ContentUris.withAppendedId(collection, id)
             val bucketId = cursor.getLong(bucketIdColumn)
             val bucketName = cursor.getString(bucketNameColumn)
@@ -185,7 +190,7 @@ fun loadMediaFolders(
             val dateModified = cursor.getLong(dateModifiedColumn)
 
             val isVideo = mediaType == MediaStore.Files.FileColumns.MEDIA_TYPE_VIDEO
-            val item = MediaItem(uri, name, isVideo, size, dateAdded, dateModified)
+            val item = MediaItem(uri, name, path, isVideo, size, dateAdded, dateModified)
 
             if (!foldersMap.containsKey(bucketId)) {
                 foldersMap[bucketId] = mutableListOf()
@@ -216,14 +221,13 @@ fun loadMediaFolders(
 
 fun loadFavoriteMediaItems(
     context: Context,
-    favoriteUris: Set<Uri>,
+    favoritePaths: Set<String>,
     sortType: SortType,
     sortAscending: Boolean,
     hiddenFolderIds: Set<String>,
     selectedDate: Long? = null
 ): ImmutableList<MediaItem> {
-    val contentUris = favoriteUris.filter { it.scheme == "content" }
-    if (contentUris.isEmpty()) {
+    if (favoritePaths.isEmpty()) {
         return persistentListOf()
     }
 
@@ -236,6 +240,7 @@ fun loadFavoriteMediaItems(
 
     val projection = arrayOf(
         MediaStore.Files.FileColumns._ID,
+        MediaStore.Files.FileColumns.DATA,
         MediaStore.Files.FileColumns.MEDIA_TYPE,
         MediaStore.Files.FileColumns.DISPLAY_NAME,
         MediaStore.Files.FileColumns.SIZE,
@@ -247,8 +252,8 @@ fun loadFavoriteMediaItems(
     val selectionParts = mutableListOf<String>()
     val selectionArgs = mutableListOf<String>()
 
-    selectionParts.add("${MediaStore.Files.FileColumns._ID} IN (${contentUris.joinToString { "?" }})")
-    selectionArgs.addAll(contentUris.map { ContentUris.parseId(it).toString() })
+    selectionParts.add("${MediaStore.Files.FileColumns.DATA} IN (${favoritePaths.joinToString { "?" }})")
+    selectionArgs.addAll(favoritePaths)
 
     if (hiddenFolderIds.isNotEmpty()) {
         selectionParts.add("${MediaStore.Files.FileColumns.BUCKET_ID} NOT IN (${hiddenFolderIds.joinToString { "?" }})")
@@ -285,6 +290,7 @@ fun loadFavoriteMediaItems(
 
     context.contentResolver.query(collection, projection, selection, selectionArgs.toTypedArray(), sortOrder)?.use { cursor ->
         val idColumn = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns._ID)
+        val dataColumn = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.DATA)
         val mediaTypeColumn = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.MEDIA_TYPE)
         val nameColumn = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.DISPLAY_NAME)
         val sizeColumn = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.SIZE)
@@ -293,6 +299,7 @@ fun loadFavoriteMediaItems(
 
         while (cursor.moveToNext()) {
             val id = cursor.getLong(idColumn)
+            val path = cursor.getString(dataColumn)
             val uri = ContentUris.withAppendedId(collection, id)
             val mediaType = cursor.getInt(mediaTypeColumn)
             val name = cursor.getString(nameColumn)
@@ -300,7 +307,7 @@ fun loadFavoriteMediaItems(
             val dateAdded = cursor.getLong(dateAddedColumn)
             val dateModified = cursor.getLong(dateModifiedColumn)
             val isVideo = mediaType == MediaStore.Files.FileColumns.MEDIA_TYPE_VIDEO
-            favoriteItems.add(MediaItem(uri, name, isVideo, size, dateAdded, dateModified))
+            favoriteItems.add(MediaItem(uri, name, path, isVideo, size, dateAdded, dateModified))
         }
     }
     return favoriteItems.toImmutableList()
@@ -324,7 +331,7 @@ fun loadTrashedMediaItems(
                         name.endsWith(".mkv", true) ||
                         name.endsWith(".webm", true)
 
-                MediaItem(uri, name, isVideo, size, lastModified / 1000, lastModified / 1000)
+                MediaItem(uri, name, path, isVideo, size, lastModified / 1000, lastModified / 1000)
             } else {
                 null
             }

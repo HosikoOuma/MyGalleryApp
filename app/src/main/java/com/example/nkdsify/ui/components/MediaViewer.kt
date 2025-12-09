@@ -75,13 +75,13 @@ import java.io.File
 fun MediaViewer(
     items: List<MediaItem>,
     startIndex: Int,
-    favorites: List<Uri>,
+    favorites: List<String>,
     onDismiss: () -> Unit,
     imageLoader: ImageLoader,
     onDelete: (List<Uri>) -> Unit,
     onRestore: (List<Uri>) -> Unit,
     onShowTagDialog: (Uri) -> Unit,
-    onToggleFavorite: (Uri) -> Unit,
+    onToggleFavorite: (String) -> Unit,
     onShowDetails: (Uri) -> Unit,
     isExternal: Boolean = false,
     isTrashMode: Boolean,
@@ -194,7 +194,8 @@ fun MediaViewer(
             state = pagerState,
             modifier = Modifier.fillMaxSize(),
             key = { items[it].uri },
-            userScrollEnabled = isSwipeToDismissEnabled        ) { page ->
+            userScrollEnabled = isSwipeToDismissEnabled
+        ) { page ->
             val item = items[page]
             val isVisible by remember { derivedStateOf { pagerState.currentPage == page } }
 
@@ -356,7 +357,7 @@ fun MediaViewer(
                                     showExternalMediaError = true
                                 } else {
                                     // Toggle favorite state first
-                                    onToggleFavorite(currentItem.uri)
+                                    onToggleFavorite(currentItem.absolutePath)
                                     // Then run the animation
                                     coroutineScope.launch {
                                         scale.animateTo(
@@ -372,9 +373,9 @@ fun MediaViewer(
                             }) {
                                 Icon(
                                     modifier = Modifier.scale(scale.value),
-                                    imageVector = if (favorites.contains(currentItem.uri)) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
+                                    imageVector = if (favorites.contains(currentItem.absolutePath)) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
                                     contentDescription = "Favorite",
-                                    tint = if (favorites.contains(currentItem.uri)) Color.Red else Color.White
+                                    tint = if (favorites.contains(currentItem.absolutePath)) Color.Red else Color.White
                                 )
                             }
                             IconButton(onClick = {

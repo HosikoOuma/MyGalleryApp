@@ -19,7 +19,7 @@ import com.example.nkdsify.ui.components.MediaGrid
 @Composable
 fun ViewHistoryScreen(
     items: List<MediaItem>,
-    favorites: List<Uri>,
+    favorites: List<String>,
     selectedItems: List<Uri>,
     imageLoader: ImageLoader,
     onItemClick: (List<MediaItem>, MediaItem) -> Unit,

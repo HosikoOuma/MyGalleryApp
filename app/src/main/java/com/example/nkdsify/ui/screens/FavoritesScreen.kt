@@ -43,7 +43,7 @@ import com.example.nkdsify.ui.components.MediaGrid
 @Composable
 fun FavoritesScreen(
     items: List<MediaItem>,
-    favorites: List<Uri>,
+    favorites: List<String>,
     selectedItems: List<Uri>,
     imageLoader: ImageLoader,
     tags: Map<String, Set<String>>,
@@ -60,7 +60,7 @@ fun FavoritesScreen(
     blurType: BlurType
 ) {
     val taggedAlbums = items
-        .flatMap { item -> (tags[item.uri.toString()] ?: emptySet()).map { tag -> tag to item } }
+        .flatMap { item -> (tags[item.absolutePath] ?: emptySet()).map { tag -> tag to item } }
         .groupBy({ it.first }, { it.second })
 
     val displayAlbums = mutableListOf<Pair<String, List<MediaItem>>>()

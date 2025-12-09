@@ -119,7 +119,7 @@ object SecretRepository {
                 val name = file.name
                 val isVideo = name.endsWith(".mp4", true) || name.endsWith(".webm", true) 
                 // The URI for MediaItem should point to the full file, not the thumbnail
-                MediaItem(uri, name, isVideo, 0, 0, 0)
+                MediaItem(uri, name, file.absolutePath, isVideo, 0, 0, 0)
             } catch (e: Exception) {
                 null
             }

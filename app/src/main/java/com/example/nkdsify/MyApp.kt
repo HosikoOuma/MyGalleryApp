@@ -1,4 +1,5 @@
 @file:kotlin.OptIn(ExperimentalMaterial3Api::class)
+
 package com.example.nkdsify
 
 import com.example.nkdsify.ui.MyAppTopBar
@@ -87,6 +88,7 @@ import com.example.nkdsify.ui.dialogs.DeletionDialogs
 import com.example.nkdsify.ui.theme.NkdsifyAppTheme
 import com.example.nkdsify.ui.utils.EncryptedImageDecoder
 import com.example.nkdsify.ui.utils.FavoritesRepository
+import com.example.nkdsify.ui.utils.MigrationUtils
 import com.example.nkdsify.ui.utils.SecretRepository
 import com.example.nkdsify.ui.utils.SettingsRepository
 import com.example.nkdsify.ui.utils.SettingsRepository.isKeepControlsVisible
@@ -126,6 +128,11 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
     val coroutineScope = rememberCoroutineScope()
     val keyboardController = LocalSoftwareKeyboardController.current
     LaunchedEffect(Unit) {
+        myAppState.isProcessing = true
+        MigrationUtils.runMigrationIfNeeded(context)
+        myAppState.isProcessing = false
+    }
+    LaunchedEffect(Unit) {
         myAppState.checkForUpdates(false)
     }
     LaunchedEffect(myAppState.selectedLanguage) {
@@ -156,7 +163,7 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
         }
 
         val favorites = remember {
-            val initialFavorites = FavoritesRepository.getFavorites(context).map { it.toUri() }
+            val initialFavorites = FavoritesRepository.getFavorites(context)
             mutableStateListOf(*initialFavorites.toTypedArray())
         }
         myAppState.allTags = TagsRepository.getAllTags(context).toImmutableList()
@@ -174,19 +181,7 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
                 TagsRepository.saveAllTags(context, mutableTags)
             }
         }
-        val imageLoader = rememberCoilImageLoader(
-            context = context,
-            gridState = when (myAppState.currentScreen) {
-                is Screen.Folders -> foldersGridState
-                is Screen.FolderContent -> folderContentGridState
-                is Screen.Favorites -> favoritesGridState
-                is Screen.Trash -> trashGridState
-                is Screen.AllMedia -> allMediaGridState
-                is Screen.SecretStorage -> secretGridState
-                is Screen.ViewHistory -> viewHistoryGridState
-                else -> rememberLazyGridState()
-            }
-        )
+        val imageLoader = rememberCoilImageLoader(context)
         val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { permissions ->
             myAppState.hasPermissions = permissions.values.all { it }
         }
@@ -268,15 +263,15 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
                     } else {
                         val details = getMediaDetails(context, initialUri)
                         val name = details?.name ?: ""
+                        val path = details?.path ?: ""
                         val isVideo = context.contentResolver.getType(initialUri)?.startsWith("video/") == true
-                        myAppState.viewerState = MediaViewerState(  persistentListOf(MediaItem(initialUri, name, isVideo, 0, 0, 0)), 0, isExternal = true)
+                        myAppState.viewerState = MediaViewerState(  persistentListOf(MediaItem(initialUri, name, path, isVideo, 0, 0, 0)), 0, isExternal = true)
                     }
                 }
             }
         }
         LaunchedEffect(favorites.toList()) {
-            val favoriteStrings = favorites.map { it.toString() }.toSet()
-            FavoritesRepository.saveFavorites(context, favoriteStrings)
+            FavoritesRepository.saveFavorites(context, favorites.toSet())
         }
         LaunchedEffect(myAppState.currentScreen) {
             val screen = myAppState.currentScreen as? Screen.FolderContent
@@ -617,11 +612,11 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
                     },
                     onShowTagDialog = { uri -> myAppState.showTagDialog = uri },
                     onShowDetails = { uri -> myAppState.showDetailsDialog = uri },
-                    onToggleFavorite = { uri ->
-                        if (favorites.contains(uri)) {
-                            favorites.remove(uri)
+                    onToggleFavorite = { path ->
+                        if (favorites.contains(path)) {
+                            favorites.remove(path)
                         } else {
-                            favorites.add(uri)
+                            favorites.add(path)
                         }
                     },
                     isMuteVideoByDefault = myAppState.isMuteVideoByDefault,

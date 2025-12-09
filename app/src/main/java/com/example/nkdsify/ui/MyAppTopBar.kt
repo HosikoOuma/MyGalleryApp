@@ -18,7 +18,7 @@ fun MyAppTopBar(
     myAppState: MyAppState,
     isVibrationEnabled: Boolean,
     title: String,
-    favorites: SnapshotStateList<Uri>,
+    favorites: SnapshotStateList<String>,
     context: Context
 ) {
     TopBar(
@@ -34,7 +34,7 @@ fun MyAppTopBar(
                 is Screen.Favorites -> {
                     if (screen.openAlbumName != null) {
                         val taggedAlbums = myAppState.favoriteItems
-                            .flatMap { item -> (myAppState.tags[item.uri.toString()] ?: emptySet()).map { tag -> tag to item } }
+                            .flatMap { item -> (myAppState.tags[item.absolutePath] ?: emptySet()).map { tag -> tag to item } }
                             .groupBy({ it.first }, { it.second })
                         taggedAlbums[screen.openAlbumName]?.map { it.uri } ?: emptyList()
                     } else {
@@ -42,8 +42,8 @@ fun MyAppTopBar(
                     }
                 }
                 is Screen.MediaByTag -> {
-                    val urisWithTag = myAppState.tags.filter { it.value.contains(screen.tag) }.keys.map { Uri.parse(it) }.toSet()
-                    myAppState.allMedia.filter { it.uri in urisWithTag }.map { it.uri }
+                    val urisWithTag = myAppState.tags.filter { it.value.contains(screen.tag) }.keys
+                    myAppState.allMedia.filter { it.absolutePath in urisWithTag }.map { it.uri }
                 }
                 is Screen.Trash -> myAppState.trashedItems.map { it.uri }
                 else -> emptyList()
@@ -101,12 +101,12 @@ fun MyAppTopBar(
             if (isVibrationEnabled) {
                 performVibration(context)
             }
-            val selectedUris = myAppState.selectedItems.toList()
-            selectedUris.forEach { uri ->
-                if (favorites.contains(uri)) {
-                    favorites.remove(uri)
+            val selectedPaths = myAppState.selectedItems.mapNotNull { uri -> myAppState.allMedia.find { it.uri == uri }?.absolutePath }
+            selectedPaths.forEach { path ->
+                if (favorites.contains(path)) {
+                    favorites.remove(path)
                 } else {
-                    favorites.add(uri)
+                    favorites.add(path)
                 }
             }
         },

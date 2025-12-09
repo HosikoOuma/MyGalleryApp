@@ -67,7 +67,7 @@ import kotlinx.coroutines.launch
 fun MediaGrid(
     modifier: Modifier = Modifier,
     items: List<MediaItem>,
-    favorites: List<Uri>,
+    favorites: List<String>,
     selectedItems: List<Uri>,
     imageLoader: ImageLoader,
     onItemClick: (MediaItem) -> Unit,
@@ -161,7 +161,7 @@ fun MediaGrid(
                                 .size(24.dp)
                         )
                     }
-                    if (favorites.contains(item.uri)) {
+                    if (favorites.contains(item.absolutePath)) {
                         Icon(
                             imageVector = Icons.Filled.Favorite,
                             contentDescription = "Favorite",

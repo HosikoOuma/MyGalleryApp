@@ -60,6 +60,7 @@ data class MediaFolder(
 data class MediaItem(
     val uri: Uri,
     val name: String,
+    val absolutePath: String,
     val isVideo: Boolean = false,
     val size: Long,
     val dateAdded: Long,

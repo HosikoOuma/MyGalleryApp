@@ -5,7 +5,6 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
-import androidx.core.net.toUri
 import com.example.nkdsify.MyAppState
 import com.example.nkdsify.R
 import com.example.nkdsify.ui.components.BackupAndRestoreDialog
@@ -23,7 +22,7 @@ fun TagDialogs(
     myAppState: MyAppState,
     onAddNewTag: (String) -> Unit,
     isVibrationEnabled: Boolean,
-    favorites: MutableList<Uri>
+    favorites: MutableList<String>
 ) {
     val context = LocalContext.current
     val importFavoritesLauncher = rememberLauncherForActivityResult(contract = ActivityResultContracts.GetContent()) { uri: Uri? ->
@@ -34,7 +33,7 @@ fun TagDialogs(
                     val type = object : TypeToken<Set<String>>() {}.type
                     val importedFavorites: Set<String> = Gson().fromJson(json, type)
                     favorites.clear()
-                    favorites.addAll(importedFavorites.map { uriString -> uriString.toUri() })
+                    favorites.addAll(importedFavorites)
                     myAppState.refreshTrigger++
                     android.widget.Toast.makeText(context, context.getString(R.string.favorites_imported_successfully), android.widget.Toast.LENGTH_SHORT).show()
                 }
@@ -59,9 +58,9 @@ fun TagDialogs(
                     val currentAllTags = TagsRepository.getAllTags(context).toMutableList()
 
                     // 2. Merge tagsMap (file-to-tag assignments)
-                    importedBackup.tagsMap.forEach { (uri, importedTagSet) ->
-                        val currentTagSet = currentTagsMap.getOrPut(uri) { emptySet() }
-                        currentTagsMap[uri] = currentTagSet + importedTagSet // Union of the two sets
+                    importedBackup.tagsMap.forEach { (path, importedTagSet) ->
+                        val currentTagSet = currentTagsMap.getOrPut(path) { emptySet() }
+                        currentTagsMap[path] = currentTagSet + importedTagSet // Union of the two sets
                     }
 
                     // 3. Merge allTags (the ordered list of unique tags)
@@ -89,23 +88,25 @@ fun TagDialogs(
     }
 
     if (myAppState.showTagDialog != null) {
-        val uri = myAppState.showTagDialog!!
-        TagEditDialog(
-            initialTags = TagsRepository.getTagsForItem(context, uri),
-            allTags = myAppState.allTags.toList(),
-            onDismiss = { myAppState.showTagDialog = null },
-            onSave = { tagSet ->
-                TagsRepository.setTagsForItem(context, uri, tagSet)
-                myAppState.tags = TagsRepository.getTags(context)
-                myAppState.allTags = TagsRepository.getAllTags(context) .toImmutableList()
-                myAppState.showTagDialog = null
-            })
+        val path = myAppState.allMedia.find { it.uri == myAppState.showTagDialog }?.absolutePath
+        if (path != null) {
+            TagEditDialog(
+                initialTags = TagsRepository.getTagsForItem(context, path),
+                allTags = myAppState.allTags.toList(),
+                onDismiss = { myAppState.showTagDialog = null },
+                onSave = { tagSet ->
+                    TagsRepository.setTagsForItem(context, path, tagSet)
+                    myAppState.tags = TagsRepository.getTags(context)
+                    myAppState.allTags = TagsRepository.getAllTags(context).toImmutableList()
+                    myAppState.showTagDialog = null
+                })
+        }
     }
 
     if (myAppState.showBulkTagDialog) {
-        val uris = myAppState.selectedItems.toList()
-        val commonTags = if (uris.isNotEmpty()) {
-            uris.map { TagsRepository.getTagsForItem(context, it) }.reduce { acc, set -> acc.intersect(set) }
+        val paths = myAppState.selectedItems.mapNotNull { uri -> myAppState.allMedia.find { it.uri == uri }?.absolutePath }
+        val commonTags = if (paths.isNotEmpty()) {
+            paths.map { TagsRepository.getTagsForItem(context, it) }.reduce { acc, set -> acc.intersect(set) }
         } else emptySet()
 
         TagEditDialog(
@@ -115,11 +116,11 @@ fun TagDialogs(
             onSave = { newTags ->
                 val tagsToAdd = newTags - commonTags
                 val tagsToRemove = commonTags - newTags
-                uris.forEach { uri ->
-                    val currentTags = TagsRepository.getTagsForItem(context, uri).toMutableSet()
+                paths.forEach { path ->
+                    val currentTags = TagsRepository.getTagsForItem(context, path).toMutableSet()
                     currentTags.addAll(tagsToAdd)
                     currentTags.removeAll(tagsToRemove)
-                    TagsRepository.setTagsForItem(context, uri, currentTags)
+                    TagsRepository.setTagsForItem(context, path, currentTags)
                 }
                 myAppState.tags = TagsRepository.getTags(context)
                 myAppState.allTags = TagsRepository.getAllTags(context).toImmutableList()
@@ -133,7 +134,7 @@ fun TagDialogs(
         BackupAndRestoreDialog(
             onDismiss = { myAppState.showBackupAndRestoreDialog = false },
             onExportFavorites = {
-                val json = Gson().toJson(favorites.map { it.toString() })
+                val json = Gson().toJson(favorites)
                 val values = android.content.ContentValues().apply {
                     put(android.provider.MediaStore.MediaColumns.DISPLAY_NAME, "favorites_backup.json")
                     put(android.provider.MediaStore.MediaColumns.MIME_TYPE, "application/json")

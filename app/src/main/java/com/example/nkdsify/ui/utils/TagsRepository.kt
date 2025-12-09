@@ -61,17 +61,17 @@ object TagsRepository {
         }
     }
 
-    fun getTagsForItem(context: Context, uri: Uri): Set<String> {
+    fun getTagsForItem(context: Context, path: String): Set<String> {
         val allTags = getTags(context)
-        return allTags[uri.toString()] ?: emptySet()
+        return allTags[path] ?: emptySet()
     }
 
-    fun setTagsForItem(context: Context, uri: Uri, tags: Set<String>) {
+    fun setTagsForItem(context: Context, path: String, tags: Set<String>) {
         val allMediaTags = getTags(context).toMutableMap()
         if (tags.isEmpty()) {
-            allMediaTags.remove(uri.toString())
+            allMediaTags.remove(path)
         } else {
-            allMediaTags[uri.toString()] = tags
+            allMediaTags[path] = tags
         }
         saveTags(context, allMediaTags)
 
