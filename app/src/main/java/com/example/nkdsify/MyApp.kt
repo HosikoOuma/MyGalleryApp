@@ -68,6 +68,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import androidx.core.net.toUri
 import coil.ImageLoader
 import coil.decode.GifDecoder
@@ -86,12 +87,10 @@ import com.example.nkdsify.ui.components.MediaViewer
 import com.example.nkdsify.ui.components.utils.rememberCoilImageLoader
 import com.example.nkdsify.ui.dialogs.DeletionDialogs
 import com.example.nkdsify.ui.theme.NkdsifyAppTheme
-import com.example.nkdsify.ui.utils.EncryptedImageDecoder
 import com.example.nkdsify.ui.utils.FavoritesRepository
 import com.example.nkdsify.ui.utils.MigrationUtils
 import com.example.nkdsify.ui.utils.SecretRepository
 import com.example.nkdsify.ui.utils.SettingsRepository
-import com.example.nkdsify.ui.utils.SettingsRepository.isKeepControlsVisible
 import com.example.nkdsify.ui.utils.TagsRepository
 import com.example.nkdsify.ui.utils.TrashRepository
 import com.example.nkdsify.ui.utils.ViewHistoryRepository
@@ -107,24 +106,8 @@ import kotlinx.coroutines.withContext
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalComposeUiApi::class)
 @Composable
-fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
-          isShakeToBlurEnabled: Boolean, onShakeToBlurEnabledChange: (Boolean) -> Unit,
-          isBlurEnabled: Boolean, onBlurEnabledChange: (Boolean) -> Unit,
-          isVibrationEnabled: Boolean, onVibrationEnabledChange: (Boolean) -> Unit,
-          isBlurInFolderEnabled: Boolean, onBlurInFolderEnabledChange: (Boolean) -> Unit,
-          onViewerOpenChange: (Boolean) -> Unit,
-          isLoopVideoEnabled: Boolean, onLoopVideoEnabledChange: (Boolean) -> Unit,
-          isSwipeToDismissEnabled: Boolean, onSwipeToDismissEnabledChange: (Boolean) -> Unit,
-          useLargeFab: Boolean, onUseLargeFabChange: (Boolean) -> Unit,
-          isBlurAllMediaEnabled: Boolean,
-          isTrashBlurEnabled: Boolean,
-          onBlurAllMediaEnabledChange: (Boolean) -> Unit,
-          onTrashBlurEnabledChange: (Boolean) -> Unit,
-          autoDeleteTrashEnabled: Boolean, onAutoDeleteTrashEnabledChange: (Boolean) -> Unit,
-          autoDeleteTrashDays: Int, onAutoDeleteTrashDaysChange: (Int) -> Unit
-) {
+fun MyApp(myAppState: MyAppState, initialUri: Uri? = null, screenWidth: Int, screenHeight: Int) {
     val context = LocalContext.current
-    val myAppState = rememberMyAppState()
     val coroutineScope = rememberCoroutineScope()
     val keyboardController = LocalSoftwareKeyboardController.current
     LaunchedEffect(Unit) {
@@ -145,9 +128,6 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
         theme = myAppState.selectedTheme,
         appFontFamily = myAppState.selectedFontFamily
     ) {
-        LaunchedEffect(myAppState.viewerState) {
-            onViewerOpenChange(myAppState.viewerState != null)
-        }
         val foldersGridState = rememberLazyGridState()
         val folderContentGridState = rememberLazyGridState()
         val favoritesGridState = rememberLazyGridState()
@@ -168,7 +148,7 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
         }
         myAppState.allTags = TagsRepository.getAllTags(context).toImmutableList()
         val onAddNewTag: (String) -> Unit = { newTag ->
-            if (isVibrationEnabled) performVibration(context)
+            if (myAppState.isVibrationEnabled) performVibration(context)
             TagsRepository.addNewTag(context, newTag)
             myAppState.allTags = TagsRepository.getAllTags(context).toImmutableList()
         }
@@ -200,8 +180,8 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
         }
         LaunchedEffect(Unit) {
             coroutineScope.launch(Dispatchers.IO) {
-                if (SettingsRepository.isAutoDeleteTrashEnabled(context)) {
-                    val days = SettingsRepository.getAutoDeleteTrashDays(context)
+                if (myAppState.autoDeleteTrashEnabled) {
+                    val days = myAppState.autoDeleteTrashDays
                     TrashRepository.deleteExpired(context, days)
                 }
             }
@@ -361,15 +341,7 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
                 }
             }
             val intentFilter = IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE)
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                context.registerReceiver(
-                    receiver,
-                    intentFilter,
-                    Context.RECEIVER_NOT_EXPORTED
-                )
-            } else {
-                context.registerReceiver(receiver, intentFilter)
-            }
+            ContextCompat.registerReceiver(context, receiver, intentFilter, ContextCompat.RECEIVER_NOT_EXPORTED)
 
             onDispose {
                 context.unregisterReceiver(receiver)
@@ -457,11 +429,11 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
         TagDialogs(
             myAppState = myAppState,
             onAddNewTag = onAddNewTag,
-            isVibrationEnabled = isVibrationEnabled,
-            favorites = favorites
+            favorites = favorites,
+            isVibrationEnabled = myAppState.isVibrationEnabled
         )
-        DeletionDialogs(myAppState = myAppState, isVibrationEnabled = isVibrationEnabled)
-        RestorationDialogs(myAppState = myAppState, isVibrationEnabled = isVibrationEnabled)
+        DeletionDialogs(myAppState = myAppState, isVibrationEnabled = myAppState.isVibrationEnabled)
+        RestorationDialogs(myAppState = myAppState, isVibrationEnabled = myAppState.isVibrationEnabled)
 
 
         Box(Modifier.fillMaxSize()) {
@@ -471,26 +443,26 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
                 topBar = {
                     MyAppTopBar(
                         myAppState = myAppState,
-                        isVibrationEnabled = isVibrationEnabled,
                         title = title,
                         favorites = favorites,
-                        context = context
+                        context = context,
+                        isVibrationEnabled = myAppState.isVibrationEnabled
                     )
                 },
                 bottomBar = {
                     MyAppBottomBar(
                         myAppState = myAppState,
                         context = context,
-                        isVibrationEnabled = isVibrationEnabled
+                        isVibrationEnabled = myAppState.isVibrationEnabled
                     )
                 },
                 floatingActionButton = {
                     MyAppFAB(
                         myAppState = myAppState,
-                        isVibrationEnabled = isVibrationEnabled,
-                        useLargeFab = useLargeFab,
                         coroutineScope = coroutineScope,
-                        context = context
+                        context = context,
+                        isVibrationEnabled = myAppState.isVibrationEnabled,
+                        useLargeFab = myAppState.useLargeFab
                     )
                 }
             ) { innerPadding ->
@@ -519,29 +491,6 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
                             keyboardController = keyboardController,
                             onMoveTag = onMoveTag,
                             onAddNewTag = onAddNewTag,
-                            isVibrationEnabled = isVibrationEnabled,
-                            isBlurEnabled = isBlurEnabled,
-                            onBlurEnabledChange = onBlurEnabledChange,
-                            isBlurInFolderEnabled = isBlurInFolderEnabled,
-                            onBlurInFolderEnabledChange = onBlurInFolderEnabledChange,
-                            isTrashBlurEnabled = isTrashBlurEnabled,
-                            onTrashBlurEnabledChange = onTrashBlurEnabledChange,
-                            isBlurAllMediaEnabled = isBlurAllMediaEnabled,
-                            onBlurAllMediaEnabledChange = onBlurAllMediaEnabledChange,
-                            onVibrationEnabledChange = onVibrationEnabledChange,
-                            isShakeToBlurEnabled = isShakeToBlurEnabled,
-                            onShakeToBlurEnabledChange = onShakeToBlurEnabledChange,
-                            isLoopVideoEnabled = isLoopVideoEnabled,
-                            onLoopVideoEnabledChange = onLoopVideoEnabledChange,
-                            isSwipeToDismissEnabled = isSwipeToDismissEnabled,
-                            onSwipeToDismissEnabledChange = onSwipeToDismissEnabledChange,
-                            useLargeFab = useLargeFab,
-                            onUseLargeFabChange = onUseLargeFabChange,
-                            autoDeleteTrashEnabled = autoDeleteTrashEnabled,
-                            onAutoDeleteTrashEnabledChange = onAutoDeleteTrashEnabledChange,
-                            autoDeleteTrashDays = autoDeleteTrashDays,
-                            onAutoDeleteTrashDaysChange = onAutoDeleteTrashDaysChange,
-                            selectedFontFamily = myAppState.selectedFontFamily,
                             onFontFamilyChange = {
                                 myAppState.selectedFontFamily = it
                                 SettingsRepository.setFontFamily(context, it)
@@ -558,7 +507,7 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
                                 Text(stringResource(id = R.string.permission_required_message))
                                 Spacer(Modifier.height(8.dp))
                                 Button(onClick = {
-                                    if (isVibrationEnabled) performVibration(context)
+                                    if (myAppState.isVibrationEnabled) performVibration(context)
                                     permissionLauncher.launch(myAppState.permissionsToRequest)
                                 }) {
                                     Text(stringResource(id = R.string.grant_permission_button))
@@ -621,8 +570,8 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
                     },
                     isMuteVideoByDefault = myAppState.isMuteVideoByDefault,
                     zoomType = myAppState.selectedZoomType,
-                    isLoopVideoEnabled = isLoopVideoEnabled,
-                    isSwipeToDismissEnabled = isSwipeToDismissEnabled,
+                    isLoopVideoEnabled = myAppState.isLoopVideoEnabled,
+                    isSwipeToDismissEnabled = myAppState.isSwipeToDismissEnabled,
                     isKeepControlsVisible = myAppState.isKeepControlsVisible
                 )
             }
@@ -651,8 +600,8 @@ fun MyApp(initialUri: Uri? = null, screenWidth: Int, screenHeight: Int,
                     isTrashMode = false,
                     isMuteVideoByDefault = myAppState.isMuteVideoByDefault,
                     zoomType = myAppState.selectedZoomType,
-                    isLoopVideoEnabled = isLoopVideoEnabled,
-                    isSwipeToDismissEnabled = isSwipeToDismissEnabled,
+                    isLoopVideoEnabled = myAppState.isLoopVideoEnabled,
+                    isSwipeToDismissEnabled = myAppState.isSwipeToDismissEnabled,
                     isKeepControlsVisible = myAppState.isKeepControlsVisible
                 )
             }

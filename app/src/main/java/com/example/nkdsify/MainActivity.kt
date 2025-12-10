@@ -27,7 +27,6 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Text
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -40,6 +39,7 @@ import androidx.media3.common.util.UnstableApi
 import com.example.nkdsify.ui.utils.*
 import androidx.annotation.OptIn
 import androidx.appcompat.app.AppCompatActivity
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.res.stringResource
 import com.example.nkdsify.ui.screens.WelcomeScreen
 
@@ -65,9 +65,8 @@ class MainActivity : AppCompatActivity() {
     private var sensorManager: SensorManager? = null
     private var accelerometer: Sensor? = null
     private var shakeDetector: ShakeDetector? = null
-    // Внутри класса MainActivity, но вне onCreate
+
     override fun attachBaseContext(newBase: Context) {
-        // Здесь мы подменяем контекст на тот, в котором уже есть нужный язык
         super.attachBaseContext(ContextUtils.updateLocale(newBase))
     }
 
@@ -82,99 +81,72 @@ class MainActivity : AppCompatActivity() {
         shakeDetector = ShakeDetector()
 
         setContent {
+            val context = LocalContext.current
             val initialUri = if (intent?.action == Intent.ACTION_VIEW || intent?.action == Intent.ACTION_EDIT || intent?.action == "com.android.camera.action.REVIEW") intent.data else null
             val displayMetrics = resources.displayMetrics
             val screenWidth = displayMetrics.widthPixels
             val screenHeight = displayMetrics.heightPixels
-            var isShakeToBlurEnabled by remember { mutableStateOf(SettingsRepository.isShakeToBlurEnabled(this@MainActivity)) }
-            var isBlurEnabled by remember { mutableStateOf(SettingsRepository.isBlurEnabled(this@MainActivity)) }
-            var isVibrationEnabled by remember { mutableStateOf(SettingsRepository.isVibrationEnabled(this@MainActivity)) }
-            var isBlurInFolderEnabled by remember { mutableStateOf(SettingsRepository.isBlurInFolderEnabled(this@MainActivity)) }
-            var isTrashBlurEnabled by remember { mutableStateOf(SettingsRepository.isTrashBlurEnabled(context = this@MainActivity)) }
-            var isBlurAllMediaEnabled by remember { mutableStateOf(SettingsRepository.isBlurAllMediaEnabled(context = this@MainActivity)) }
-            var isViewerOpen by remember { mutableStateOf(false) }
-            var isLoopVideoEnabled by remember { mutableStateOf(SettingsRepository.isLoopVideoEnabled(this@MainActivity)) }
-            var isSwipeToDismissEnabled by remember { mutableStateOf(SettingsRepository.isSwipeToDismissEnabled(this@MainActivity)) }
-            var useLargeFab by remember { mutableStateOf(SettingsRepository.isUseLargeFab(this@MainActivity)) }
-            var autoDeleteTrashEnabled by remember { mutableStateOf(SettingsRepository.isAutoDeleteTrashEnabled(this@MainActivity)) }
-            var autoDeleteTrashDays by remember { mutableIntStateOf(SettingsRepository.getAutoDeleteTrashDays(this@MainActivity)) }
-            val context = LocalContext.current
+
             var isFirstLaunch by remember { mutableStateOf(SettingsRepository.isFirstLaunch(context)) }
-            var selectedTheme by remember { mutableStateOf(SettingsRepository.getTheme(context)) }
-            val permissionsToRequest = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                arrayOf(Manifest.permission.READ_MEDIA_IMAGES, Manifest.permission.READ_MEDIA_VIDEO)
-            } else {
-                arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.WRITE_EXTERNAL_STORAGE)
+            val selectedTheme by remember { mutableStateOf(SettingsRepository.getTheme(context)) }
+
+            val myAppState = rememberMyAppState()
+
+            LaunchedEffect(shakeDetector) {
+                shakeDetector?.setOnShakeListener {
+                    if (myAppState.isShakeToBlurEnabled && myAppState.viewerState == null) {
+                        if (myAppState.isVibrationEnabled) {
+                            performVibration(this@MainActivity)
+                        }
+                        val newBlurState = !myAppState.isBlurEnabled
+                        myAppState.isBlurEnabled = newBlurState
+                        myAppState.isBlurInFolderEnabled = newBlurState
+                        myAppState.isTrashBlurEnabled = newBlurState
+                        myAppState.isBlurAllMediaEnabled = newBlurState
+                        SettingsRepository.setBlurEnabled(context, newBlurState)
+                        SettingsRepository.setBlurInFolderEnabled(context, newBlurState)
+                        SettingsRepository.setTrashBlurEnabled(context, newBlurState)
+                        SettingsRepository.setBlurAllMediaEnabled(context, newBlurState)
+                    }
+                }
             }
-            var hasPermissions by remember { mutableStateOf(permissionsToRequest.all { ContextCompat.checkSelfPermission(this, it) == PackageManager.PERMISSION_GRANTED }) }
 
             val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { permissions ->
-                hasPermissions = permissions.values.all { it }
+                myAppState.hasPermissions = permissions.values.all { it }
                 if (isFirstLaunch) {
                     SettingsRepository.setFirstLaunchDone(context)
                     isFirstLaunch = false
                 }
             }
 
-            // This is the corrected logic block
-            if (isFirstLaunch && !hasPermissions) {
+            if (isFirstLaunch && !myAppState.hasPermissions) {
                 WelcomeScreen(
-                    onGrantPermissionClick = { permissionLauncher.launch(permissionsToRequest)  },
+                    onGrantPermissionClick = { permissionLauncher.launch(myAppState.permissionsToRequest) },
                     theme = selectedTheme
-                )           } else {
+                )
+            } else {
                 if (isFirstLaunch) {
-                    // This handles the case where permissions were already granted on the first launch.
-                    // We must still mark it as "not first launch" for the next run.
                     SettingsRepository.setFirstLaunchDone(context)
                     isFirstLaunch = false
                 }
 
-                if (hasPermissions) {
+                if (myAppState.hasPermissions) {
                     MyApp(
+                        myAppState = myAppState,
                         initialUri = initialUri,
                         screenWidth = screenWidth,
                         screenHeight = screenHeight,
-                        isShakeToBlurEnabled = isShakeToBlurEnabled, onShakeToBlurEnabledChange = { isShakeToBlurEnabled = it },
-                        isBlurEnabled = isBlurEnabled, onBlurEnabledChange = { isBlurEnabled = it },
-                        isVibrationEnabled = isVibrationEnabled, onVibrationEnabledChange = { isVibrationEnabled = it },
-                        isBlurInFolderEnabled = isBlurInFolderEnabled, onBlurInFolderEnabledChange = { isBlurInFolderEnabled = it },
-                        onViewerOpenChange = { isViewerOpen = it },
-                        isLoopVideoEnabled = isLoopVideoEnabled, onLoopVideoEnabledChange = {isLoopVideoEnabled = it},
-                        isSwipeToDismissEnabled = isSwipeToDismissEnabled, onSwipeToDismissEnabledChange = {isSwipeToDismissEnabled = it},
-                        useLargeFab = useLargeFab, onUseLargeFabChange = { useLargeFab = it }, isBlurAllMediaEnabled = isBlurAllMediaEnabled, isTrashBlurEnabled = isTrashBlurEnabled,
-                        onBlurAllMediaEnabledChange = { isBlurAllMediaEnabled = it },
-                        onTrashBlurEnabledChange = { isTrashBlurEnabled = it },
-                        autoDeleteTrashEnabled = autoDeleteTrashEnabled, onAutoDeleteTrashEnabledChange = { autoDeleteTrashEnabled = it },
-                        autoDeleteTrashDays = autoDeleteTrashDays, onAutoDeleteTrashDaysChange = { autoDeleteTrashDays = it }
                     )
                 } else {
-                    // This handles the case where permissions are revoked by the user on a subsequent launch.
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Text(stringResource(id = R.string.permission_required_message))
                             Spacer(Modifier.height(8.dp))
-                            Button(onClick = { permissionLauncher.launch(permissionsToRequest) }) {
+                            Button(onClick = { permissionLauncher.launch(myAppState.permissionsToRequest) }) {
                                 Text(stringResource(id = R.string.grant_permission_button))
                             }
                         }
                     }
-                }
-            }
-
-            shakeDetector?.setOnShakeListener {
-                if (isShakeToBlurEnabled && !isViewerOpen) {
-                    if (isVibrationEnabled) {
-                        performVibration(this@MainActivity)
-                    }
-                    val newBlurState = !isBlurEnabled
-                    isBlurEnabled = newBlurState
-                    isBlurInFolderEnabled = newBlurState
-                    isTrashBlurEnabled = newBlurState
-                    isBlurAllMediaEnabled = newBlurState
-                    SettingsRepository.setBlurEnabled(this, newBlurState)
-                    SettingsRepository.setBlurInFolderEnabled(this, newBlurState)
-                    SettingsRepository.setTrashBlurEnabled(this, newBlurState)
-                    SettingsRepository.setBlurAllMediaEnabled(this, newBlurState)
                 }
             }
         }

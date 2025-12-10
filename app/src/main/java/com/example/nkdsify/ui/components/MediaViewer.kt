@@ -85,7 +85,7 @@ fun MediaViewer(
     onShowDetails: (Uri) -> Unit,
     isExternal: Boolean = false,
     isTrashMode: Boolean,
-    isSecretMode: Boolean = false, // <-- ДОБАВЬТЕ ЭТО
+    isSecretMode: Boolean = false,
     isMuteVideoByDefault: Boolean,
     zoomType: ZoomType,
     isLoopVideoEnabled: Boolean,
@@ -165,17 +165,16 @@ fun MediaViewer(
 
     // --- Unified Controls Visibility State ---
     var controlsVisible by remember { mutableStateOf(true) }
+    val isVideo = items.getOrNull(pagerState.currentPage)?.isVideo == true
     val toggleControls = {
-        if (!isKeepControlsVisible) {
+        if (isVideo || !isKeepControlsVisible) {
             controlsVisible = !controlsVisible
         }
     }
 
     // Auto-hide controls
-    // Auto-hide controls
-    // Auto-hide controls
-    LaunchedEffect(controlsVisible, isKeepControlsVisible) {
-        if (controlsVisible && !isKeepControlsVisible) {
+    LaunchedEffect(controlsVisible, isKeepControlsVisible, pagerState.currentPage) {
+        if (controlsVisible && (isVideo || !isKeepControlsVisible)) {
             delay(4000)
             controlsVisible = false
         }

@@ -49,6 +49,20 @@ class MyAppState(
     var isShuffleButtonVisible by mutableStateOf(SettingsRepository.isShuffleButtonVisible(context))
     var selectedLanguage by mutableStateOf(SettingsRepository.getLanguage(context))
     var selectedFabAction by mutableStateOf(SettingsRepository.getFabAction(context))
+
+    // Properties moved from MainActivity
+    var isShakeToBlurEnabled by mutableStateOf(SettingsRepository.isShakeToBlurEnabled(context))
+    var isBlurEnabled by mutableStateOf(SettingsRepository.isBlurEnabled(context))
+    var isVibrationEnabled by mutableStateOf(SettingsRepository.isVibrationEnabled(context))
+    var isBlurInFolderEnabled by mutableStateOf(SettingsRepository.isBlurInFolderEnabled(context))
+    var isTrashBlurEnabled by mutableStateOf(SettingsRepository.isTrashBlurEnabled(context))
+    var isBlurAllMediaEnabled by mutableStateOf(SettingsRepository.isBlurAllMediaEnabled(context))
+    var isLoopVideoEnabled by mutableStateOf(SettingsRepository.isLoopVideoEnabled(context))
+    var isSwipeToDismissEnabled by mutableStateOf(SettingsRepository.isSwipeToDismissEnabled(context))
+    var useLargeFab by mutableStateOf(SettingsRepository.isUseLargeFab(context))
+    var autoDeleteTrashEnabled by mutableStateOf(SettingsRepository.isAutoDeleteTrashEnabled(context))
+    var autoDeleteTrashDays by mutableIntStateOf(SettingsRepository.getAutoDeleteTrashDays(context))
+
     var mediaTypeFilter by mutableStateOf(MediaTypeFilter.ALL)
     var selectedTheme by mutableStateOf(SettingsRepository.getTheme(context))
     var searchQuery by mutableStateOf("")

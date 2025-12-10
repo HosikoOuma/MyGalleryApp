@@ -50,29 +50,6 @@ fun MyAppNavigation(
     keyboardController: SoftwareKeyboardController?,
     onMoveTag: (Int, Int) -> Unit,
     onAddNewTag: (String) -> Unit,
-    isVibrationEnabled: Boolean,
-    isBlurEnabled: Boolean,
-    onBlurEnabledChange: (Boolean) -> Unit,
-    isBlurInFolderEnabled: Boolean,
-    onBlurInFolderEnabledChange: (Boolean) -> Unit,
-    isTrashBlurEnabled: Boolean,
-    onTrashBlurEnabledChange: (Boolean) -> Unit,
-    isBlurAllMediaEnabled: Boolean,
-    onBlurAllMediaEnabledChange: (Boolean) -> Unit,
-    onVibrationEnabledChange: (Boolean) -> Unit,
-    isShakeToBlurEnabled: Boolean,
-    onShakeToBlurEnabledChange: (Boolean) -> Unit,
-    isLoopVideoEnabled: Boolean,
-    onLoopVideoEnabledChange: (Boolean) -> Unit,
-    isSwipeToDismissEnabled: Boolean,
-    onSwipeToDismissEnabledChange: (Boolean) -> Unit,
-    useLargeFab: Boolean,
-    onUseLargeFabChange: (Boolean) -> Unit,
-    autoDeleteTrashEnabled: Boolean,
-    onAutoDeleteTrashEnabledChange: (Boolean) -> Unit,
-    autoDeleteTrashDays: Int,
-    onAutoDeleteTrashDaysChange: (Int) -> Unit,
-    selectedFontFamily: AppFontFamily,
     onFontFamilyChange: (AppFontFamily) -> Unit,
     onFabActionChange: (FabAction) -> Unit
 ) {
@@ -194,7 +171,7 @@ fun MyAppNavigation(
                     keyboardController?.hide()
                     myAppState.currentScreen = Screen.FolderContent(folder)
                 },
-                isBlurEnabled = isBlurEnabled,
+                isBlurEnabled = myAppState.isBlurEnabled,
                 gridState = foldersGridState,
                 isShowFileCountEnabled = myAppState.isShowFileCountEnabled,
                 blurType = myAppState.selectedBlurType
@@ -218,7 +195,7 @@ fun MyAppNavigation(
                     favorites = favorites,
                     selectedItems = myAppState.selectedItems,
                     imageLoader = imageLoader,
-                    isBlurEnabled = isBlurInFolderEnabled,
+                    isBlurEnabled = myAppState.isBlurInFolderEnabled,
                     onItemClick = { item ->
                         keyboardController?.hide()
                         myAppState.viewerState = MediaViewerState(items = items, startIndex = items.indexOf(item))
@@ -254,13 +231,13 @@ fun MyAppNavigation(
                             myAppState.selectedItems.add(item.uri)
                         }
                     },
-                    isBlurEnabled = isBlurEnabled,
-                    isBlurInFolderEnabled = isBlurInFolderEnabled,
+                    isBlurEnabled = myAppState.isBlurEnabled,
+                    isBlurInFolderEnabled = myAppState.isBlurInFolderEnabled,
                     gridState = favoritesGridState,
                     contentGridState = favoritesContentGridState,
                     openAlbumName = screen.openAlbumName,
                     onOpenAlbum = { albumName ->
-                        if (isVibrationEnabled) performVibration(context)
+                        if (myAppState.isVibrationEnabled) performVibration(context)
                         myAppState.currentScreen = Screen.Favorites(openAlbumName = albumName)
                     },
                     isShowFileCountEnabled = myAppState.isShowFileCountEnabled,
@@ -271,38 +248,41 @@ fun MyAppNavigation(
 
             is Screen.Settings -> {
                 val settingsState = SettingsState(
-                    isBlurEnabled = isBlurEnabled,
-                    isBlurInFolderEnabled = isBlurInFolderEnabled,
-                    isTrashBlurEnabled = isTrashBlurEnabled,
+                    isBlurEnabled = myAppState.isBlurEnabled,
+                    isBlurInFolderEnabled = myAppState.isBlurInFolderEnabled,
+                    isTrashBlurEnabled = myAppState.isTrashBlurEnabled,
                     isMuteVideoByDefault = myAppState.isMuteVideoByDefault,
-                    isBlurAllMediaEnabled = isBlurAllMediaEnabled,
+                    isBlurAllMediaEnabled = myAppState.isBlurAllMediaEnabled,
                     selectedTheme = myAppState.selectedTheme,
                     selectedZoomType = myAppState.selectedZoomType,
-                    isVibrationEnabled = isVibrationEnabled,
+                    isVibrationEnabled = myAppState.isVibrationEnabled,
                     isShowFileCountEnabled = myAppState.isShowFileCountEnabled,
                     isShuffleButtonVisible = myAppState.isShuffleButtonVisible,
-                    isShakeToBlurEnabled = isShakeToBlurEnabled,
-                    isLoopVideoEnabled = isLoopVideoEnabled,
+                    isShakeToBlurEnabled = myAppState.isShakeToBlurEnabled,
+                    isLoopVideoEnabled = myAppState.isLoopVideoEnabled,
                     selectedBlurType = myAppState.selectedBlurType,
-                    isSwipeToDismissEnabled = isSwipeToDismissEnabled,
-                    useLargeFab = useLargeFab,
-                    autoDeleteTrashEnabled = autoDeleteTrashEnabled,
-                    autoDeleteTrashDays = autoDeleteTrashDays,
+                    isSwipeToDismissEnabled = myAppState.isSwipeToDismissEnabled,
+                    useLargeFab = myAppState.useLargeFab,
+                    autoDeleteTrashEnabled = myAppState.autoDeleteTrashEnabled,
+                    autoDeleteTrashDays = myAppState.autoDeleteTrashDays,
                     selectedLanguage = myAppState.selectedLanguage,
                     currentVersion = myAppState.currentVersion,
                     selectedFabAction = myAppState.selectedFabAction,
-                    selectedFontFamily = selectedFontFamily,
+                    selectedFontFamily = myAppState.selectedFontFamily,
                     isKeepControlsVisible = myAppState.isKeepControlsVisible
                 )
 
                 val settingsActions = SettingsActions(
-                    onBlurEnabledChange = onBlurEnabledChange,
+                    onBlurEnabledChange = {
+                        myAppState.isBlurEnabled = it
+                        SettingsRepository.setBlurEnabled(context, it)
+                    },
                     onBlurInFolderEnabledChange = {
-                        onBlurInFolderEnabledChange(it)
+                        myAppState.isBlurInFolderEnabled = it
                         SettingsRepository.setBlurInFolderEnabled(context, it)
                     },
                     onTrashBlurEnabledChange = {
-                        onTrashBlurEnabledChange(it)
+                        myAppState.isTrashBlurEnabled = it
                         SettingsRepository.setTrashBlurEnabled(context, it)
                     },
                     onMuteVideoByDefaultChange = {
@@ -310,11 +290,11 @@ fun MyAppNavigation(
                         SettingsRepository.setMuteVideoByDefault(context, it)
                     },
                     onBlurAllMediaEnabledChange = {
-                        onBlurAllMediaEnabledChange(it)
+                        myAppState.isBlurAllMediaEnabled = it
                         SettingsRepository.setBlurAllMediaEnabled(context, it)
                     },
                     onEasterEggClick = {
-                        if (isVibrationEnabled) performVibration(context)
+                        if (myAppState.isVibrationEnabled) performVibration(context)
                         myAppState.easterEggTapCount++
                         if (myAppState.easterEggTapCount == 10) {
                             myAppState.easterEggTapCount = 0
@@ -329,7 +309,7 @@ fun MyAppNavigation(
                         SettingsRepository.setTheme(context, theme)
                     },
                     onManageHiddenFoldersClick = {
-                        if (isVibrationEnabled) performVibration(context)
+                        if (myAppState.isVibrationEnabled) performVibration(context)
                         myAppState.showHiddenFoldersDialog = true
                     },
                     onZoomTypeChange = {
@@ -337,11 +317,11 @@ fun MyAppNavigation(
                         SettingsRepository.setZoomType(context, it)
                     },
                     onManageTagsClick = {
-                        if (isVibrationEnabled) performVibration(context)
+                        if (myAppState.isVibrationEnabled) performVibration(context)
                         myAppState.currentScreen = Screen.TagManagement
                     },
                     onBackupAndRestoreClick = {
-                        if (isVibrationEnabled) performVibration(context)
+                        if (myAppState.isVibrationEnabled) performVibration(context)
                         myAppState.showBackupAndRestoreDialog = true
                     },
                     onGoToSecretStorage = {
@@ -354,7 +334,7 @@ fun MyAppNavigation(
                     },
                     onViewHistoryClick = { myAppState.currentScreen = Screen.ViewHistory },
                     onVibrationEnabledChange = {
-                        onVibrationEnabledChange(it)
+                        myAppState.isVibrationEnabled = it
                         SettingsRepository.setVibrationEnabled(context, it)
                     },
                     onShowFileCountChange = {
@@ -366,11 +346,11 @@ fun MyAppNavigation(
                         SettingsRepository.setShuffleButtonVisible(context, it)
                     },
                     onShakeToBlurEnabledChange = {
-                        onShakeToBlurEnabledChange(it)
+                        myAppState.isShakeToBlurEnabled = it
                         SettingsRepository.setShakeToBlurEnabled(context, it)
                     },
                     onLoopVideoEnabledChange = {
-                        onLoopVideoEnabledChange(it)
+                        myAppState.isLoopVideoEnabled = it
                         SettingsRepository.setLoopVideoEnabled(context, it)
                     },
                     onBlurTypeChange = {
@@ -378,19 +358,19 @@ fun MyAppNavigation(
                         SettingsRepository.setBlurType(context, it)
                     },
                     onSwipeToDismissEnabledChange = {
-                        onSwipeToDismissEnabledChange(it)
+                        myAppState.isSwipeToDismissEnabled = it
                         SettingsRepository.setSwipeToDismissEnabled(context, it)
                     },
                     onUseLargeFabChange = {
-                        onUseLargeFabChange(it)
+                        myAppState.useLargeFab = it
                         SettingsRepository.setUseLargeFab(context, it)
                     },
                     onAutoDeleteTrashEnabledChange = {
-                        onAutoDeleteTrashEnabledChange(it)
+                        myAppState.autoDeleteTrashEnabled = it
                         SettingsRepository.setAutoDeleteTrashEnabled(context, it)
                     },
                     onAutoDeleteTrashDaysChange = {
-                        onAutoDeleteTrashDaysChange(it)
+                        myAppState.autoDeleteTrashDays = it
                         SettingsRepository.setAutoDeleteTrashDays(context, it)
                     },
                     onLanguageChange = { language -> myAppState.selectedLanguage = language },
@@ -401,10 +381,7 @@ fun MyAppNavigation(
                     },
                     onAboutClick = { myAppState.currentScreen = Screen.About },
                     onFontFamilyChange = onFontFamilyChange,
-                    onFabActionChange = {
-                        onFabActionChange(it)
-                        SettingsRepository.setFabAction(context, it)
-                    },
+                    onFabActionChange = onFabActionChange,
                     onKeepControlsVisibleChange = {
                         myAppState.isKeepControlsVisible = it
                         SettingsRepository.setKeepControlsVisible(context, it)
@@ -417,13 +394,13 @@ fun MyAppNavigation(
             is Screen.TagManagement -> {
                 TagManagementScreen(
                     onDeleteTag = {
-                        if (isVibrationEnabled) performVibration(context)
+                        if (myAppState.isVibrationEnabled) performVibration(context)
                         TagsRepository.removeTagFromAllItems(context, it)
                         myAppState.tags = TagsRepository.getTags(context)
                         myAppState.allTags = TagsRepository.getAllTags(context).toImmutableList()
                     },
                     onEditTag = { oldTag, newTag ->
-                        if (isVibrationEnabled) performVibration(context)
+                        if (myAppState.isVibrationEnabled) performVibration(context)
                         TagsRepository.renameTag(context, oldTag, newTag)
                         myAppState.tags = TagsRepository.getTags(context)
                         myAppState.allTags = TagsRepository.getAllTags(context).toImmutableList()
@@ -454,12 +431,12 @@ fun MyAppNavigation(
                         }
                     },
                     onClearTrash = {
-                        if (isVibrationEnabled) performVibration(context)
+                        if (myAppState.isVibrationEnabled) performVibration(context)
                         myAppState.isClearingTrash = true
                         myAppState.itemsToDelete = myAppState.trashedItems.map { it.uri }.toImmutableList()
                         myAppState.showConfirmDeleteDialog = true
                     },
-                    isTrashBlurEnabled = isTrashBlurEnabled,
+                    isTrashBlurEnabled = myAppState.isTrashBlurEnabled,
                     onClearSelection = { myAppState.selectedItems.clear() },
                     blurType = myAppState.selectedBlurType,
                     gridState = trashGridState
@@ -471,7 +448,7 @@ fun MyAppNavigation(
                     favorites = favorites,
                     selectedItems = myAppState.selectedItems,
                     imageLoader = imageLoader,
-                    isBlurEnabled = isBlurAllMediaEnabled,
+                    isBlurEnabled = myAppState.isBlurAllMediaEnabled,
                     onItemClick = { item ->
                         keyboardController?.hide()
                         myAppState.viewerState = MediaViewerState(items = filteredAllMedia.toImmutableList(), startIndex = filteredAllMedia.indexOf(item))
@@ -498,7 +475,7 @@ fun MyAppNavigation(
                     favorites = favorites,
                     selectedItems = myAppState.selectedItems,
                     imageLoader = imageLoader,
-                    isBlurEnabled = isBlurInFolderEnabled,
+                    isBlurEnabled = myAppState.isBlurInFolderEnabled,
                     onItemClick = { item ->
                         keyboardController?.hide()
                         myAppState.viewerState = MediaViewerState(items = mediaWithTag, startIndex = mediaWithTag.indexOf(item))
@@ -532,7 +509,7 @@ fun MyAppNavigation(
                         keyboardController?.hide()
                         myAppState.secretViewerState = MediaViewerState(items = items.toImmutableList(), startIndex = items.indexOf(item))
                     },
-                    isBlurEnabled = isBlurEnabled,
+                    isBlurEnabled = myAppState.isBlurEnabled,
                     blurType = myAppState.selectedBlurType,
                     gridState = secretGridState
                 )
@@ -557,7 +534,7 @@ fun MyAppNavigation(
                     onClearSelection = { myAppState.selectedItems.clear() },
                     gridState = viewHistoryGridState,
                     blurType = myAppState.selectedBlurType,
-                    isBlurEnabled = isBlurEnabled
+                    isBlurEnabled = myAppState.isBlurEnabled
                 )
             }
         }
