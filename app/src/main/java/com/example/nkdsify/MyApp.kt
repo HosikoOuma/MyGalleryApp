@@ -103,6 +103,10 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import androidx.compose.runtime.snapshotFlow
+import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.first
+
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalComposeUiApi::class)
 @Composable
@@ -211,45 +215,43 @@ fun MyApp(myAppState: MyAppState, initialUri: Uri? = null, screenWidth: Int, scr
             }
         }
         LaunchedEffect(initialUri, myAppState.hasPermissions) {
-            if (initialUri != null && myAppState.hasPermissions) {
-                withContext(Dispatchers.IO) {
-                    val loadedFolders = loadMediaFolders(context, myAppState.sortType, myAppState.sortAscending, null)
-                    var targetFolder: MediaFolder? = null
-                    var targetItemIndex = -1
+    if (initialUri != null && myAppState.hasPermissions) {
+        // Wait until all media is loaded
+        snapshotFlow { myAppState.allMedia }
+            .filter { it.isNotEmpty() }
+            .first()
 
-                    val mediaUri = if (initialUri.scheme == "file") {
-                        val path = initialUri.path
-                        context.contentResolver.query(MediaStore.Files.getContentUri("external"), arrayOf(MediaStore.Files.FileColumns._ID), "${MediaStore.Files.FileColumns.DATA} = ?", arrayOf(path), null)?.use { cursor ->
-                            if (cursor.moveToFirst()) {
-                                val id = cursor.getLong(0)
-                                ContentUris.withAppendedId(MediaStore.Files.getContentUri("external"), id)
-                            } else null
-                        }
-                    } else {
-                        initialUri
-                    }
-                    if (mediaUri != null) {
-                        for (folder in loadedFolders) {
-                            val index = folder.items.indexOfFirst { item -> item.uri == mediaUri }
-                            if (index != -1) {
-                                targetFolder = folder
-                                targetItemIndex = index
-                                break
-                            }
-                        }
-                    }
-                    if (targetFolder != null) {
-                        myAppState.viewerState = MediaViewerState(targetFolder.items, targetItemIndex)
-                    } else {
-                        val details = getMediaDetails(context, initialUri)
-                        val name = details?.name ?: ""
-                        val path = details?.path ?: ""
-                        val isVideo = context.contentResolver.getType(initialUri)?.startsWith("video/") == true
-                        myAppState.viewerState = MediaViewerState(  persistentListOf(MediaItem(initialUri, name, path, isVideo, 0, 0, 0)), 0, isExternal = true)
-                    }
+        withContext(Dispatchers.IO) {
+            val details = getMediaDetails(context, initialUri)
+            val externalPath = details?.path
+
+            // Try to find the item in our loaded media by absolute path
+            val foundItem = myAppState.allMedia.find { it.absolutePath == externalPath }
+
+            if (foundItem != null) {
+                // Found it! Now find which folder it belongs to for context.
+                val folder = myAppState.allFolders.find { it.items.contains(foundItem) }
+                if (folder != null) {
+                    val indexInFolder = folder.items.indexOf(foundItem)
+                    myAppState.viewerState = MediaViewerState(folder.items, indexInFolder)
+                } else {
+                     // Should not happen if allMedia is derived from allFolders, but handle as a fallback
+                    myAppState.viewerState = MediaViewerState(persistentListOf(foundItem), 0)
                 }
+            } else {
+                 // File not in our media library, open it as a single external item
+                val name = details?.name ?: ""
+                val path = details?.path ?: ""
+                val isVideo = context.contentResolver.getType(initialUri)?.startsWith("video/") == true
+                myAppState.viewerState = MediaViewerState(
+                    persistentListOf(MediaItem(initialUri, name, path, isVideo, 0, 0, 0)),
+                    0,
+                    isExternal = true
+                )
             }
         }
+    }
+}
         LaunchedEffect(favorites.toList()) {
             FavoritesRepository.saveFavorites(context, favorites.toSet())
         }
