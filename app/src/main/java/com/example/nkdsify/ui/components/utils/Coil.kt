@@ -10,6 +10,8 @@ import coil.decode.VideoFrameDecoder
 import coil.disk.DiskCache
 import coil.memory.MemoryCache
 import com.example.nkdsify.ui.utils.EncryptedImageDecoder
+import kotlinx.coroutines.Dispatchers
+
 
 // Создаем синглтон для ImageLoader, чтобы обеспечить общий кэш для всего приложения
 object AppImageLoader {
@@ -44,6 +46,7 @@ object AppImageLoader {
                     .maxSizeBytes(256 * 1024 * 1024)
                     .build()
             }
+            .dispatcher(Dispatchers.IO)
             .build()
     }
 }

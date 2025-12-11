@@ -28,6 +28,7 @@ import com.example.nkdsify.data.MediaTypeFilter
 import com.example.nkdsify.data.Screen
 import com.example.nkdsify.data.SortType
 import com.example.nkdsify.ui.components.TagVisualTransformation
+import com.example.nkdsify.ui.utils.parseQueryString
 import com.example.nkdsify.ui.utils.getMediaDetails
 import com.example.nkdsify.ui.utils.performVibration
 import kotlinx.coroutines.launch
@@ -47,24 +48,66 @@ fun TopBar(
     val isFavoritesScreen = myAppState.currentScreen is Screen.Favorites
     val isSearchActive = myAppState.isSearchActive
     val selectedDate = myAppState.selectedDate
+    val albumNameAllFavorites = stringResource(id = R.string.album_name_all_favorites)
 
     // helper: toggle select all for the current screen
     val toggleSelectAll = {
+        // helper: build visible items according to the current screen and current filters (search, tags, date, mediaType)
+        fun matchesParsedQuery(item: com.example.nkdsify.data.MediaItem, query: String?): Boolean {
+            if (query.isNullOrBlank()) return true
+            val parsed = parseQueryString(query)
+            val itemTags = myAppState.tags[item.absolutePath] ?: emptySet()
+            if (parsed.includedTags.isNotEmpty() && !itemTags.containsAll(parsed.includedTags)) return false
+            if (parsed.excludedTags.isNotEmpty() && itemTags.any { it in parsed.excludedTags }) return false
+            if (parsed.searchTerms.isNotEmpty()) {
+                val name = item.name.lowercase()
+                if (!parsed.searchTerms.all { name.contains(it.lowercase()) }) return false
+            }
+            return true
+        }
+
         val currentItemsUris = when (val screen = myAppState.currentScreen) {
-            is Screen.FolderContent -> screen.folder.items.map { it.uri }
-            is Screen.Favorites -> {
-                if (screen.openAlbumName != null) {
-                    val taggedAlbums = myAppState.favoriteItems
-                        .flatMap { item -> (myAppState.tags[item.absolutePath] ?: emptySet()).map { tag -> tag to item } }
-                        .groupBy({ it.first }, { it.second })
-                    taggedAlbums[screen.openAlbumName]?.map { it.uri } ?: emptyList()
-                } else {
-                    myAppState.favoriteItems.map { it.uri }
+            is Screen.FolderContent -> {
+                val folder = myAppState.allFolders.find { it.id == screen.folder.id } ?: screen.folder
+                val sorted = folder.items
+                val filtered = if (myAppState.isSearchActive && myAppState.searchQuery.isNotBlank()) {
+                    sorted.filter { matchesParsedQuery(it, myAppState.searchQuery) }
+                } else sorted
+                filtered.map { it.uri }
+            }
+            is Screen.AllMedia -> {
+                val base = when (myAppState.mediaTypeFilter) {
+                    MediaTypeFilter.PHOTOS -> myAppState.allMedia.filter { !it.isVideo }
+                    MediaTypeFilter.VIDEOS -> myAppState.allMedia.filter { it.isVideo }
+                    else -> myAppState.allMedia
                 }
+                val withDate = myAppState.selectedDate?.let { date ->
+                    base.filter { item ->
+                        val cal = java.util.Calendar.getInstance().apply { timeInMillis = date }
+                        val ic = java.util.Calendar.getInstance().apply { timeInMillis = item.dateAdded * 1000 }
+                        cal.get(java.util.Calendar.YEAR) == ic.get(java.util.Calendar.YEAR) && cal.get(java.util.Calendar.DAY_OF_YEAR) == ic.get(java.util.Calendar.DAY_OF_YEAR)
+                    }
+                } ?: base
+                val filtered = if (myAppState.isSearchActive && myAppState.searchQuery.isNotBlank()) withDate.filter { matchesParsedQuery(it, myAppState.searchQuery) } else withDate
+                filtered.map { it.uri }
+            }
+            is Screen.Favorites -> {
+                // build album contents similar to FavoritesScreen
+                val taggedAlbums = myAppState.favoriteItems
+                    .flatMap { item -> (myAppState.tags[item.absolutePath] ?: emptySet()).map { tag -> tag to item } }
+                    .groupBy({ it.first }, { it.second })
+
+                val albumItems = if (screen.openAlbumName != null) {
+                    if (screen.openAlbumName == albumNameAllFavorites) myAppState.favoriteItems else taggedAlbums[screen.openAlbumName] ?: emptyList()
+                } else myAppState.favoriteItems
+
+                val filtered = if (myAppState.isSearchActive && myAppState.searchQuery.isNotBlank()) albumItems.filter { matchesParsedQuery(it, myAppState.searchQuery) } else albumItems
+                filtered.map { it.uri }
             }
             is Screen.MediaByTag -> {
-                val urisWithTag = myAppState.tags.filter { it.value.contains(screen.tag) }.keys
-                myAppState.allMedia.filter { it.absolutePath in urisWithTag }.map { it.uri }
+                val base = myAppState.allMedia.filter { item -> (myAppState.tags[item.absolutePath] ?: emptySet()).contains(screen.tag) }
+                val filtered = if (myAppState.isSearchActive && myAppState.searchQuery.isNotBlank()) base.filter { matchesParsedQuery(it, myAppState.searchQuery) } else base
+                filtered.map { it.uri }
             }
             is Screen.Trash -> myAppState.trashedItems.map { it.uri }
             else -> emptyList()
