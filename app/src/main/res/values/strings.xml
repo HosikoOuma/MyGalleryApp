@@ -248,5 +248,7 @@
     <string name="theme_amoled">Amoled</string>
     <string name="find_in_page_content_description">Find</string>
     <string name="keep_controls_visible_label">Keep controls visible</string>
-
+    <string name="permission_permanently_denied_title">Permission Denied</string>
+    <string name="permission_permanently_denied_message">You have permanently denied the permission. To use this feature, please go to the app settings and grant the permission.</string>
+    <string name="go_to_settings_button">Go to Settings</string>
 </resources>

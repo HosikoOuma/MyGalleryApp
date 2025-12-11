@@ -23,6 +23,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
@@ -44,6 +45,7 @@ import com.example.nkdsify.ui.utils.BiometricUtils
 import com.example.nkdsify.ui.utils.SettingsRepository
 import com.example.nkdsify.ui.utils.getDisplayName
 import com.example.nkdsify.ui.utils.performVibration
+import androidx.compose.animation.AnimatedVisibility
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -122,9 +124,9 @@ fun SettingsScreen(
                     vibrate = vibrate
                 )
                 SettingsSwitch(title = stringResource(id = R.string.auto_delete_trash_label), isChecked = state.autoDeleteTrashEnabled, onCheckedChange = actions.onAutoDeleteTrashEnabledChange, vibrate = vibrate)
-                if (state.autoDeleteTrashEnabled) {
+                AnimatedVisibility(visible = state.autoDeleteTrashEnabled) {
                     SettingsRow(title = { Text(text = stringResource(id = R.string.auto_delete_trash_days_label)) }) {
-                        TextField(value = state.autoDeleteTrashDays.toString(), onValueChange = { value -> actions.onAutoDeleteTrashDaysChange(value.filter { it.isDigit() }.toIntOrNull() ?: 0) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.width(80.dp))
+                        OutlinedTextField(value = state.autoDeleteTrashDays.toString(), onValueChange = { value -> actions.onAutoDeleteTrashDaysChange(value.filter { it.isDigit() }.toIntOrNull() ?: 0) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.width(80.dp))
                     }
                 }
                 SettingsSwitch(title = stringResource(id = R.string.show_shuffle_button_label), isChecked = state.isShuffleButtonVisible, onCheckedChange = actions.onShuffleButtonVisibleChange, vibrate = vibrate)

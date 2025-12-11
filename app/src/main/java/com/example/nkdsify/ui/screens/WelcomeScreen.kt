@@ -1,31 +1,79 @@
 package com.example.nkdsify.ui.screens
 
-import androidx.compose.foundation.layout.*
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.FavoriteBorder
-import androidx.compose.material3.*
+import androidx.compose.material3.Button
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.example.nkdsify.R
+import com.example.nkdsify.data.GoogleSansFontFamily
+import com.example.nkdsify.data.JetBrainsMonoFontFamily
 import com.example.nkdsify.data.Theme
-import com.example.nkdsify.ui.theme.NkdsifyAppTheme
-import com.example.nkdsify.ui.utils.SettingsRepository
+import kotlinx.coroutines.delay
 
 @Composable
 fun WelcomeScreen(onGrantPermissionClick: () -> Unit, theme: Theme) {
-    val context = LocalContext.current
-    val theme = remember { SettingsRepository.getTheme(context) }
-    NkdsifyAppTheme(theme = theme) {
-        Surface(modifier = Modifier.fillMaxSize()) {
+    val fonts = listOf(FontFamily.Default, GoogleSansFontFamily, JetBrainsMonoFontFamily)
+    var currentFont by remember { mutableStateOf(fonts[0]) }
 
+    LaunchedEffect(Unit) {
+        while (true) {
+            delay(1000)
+            currentFont = fonts[(fonts.indexOf(currentFont) + 1) % fonts.size]
+        }
+    }
+
+    val infiniteTransition = rememberInfiniteTransition(label = "icon rotation")
+    val rotation by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 360f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(2000, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "rotation"
+    )
+
+    val scale by infiniteTransition.animateFloat(
+        initialValue = 1f,
+        targetValue = 0.95f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1500, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "button scale"
+    )
+
+    Surface(modifier = Modifier.fillMaxSize()) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -35,15 +83,19 @@ fun WelcomeScreen(onGrantPermissionClick: () -> Unit, theme: Theme) {
         ) {
             Text(
                 text = "Nekolery",
-                style = MaterialTheme.typography.displaySmall,
+                style = MaterialTheme.typography.displaySmall.copy(fontFamily = currentFont),
                 color = MaterialTheme.colorScheme.primary
             )
             Spacer(modifier = Modifier.height(32.dp))
-            Icon(
-                imageVector = Icons.Outlined.FavoriteBorder,
-                contentDescription = null,
-                modifier = Modifier.size(128.dp),
-                tint = MaterialTheme.colorScheme.primary
+            Text(
+                text = stringResource(id = R.string.easter_egg_button),
+                textAlign = TextAlign.Center,
+                modifier = Modifier
+                    .size(128.dp)
+                    .graphicsLayer {
+                        rotationZ = rotation
+                    },
+                fontSize = 120.sp
             )
             Spacer(modifier = Modifier.height(32.dp))
             Text(
@@ -61,10 +113,13 @@ fun WelcomeScreen(onGrantPermissionClick: () -> Unit, theme: Theme) {
             Button(
                 onClick = onGrantPermissionClick,
                 shape = RoundedCornerShape(16.dp),
-                modifier = Modifier.fillMaxWidth()
+                contentPadding = PaddingValues(horizontal = 48.dp, vertical = 24.dp),
+                modifier = Modifier.graphicsLayer {
+                    scaleX = scale
+                    scaleY = scale
+                }
             ) {
                 Text(text = stringResource(id = R.string.grant_permission_button))
-                }
             }
         }
     }

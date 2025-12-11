@@ -14,35 +14,25 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.Environment
+import android.provider.Settings
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.height
-import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Text
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.unit.dp
-import androidx.core.content.ContextCompat
-import androidx.media3.common.util.UnstableApi
-import com.example.nkdsify.ui.utils.*
 import androidx.annotation.OptIn
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.ui.res.stringResource
+import com.example.nkdsify.ui.dialogs.PermissionPermanentlyDeniedDialog
 import com.example.nkdsify.ui.screens.WelcomeScreen
-
+import com.example.nkdsify.ui.theme.NkdsifyAppTheme
+import com.example.nkdsify.ui.utils.*
+import androidx.media3.common.util.UnstableApi
 
 enum class FileOperation {
     COPY, MOVE
@@ -58,8 +48,6 @@ fun downloadAndUpdate(context: Context, downloadUrl: String, version: String) {
     downloadManager.enqueue(request)
     Toast.makeText(context, context.getString(R.string.download_started), Toast.LENGTH_SHORT).show()
 }
-
-
 @OptIn(UnstableApi::class, ExperimentalMaterial3Api::class)
 class MainActivity : AppCompatActivity() {
     private var sensorManager: SensorManager? = null
@@ -89,6 +77,7 @@ class MainActivity : AppCompatActivity() {
 
             var isFirstLaunch by remember { mutableStateOf(SettingsRepository.isFirstLaunch(context)) }
             val selectedTheme by remember { mutableStateOf(SettingsRepository.getTheme(context)) }
+            var showPermanentlyDeniedDialog by remember { mutableStateOf(false) }
 
             val myAppState = rememberMyAppState()
 
@@ -113,40 +102,55 @@ class MainActivity : AppCompatActivity() {
 
             val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { permissions ->
                 myAppState.hasPermissions = permissions.values.all { it }
-                if (isFirstLaunch) {
+                if (myAppState.hasPermissions) {
+                    if (isFirstLaunch) {
+                        SettingsRepository.setFirstLaunchDone(context)
+                        isFirstLaunch = false
+                    }
+                } else {
+                     if (!isFirstLaunch) {
+                        val permanentlyDenied = myAppState.permissionsToRequest.any {
+                            !shouldShowRequestPermissionRationale(it)
+                        }
+                        if (permanentlyDenied) {
+                            showPermanentlyDeniedDialog = true
+                        }
+                    }
+                }
+                 if (isFirstLaunch) {
                     SettingsRepository.setFirstLaunchDone(context)
                     isFirstLaunch = false
                 }
             }
-
-            if (isFirstLaunch && !myAppState.hasPermissions) {
-                WelcomeScreen(
-                    onGrantPermissionClick = { permissionLauncher.launch(myAppState.permissionsToRequest) },
-                    theme = selectedTheme
-                )
-            } else {
-                if (isFirstLaunch) {
-                    SettingsRepository.setFirstLaunchDone(context)
-                    isFirstLaunch = false
+            
+            NkdsifyAppTheme(theme = selectedTheme) {
+                if (showPermanentlyDeniedDialog) {
+                    PermissionPermanentlyDeniedDialog(
+                        onDismiss = { showPermanentlyDeniedDialog = false },
+                        onConfirm = {
+                            val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
+                            val uri = Uri.fromParts("package", context.packageName, null)
+                            intent.data = uri
+                            context.startActivity(intent)
+                            showPermanentlyDeniedDialog = false
+                        }
+                    )
                 }
 
-                if (myAppState.hasPermissions) {
-                    MyApp(
+                if (!myAppState.hasPermissions) {
+                    WelcomeScreen(
+                        onGrantPermissionClick = {
+                            permissionLauncher.launch(myAppState.permissionsToRequest)
+                        },
+                        theme = selectedTheme
+                    )
+                } else {
+                     MyApp(
                         myAppState = myAppState,
                         initialUri = initialUri,
                         screenWidth = screenWidth,
                         screenHeight = screenHeight,
                     )
-                } else {
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(stringResource(id = R.string.permission_required_message))
-                            Spacer(Modifier.height(8.dp))
-                            Button(onClick = { permissionLauncher.launch(myAppState.permissionsToRequest) }) {
-                                Text(stringResource(id = R.string.grant_permission_button))
-                            }
-                        }
-                    }
                 }
             }
         }

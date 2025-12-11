@@ -251,5 +251,8 @@
     <string name="theme_amoled">Amoled</string>
     <string name="find_in_page_content_description">Найти</string>
     <string name="keep_controls_visible_label">Оставлять кнопки видимыми</string>
+    <string name="permission_permanently_denied_title">Разрешение отклонено</string>
+    <string name="permission_permanently_denied_message">Вы навсегда отклонили разрешение. Чтобы использовать эту функцию, перейдите в настройки приложения и предоставьте разрешение.</string>
+    <string name="go_to_settings_button">Перейти в настройки</string>
 
 </resources>

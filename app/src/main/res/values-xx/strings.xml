@@ -245,4 +245,7 @@
     <string name="theme_amoled">Amoled</string>
     <string name="find_in_page_content_description">Ало где</string>
     <string name="keep_controls_visible_label">Оставить вот ту ебаную панель всегда</string>
+    <string name="permission_permanently_denied_title">.</string>
+    <string name="permission_permanently_denied_message">.</string>
+    <string name="go_to_settings_button">.</string>
 </resources>
