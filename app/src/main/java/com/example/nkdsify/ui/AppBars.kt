@@ -23,63 +23,96 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import com.example.nkdsify.R
+import com.example.nkdsify.MyAppState
 import com.example.nkdsify.data.MediaTypeFilter
 import com.example.nkdsify.data.Screen
 import com.example.nkdsify.data.SortType
 import com.example.nkdsify.ui.components.TagVisualTransformation
+import com.example.nkdsify.ui.utils.getMediaDetails
 import com.example.nkdsify.ui.utils.performVibration
 import kotlinx.coroutines.launch
+import kotlinx.collections.immutable.toImmutableList
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TopBar(
-    isSelectionMode: Boolean,
-    selectedItems: List<android.net.Uri>,
-    onCloseSelection: () -> Unit,
-    currentScreen: Screen,
-    onSelectAll: () -> Unit,
-    onRestore: () -> Unit,
-    onDeletePermanently: () -> Unit,
-    onEditTags: () -> Unit,
-    onShare: () -> Unit,
-    onTrash: () -> Unit,
-    onToggleFavorite: () -> Unit,
-    isFavoritesScreen: Boolean,
-    isSearchActive: Boolean,
-    searchQuery: String,
-    onSearchQueryChange: (String) -> Unit,
+    myAppState: MyAppState,
+    favorites: androidx.compose.runtime.snapshots.SnapshotStateList<String>,
     title: String,
-    onBackClick: () -> Unit,
-    onBackClickS: () -> Unit,
-    onBackClickTM: () -> Unit,
-    onCloseSearch: () -> Unit,
-    onSearchClick: () -> Unit,
-    onFilterByDateClick: () -> Unit,
-    onSortTypeChange: (SortType) -> Unit,
-    onReverseSort: () -> Unit,
-    selectedDate: Long?,
-    onResetDateFilter: () -> Unit,
-    onDetailsClick: () -> Unit,
-    context: Context,
-    onAddNewTag: () -> Unit,
-    isVibrationEnabled: Boolean,
-    onCopy: () -> Unit,
-    onMove: () -> Unit,
-    onMoveToSecret: () -> Unit,
-    onRestoreFromSecret: () -> Unit,
-    onDeleteFromSecret: () -> Unit,
-    mediaTypeFilter: MediaTypeFilter,
-    onMediaTypeFilterChange: (MediaTypeFilter) -> Unit,
-    onSelectionDetailsClick: () -> Unit,
-    onClearHistoryClick: () -> Unit
+    context: Context
 ) {
+    val isSelectionMode = myAppState.isSelectionMode
+    val selectedItems = myAppState.selectedItems
+    val currentScreen = myAppState.currentScreen
+    val isFavoritesScreen = myAppState.currentScreen is Screen.Favorites
+    val isSearchActive = myAppState.isSearchActive
+    val selectedDate = myAppState.selectedDate
+
+    // helper: toggle select all for the current screen
+    val toggleSelectAll = {
+        val currentItemsUris = when (val screen = myAppState.currentScreen) {
+            is Screen.FolderContent -> screen.folder.items.map { it.uri }
+            is Screen.Favorites -> {
+                if (screen.openAlbumName != null) {
+                    val taggedAlbums = myAppState.favoriteItems
+                        .flatMap { item -> (myAppState.tags[item.absolutePath] ?: emptySet()).map { tag -> tag to item } }
+                        .groupBy({ it.first }, { it.second })
+                    taggedAlbums[screen.openAlbumName]?.map { it.uri } ?: emptyList()
+                } else {
+                    myAppState.favoriteItems.map { it.uri }
+                }
+            }
+            is Screen.MediaByTag -> {
+                val urisWithTag = myAppState.tags.filter { it.value.contains(screen.tag) }.keys
+                myAppState.allMedia.filter { it.absolutePath in urisWithTag }.map { it.uri }
+            }
+            is Screen.Trash -> myAppState.trashedItems.map { it.uri }
+            else -> emptyList()
+        }.distinct()
+
+        if (myAppState.selectedItems.size == currentItemsUris.size && myAppState.selectedItems.containsAll(currentItemsUris)) {
+            myAppState.selectedItems.clear()
+        } else {
+            myAppState.selectedItems.clear()
+            myAppState.selectedItems.addAll(currentItemsUris)
+        }
+    }
+
+    val showSelectionDetails = {
+        if (myAppState.selectedItems.size == 1 && myAppState.currentScreen !is Screen.SecretStorage) {
+            myAppState.showDetailsDialog = myAppState.selectedItems.first()
+        } else if (myAppState.selectedItems.isNotEmpty()) {
+            val count = myAppState.selectedItems.size
+            val totalSize = myAppState.selectedItems.sumOf { getMediaDetails(context, it)?.size ?: 0L }
+            val formattedSize = android.text.format.Formatter.formatShortFileSize(context, totalSize)
+            myAppState.selectionDetails = context.getString(R.string.selection_details_text, count, formattedSize)
+            myAppState.showSelectionDetailsDialog = true
+        }
+    }
+
+    val performCopy = {
+        myAppState.filesToProcess = myAppState.selectedItems.toImmutableList()
+        myAppState.currentFileOperation = com.example.nkdsify.FileOperation.COPY
+        myAppState.showFolderSelectionDialog = true
+    }
+
+    val performMove = {
+        myAppState.filesToProcess = myAppState.selectedItems.toImmutableList()
+        myAppState.currentFileOperation = com.example.nkdsify.FileOperation.MOVE
+        myAppState.showFolderSelectionDialog = true
+    }
+
+    val performMoveToSecret = {
+        myAppState.showConfirmMoveToSecretDialog = true
+    }
+
     if (isSelectionMode) {
         TopAppBar(
             title = { Text(stringResource(id = R.string.selected_items_title, selectedItems.size)) },
             navigationIcon = {
                 IconButton(onClick = {
-                    if (isVibrationEnabled) performVibration(context)
-                    onCloseSelection()
+                    if (myAppState.isVibrationEnabled) performVibration(context)
+                    myAppState.selectedItems.clear()
                 }) {
                     Icon(Icons.Filled.Close, contentDescription = stringResource(id = R.string.close_selection_content_description))
                 }
@@ -88,62 +121,90 @@ fun TopBar(
                 when (currentScreen) {
                     is Screen.Trash -> {
                         IconButton(onClick = {
-                            if (isVibrationEnabled) performVibration(context)
-                            onSelectAll()
+                            if (myAppState.isVibrationEnabled) performVibration(context)
+                            toggleSelectAll()
                         }) {
                             Icon(Icons.Default.SelectAll, contentDescription = stringResource(id = R.string.select_all_content_description))
                         }
                         IconButton(onClick = {
-                            if (isVibrationEnabled) performVibration(context)
-                            onRestore()
+                            if (myAppState.isVibrationEnabled) performVibration(context)
+                            myAppState.itemsToRestore = myAppState.selectedItems.toImmutableList()
+                            myAppState.showConfirmRestoreDialog = true
                         }) {
                             Icon(Icons.Default.Restore, contentDescription = stringResource(id = R.string.restore_content_description))
                         }
                         IconButton(onClick = {
-                            if (isVibrationEnabled) performVibration(context)
-                            onDeletePermanently()
+                            if (myAppState.isVibrationEnabled) performVibration(context)
+                            myAppState.itemsToDelete = myAppState.selectedItems.toImmutableList()
+                            myAppState.showConfirmDeleteDialog = true
                         }) {
                             Icon(Icons.Default.Delete, contentDescription = stringResource(id = R.string.delete_permanently_content_description))
                         }
                     }
                     is Screen.SecretStorage -> {
                         IconButton(onClick = {
-                            if (isVibrationEnabled) performVibration(context)
-                            onRestoreFromSecret()
+                            if (myAppState.isVibrationEnabled) performVibration(context)
+                            myAppState.itemsToRestoreFromSecret = myAppState.selectedItems.toImmutableList()
+                            myAppState.showConfirmRestoreFromSecretDialog = true
                         }) {
                             Icon(Icons.Default.Restore, contentDescription = stringResource(id = R.string.restore_from_secret_storage_content_description))
                         }
                         IconButton(onClick = {
-                            if (isVibrationEnabled) performVibration(context)
-                            onDeleteFromSecret()
+                            if (myAppState.isVibrationEnabled) performVibration(context)
+                            myAppState.itemsToDeleteFromSecret = myAppState.selectedItems.toImmutableList()
+                            myAppState.showConfirmDeleteFromSecretDialog = true
                         }) {
                             Icon(Icons.Default.Delete, contentDescription = stringResource(id = R.string.delete_content_description))
                         }
                     }
                     else -> {
                         IconButton(onClick = {
-                            if (isVibrationEnabled) performVibration(context)
-                            onEditTags()
+                            if (myAppState.isVibrationEnabled) performVibration(context)
+                            myAppState.showBulkTagDialog = true
                         }) {
                             Icon(Icons.Default.Edit, contentDescription = stringResource(id = R.string.edit_tags_content_description))
                         }
                         IconButton(onClick = {
-                            if (isVibrationEnabled) performVibration(context)
-                            onShare()
+                            if (myAppState.isVibrationEnabled) performVibration(context)
+                            val currentSelected = myAppState.selectedItems.toImmutableList()
+                            val uris = ArrayList(currentSelected)
+                            if (uris.isEmpty()) return@IconButton
+                            val intent = android.content.Intent().addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                            if (uris.size == 1) {
+                                val uri = uris.first()
+                                intent.action = android.content.Intent.ACTION_SEND
+                                intent.putExtra(android.content.Intent.EXTRA_STREAM, uri)
+                                intent.type = context.contentResolver.getType(uri) ?: "*/*"
+                            } else {
+                                val areAllImages = uris.all { uri -> context.contentResolver.getType(uri)?.startsWith("image/") == true }
+                                val areAllVideos = uris.all { uri -> context.contentResolver.getType(uri)?.startsWith("video/") == true }
+                                intent.action = android.content.Intent.ACTION_SEND_MULTIPLE
+                                intent.putParcelableArrayListExtra(android.content.Intent.EXTRA_STREAM, uris)
+                                intent.type = when {
+                                    areAllImages -> "image/*"
+                                    areAllVideos -> "video/*"
+                                    else -> "*/*"
+                                }
+                            }
+                            context.startActivity(android.content.Intent.createChooser(intent, null))
                         }) {
                             Icon(Icons.Default.Share, contentDescription = stringResource(id = R.string.share_content_description))
                         }
                         IconButton(onClick = {
-                            if (isVibrationEnabled) performVibration(context)
-                            onTrash()
+                            if (myAppState.isVibrationEnabled) performVibration(context)
+                            myAppState.itemsToTrash = myAppState.selectedItems.toImmutableList()
+                            myAppState.showConfirmTrashDialog = true
                         }) {
                             Icon(Icons.Default.Delete, contentDescription = stringResource(id = R.string.delete_content_description))
                         }
                         val coroutineScope = rememberCoroutineScope()
                         val scale = remember { Animatable(1f) }
                         IconButton(onClick = {
-                            if (isVibrationEnabled) performVibration(context)
-                            onToggleFavorite()
+                            if (myAppState.isVibrationEnabled) performVibration(context)
+                            val selectedPaths = myAppState.selectedItems.mapNotNull { uri -> myAppState.allMedia.find { it.uri == uri }?.absolutePath }
+                            selectedPaths.forEach { path ->
+                                if (favorites.contains(path)) favorites.remove(path) else favorites.add(path)
+                            }
                             coroutineScope.launch {
                                 scale.animateTo(
                                     targetValue = 1.3f,
@@ -166,7 +227,7 @@ fun TopBar(
                         var menuExpanded by remember { mutableStateOf(false) }
                         Box {
                             IconButton(onClick = {
-                                if (isVibrationEnabled) performVibration(context)
+                                if (myAppState.isVibrationEnabled) performVibration(context)
                                 menuExpanded = true
                             }) {
                                 Icon(Icons.Default.MoreVert, contentDescription = stringResource(id = R.string.more_options_content_description))
@@ -174,27 +235,27 @@ fun TopBar(
                             DropdownMenu(expanded = menuExpanded, onDismissRequest = { menuExpanded = false }) {
                                 DropdownMenuItem(
                                     text = { Text(stringResource(id = R.string.select_all_content_description)) },
-                                    onClick = { if (isVibrationEnabled) performVibration(context); onSelectAll(); menuExpanded = false },
+                                    onClick = { if (myAppState.isVibrationEnabled) performVibration(context); toggleSelectAll(); menuExpanded = false },
                                     leadingIcon = { Icon(Icons.Default.SelectAll, contentDescription = stringResource(id = R.string.select_all_content_description)) }
                                 )
                                 DropdownMenuItem(
                                     text = { Text(stringResource(id = R.string.details_content_description)) },
-                                    onClick = { if (isVibrationEnabled) performVibration(context); onSelectionDetailsClick(); menuExpanded = false },
+                                    onClick = { if (myAppState.isVibrationEnabled) performVibration(context); showSelectionDetails(); menuExpanded = false },
                                     leadingIcon = { Icon(Icons.Default.Info, contentDescription = stringResource(id = R.string.details_content_description)) }
                                 )
                                 DropdownMenuItem(
                                     text = { Text(stringResource(id = R.string.copy_button)) },
-                                    onClick = { if (isVibrationEnabled) performVibration(context); onCopy(); menuExpanded = false },
+                                    onClick = { if (myAppState.isVibrationEnabled) performVibration(context); performCopy(); menuExpanded = false },
                                     leadingIcon = { Icon(Icons.Default.ContentCopy, contentDescription = stringResource(id = R.string.copy_button)) }
                                 )
                                 DropdownMenuItem(
                                     text = { Text(stringResource(id = R.string.move_button)) },
-                                    onClick = { if (isVibrationEnabled) performVibration(context); onMove(); menuExpanded = false },
+                                    onClick = { if (myAppState.isVibrationEnabled) performVibration(context); performMove(); menuExpanded = false },
                                     leadingIcon = { Icon(Icons.AutoMirrored.Filled.DriveFileMove, contentDescription = stringResource(id = R.string.move_button)) }
                                 )
                                 DropdownMenuItem(
                                     text = { Text(stringResource(id = R.string.move_to_secret_storage_button)) },
-                                    onClick = { if (isVibrationEnabled) performVibration(context); onMoveToSecret(); menuExpanded = false },
+                                    onClick = { if (myAppState.isVibrationEnabled) performVibration(context); performMoveToSecret(); menuExpanded = false },
                                     leadingIcon = { Icon(Icons.Default.Lock, contentDescription = stringResource(id = R.string.move_to_secret_storage_button)) }
                                 )
                             }
@@ -208,14 +269,13 @@ fun TopBar(
 
         if (isSearchActive) {
             BackHandler {
-                onCloseSearch()
+                myAppState.isSearchActive = false
+                myAppState.searchQuery = ""
             }
         }
 
-        LaunchedEffect(isSearchActive) {
-            if (isSearchActive) {
-                focusRequester.requestFocus()
-            }
+        LaunchedEffect(myAppState.isSearchActive) {
+            if (myAppState.isSearchActive) focusRequester.requestFocus()
         }
 
         TopAppBar(
@@ -223,8 +283,8 @@ fun TopBar(
                 AnimatedContent(targetState = isSearchActive, label = "Search bar animation") { targetState ->
                     if (targetState) {
                         TextField(
-                            value = searchQuery,
-                            onValueChange = onSearchQueryChange,
+                            value = myAppState.searchQuery,
+                            onValueChange = { myAppState.searchQuery = it },
                             placeholder = { Text(stringResource(id = R.string.search_placeholder)) },
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -242,10 +302,11 @@ fun TopBar(
             },
             modifier = Modifier.statusBarsPadding(),
             navigationIcon = {
+                val currentScreen = myAppState.currentScreen
                 if (currentScreen is Screen.FolderContent || (currentScreen is Screen.Favorites && currentScreen.openAlbumName != null) || currentScreen is Screen.ViewHistory) {
                     IconButton(onClick = {
-                        if (isVibrationEnabled) performVibration(context)
-                        onBackClick()
+                        if (myAppState.isVibrationEnabled) performVibration(context)
+                        myAppState.currentScreen = Screen.Folders
                     }) {
                         Icon(
                             Icons.AutoMirrored.Filled.ArrowBack,
@@ -255,16 +316,16 @@ fun TopBar(
                 }
                 if (currentScreen is Screen.TagManagement || currentScreen is Screen.SecretStorage) {
                     IconButton(onClick = {
-                        if (isVibrationEnabled) performVibration(context)
-                        onBackClickS()
+                        if (myAppState.isVibrationEnabled) performVibration(context)
+                        myAppState.currentScreen = Screen.Settings
                     }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(id = R.string.back_content_description))
                     }
                 }
                 if (currentScreen is Screen.MediaByTag) {
                     IconButton(onClick = {
-                        if (isVibrationEnabled) performVibration(context)
-                        onBackClickTM()
+                        if (myAppState.isVibrationEnabled) performVibration(context)
+                        myAppState.currentScreen = Screen.TagManagement
                     }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(id = R.string.back_content_description))
                     }
@@ -274,8 +335,9 @@ fun TopBar(
                 AnimatedContent(targetState = isSearchActive, label = "Search actions animation") { targetState ->
                     if (targetState) {
                         IconButton(onClick = {
-                            if (isVibrationEnabled) performVibration(context)
-                            onCloseSearch()
+                            if (myAppState.isVibrationEnabled) performVibration(context)
+                            myAppState.isSearchActive = false
+                            myAppState.searchQuery = ""
                         }) {
                             Icon(Icons.Filled.Close, contentDescription = stringResource(id = R.string.close_search_content_description))
                         }
@@ -283,14 +345,14 @@ fun TopBar(
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             if (currentScreen is Screen.AllMedia) {
                                 IconButton(onClick = {
-                                    val nextFilter = when (mediaTypeFilter) {
+                                    val nextFilter = when (myAppState.mediaTypeFilter) {
                                         MediaTypeFilter.ALL -> MediaTypeFilter.PHOTOS
                                         MediaTypeFilter.PHOTOS -> MediaTypeFilter.VIDEOS
                                         MediaTypeFilter.VIDEOS -> MediaTypeFilter.ALL
                                     }
-                                    onMediaTypeFilterChange(nextFilter)
+                                    myAppState.mediaTypeFilter = nextFilter
                                 }) {
-                                    val icon = when (mediaTypeFilter) {
+                                    val icon = when (myAppState.mediaTypeFilter) {
                                         MediaTypeFilter.PHOTOS -> Icons.Default.PhotoLibrary
                                         MediaTypeFilter.VIDEOS -> Icons.Default.VideoLibrary
                                         else -> Icons.Default.FilterList
@@ -300,26 +362,26 @@ fun TopBar(
                             }
                             if (currentScreen is Screen.TagManagement) {
                                 IconButton(onClick = {
-                                    if (isVibrationEnabled) performVibration(context)
-                                    onAddNewTag()
+                                    if (myAppState.isVibrationEnabled) performVibration(context)
+                                    myAppState.showAddDialog = true
                                 }) {
                                     Icon(Icons.Default.Add, contentDescription = stringResource(id = R.string.add_new_tag_content_description))
                                 }
                             }
-                            
+
                             if (currentScreen !is Screen.Settings && currentScreen !is Screen.TagManagement && currentScreen !is Screen.SecretStorage && currentScreen !is Screen.About) {
 
                                 if (currentScreen !is Screen.Trash) {
                                     IconButton(onClick = {
-                                        if (isVibrationEnabled) performVibration(context)
-                                        onSearchClick()
+                                        if (myAppState.isVibrationEnabled) performVibration(context)
+                                        myAppState.isSearchActive = true
                                     }) {
                                         Icon(Icons.Filled.Search, contentDescription = stringResource(id = R.string.search_content_description))
                                     }
                                     if (currentScreen !is Screen.ViewHistory) {
                                         IconButton(onClick = {
-                                            if (isVibrationEnabled) performVibration(context)
-                                            onFilterByDateClick()
+                                            if (myAppState.isVibrationEnabled) performVibration(context)
+                                            myAppState.showDatePicker = true
                                         }) {
                                             Icon(Icons.Filled.DateRange, contentDescription = stringResource(id = R.string.filter_by_date_content_description))
                                         }
@@ -328,8 +390,8 @@ fun TopBar(
 
                                 if (currentScreen is Screen.ViewHistory) {
                                     IconButton(onClick = {
-                                        if (isVibrationEnabled) performVibration(context)
-                                        onClearHistoryClick()
+                                        if (myAppState.isVibrationEnabled) performVibration(context)
+                                        myAppState.showClearHistoryDialog = true
                                     }) {
                                         Icon(Icons.Default.Delete, contentDescription = stringResource(id = R.string.clear_history_title))
                                     }
@@ -337,7 +399,7 @@ fun TopBar(
                                     var menuExpanded by remember { mutableStateOf(false) }
                                     Box {
                                         IconButton(onClick = {
-                                            if (isVibrationEnabled) performVibration(context)
+                                            if (myAppState.isVibrationEnabled) performVibration(context)
                                             menuExpanded = true
                                         }) {
                                             Icon(Icons.AutoMirrored.Filled.Sort, contentDescription = stringResource(id = R.string.sort_by_content_description))
@@ -345,29 +407,29 @@ fun TopBar(
                                         DropdownMenu(expanded = menuExpanded, onDismissRequest = { menuExpanded = false }) {
                                             DropdownMenuItem(
                                                 text = { Text(stringResource(id = R.string.sort_by_date_modified)) },
-                                                onClick = { if (isVibrationEnabled) performVibration(context); onSortTypeChange(SortType.DATE_MODIFIED); menuExpanded = false }
+                                                onClick = { if (myAppState.isVibrationEnabled) performVibration(context); myAppState.sortType = SortType.DATE_MODIFIED; menuExpanded = false }
                                             )
                                             DropdownMenuItem(
                                                 text = { Text(stringResource(id = R.string.sort_by_date_added)) },
-                                                onClick = { if (isVibrationEnabled) performVibration(context); onSortTypeChange(SortType.DATE_ADDED); menuExpanded = false }
+                                                onClick = { if (myAppState.isVibrationEnabled) performVibration(context); myAppState.sortType = SortType.DATE_ADDED; menuExpanded = false }
                                             )
                                             DropdownMenuItem(
                                                 text = { Text(stringResource(id = R.string.sort_by_alphabet)) },
-                                                onClick = { if (isVibrationEnabled) performVibration(context); onSortTypeChange(SortType.ALPHABET); menuExpanded = false }
+                                                onClick = { if (myAppState.isVibrationEnabled) performVibration(context); myAppState.sortType = SortType.ALPHABET; menuExpanded = false }
                                             )
                                             DropdownMenuItem(
                                                 text = { Text(stringResource(id = R.string.sort_by_size)) },
-                                                onClick = { if (isVibrationEnabled) performVibration(context); onSortTypeChange(SortType.SIZE); menuExpanded = false }
+                                                onClick = { if (myAppState.isVibrationEnabled) performVibration(context); myAppState.sortType = SortType.SIZE; menuExpanded = false }
                                             )
                                             DropdownMenuItem(
                                                 text = { Text(stringResource(id = R.string.reverse_sort)) },
                                                 trailingIcon = { Icon(Icons.Filled.SwapVert, contentDescription = stringResource(id = R.string.reverse_sort_content_description)) },
-                                                onClick = { if (isVibrationEnabled) performVibration(context); onReverseSort(); menuExpanded = false }
+                                                onClick = { if (myAppState.isVibrationEnabled) performVibration(context); myAppState.sortAscending = !myAppState.sortAscending; menuExpanded = false }
                                             )
                                             if (selectedDate != null && currentScreen !is Screen.Trash) {
                                                 DropdownMenuItem(
                                                     text = { Text(stringResource(id = R.string.reset_date_filter)) },
-                                                    onClick = { if (isVibrationEnabled) performVibration(context); onResetDateFilter(); menuExpanded = false }
+                                                    onClick = { if (myAppState.isVibrationEnabled) performVibration(context); myAppState.selectedDate = null; menuExpanded = false }
                                                 )
                                             }
                                         }
@@ -376,8 +438,8 @@ fun TopBar(
 
                                 if (currentScreen is Screen.FolderContent || (currentScreen is Screen.Favorites && currentScreen.openAlbumName != null)) {
                                     IconButton(onClick = {
-                                        if (isVibrationEnabled) performVibration(context)
-                                        onDetailsClick()
+                                        if (myAppState.isVibrationEnabled) performVibration(context)
+                                        myAppState.showAlbumDetailsDialog = true
                                     }) {
                                         Icon(Icons.Filled.Info, contentDescription = stringResource(id = R.string.details_content_description))
                                     }
