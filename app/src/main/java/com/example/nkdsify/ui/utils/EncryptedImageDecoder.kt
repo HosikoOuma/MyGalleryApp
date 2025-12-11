@@ -21,16 +21,31 @@ class EncryptedImageDecoder(
     private val originalUri: Uri // Pass the original URI from the factory
 ) : Decoder {
 
+    private fun getCacheFile(originalPath: String): File {
+        val cacheDir = context.cacheDir.resolve("decrypted_thumbnails")
+        if (!cacheDir.exists()) {
+            cacheDir.mkdirs()
+        }
+        val fileName = File(originalPath).name
+        return File(cacheDir, "$fileName.decrypted")
+    }
+
     override suspend fun decode(): DecodeResult {
         val originalFilePath = originalUri.path!!
-        // The thumbnail file is what we actually decrypt for the grid
-        val thumbFile = File(originalFilePath + ".thumb")
+        val cacheFile = getCacheFile(originalFilePath)
 
-        val decryptedBytes = ByteArrayOutputStream().use { outputStream ->
-            thumbFile.inputStream().use { inputStream ->
-                CryptoUtils.decrypt(inputStream, outputStream)
+        val decryptedBytes = if (cacheFile.exists()) {
+            cacheFile.readBytes()
+        } else {
+            val thumbFile = File(originalFilePath + ".thumb")
+            val decrypted = ByteArrayOutputStream().use { outputStream ->
+                thumbFile.inputStream().use { inputStream ->
+                    CryptoUtils.decrypt(inputStream, outputStream)
+                }
+                outputStream.toByteArray()
             }
-            outputStream.toByteArray()
+            cacheFile.writeBytes(decrypted)
+            decrypted
         }
 
         val bitmap = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {

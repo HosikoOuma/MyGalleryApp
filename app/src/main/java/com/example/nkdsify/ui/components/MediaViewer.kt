@@ -87,7 +87,8 @@ fun MediaViewer(
 ) {
     val pagerState = rememberPagerState(initialPage = startIndex, pageCount = { items.size })
     val context = LocalContext.current
-    var tempFileUri by remember { mutableStateOf<Uri?>(null) }
+    var decryptedUri by remember { mutableStateOf<Uri?>(null) }
+    var isDecrypting by remember { mutableStateOf(false) }
 
     val view = LocalView.current
     val window = (view.context as Activity).window
@@ -102,41 +103,38 @@ fun MediaViewer(
     }
 
     if (isSecretMode) {
-        DisposableEffect(Unit) {
-            onDispose {
-                tempFileUri?.path?.let {
-                    try {
-                        File(it).delete()
-                    } catch (e: Exception) {
-                        // ignore
-                    }
-                }
-            }
-        }
-
         LaunchedEffect(pagerState.currentPage) {
-            // Clean up previous temp file
-            tempFileUri?.path?.let { File(it).delete() }
-            tempFileUri = null
-
-            // Decrypt new item
+            isDecrypting = true
+            decryptedUri = null
             val item = items[pagerState.currentPage]
-            withContext(Dispatchers.IO) {
-                val tempFile = File.createTempFile("decrypted_", item.name.substringAfterLast('.'), context.cacheDir)
-                try {
-                    File(item.uri.path!!).inputStream().use { input ->
-                        tempFile.outputStream().use { output ->
-                            CryptoUtils.decrypt(input, output)
+
+            val decryptedFile = withContext(Dispatchers.IO) {
+                val cacheDir = context.cacheDir.resolve("decrypted_media")
+                if (!cacheDir.exists()) {
+                    cacheDir.mkdirs()
+                }
+                val originalFile = File(item.uri.path!!)
+                val cachedFile = File(cacheDir, originalFile.name)
+
+                if (cachedFile.exists() && cachedFile.length() > 0) {
+                    cachedFile
+                } else {
+                    try {
+                        originalFile.inputStream().use { input ->
+                            cachedFile.outputStream().use { output ->
+                                CryptoUtils.decrypt(input, output)
+                            }
                         }
+                        cachedFile
+                    } catch (e: Exception) {
+                        cachedFile.delete() // Clean up on error
+                        null
                     }
-                    withContext(Dispatchers.Main) {
-                        tempFileUri = Uri.fromFile(tempFile)
-                    }
-                } catch (e: Exception) {
-                    tempFile.delete()
-                    // Handle error, maybe show a toast
                 }
             }
+
+            decryptedUri = decryptedFile?.let { Uri.fromFile(it) }
+            isDecrypting = false
         }
     }
 
@@ -207,14 +205,22 @@ fun MediaViewer(
             userScrollEnabled = myAppState.isSwipeToDismissEnabled
         ) { page ->
             val item = items[page]
-            val isVisible by remember { derivedStateOf { pagerState.currentPage == page } }
+            val isFullyVisible by remember { derivedStateOf { !pagerState.isScrollInProgress && pagerState.currentPage == page } }
 
             if (isSecretMode) {
-                if (isVisible && tempFileUri != null) {
+                if (isDecrypting) {
+                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            CircularProgressIndicator()
+                            Spacer(Modifier.height(8.dp))
+                            Text(stringResource(id = R.string.decrypting_file), color = Color.White)
+                        }
+                    }
+                } else if (decryptedUri != null) {
                     if (item.isVideo) {
                         VideoPlayerPage(
-                            uri = tempFileUri!!,
-                            isVisible = isVisible,
+                            uri = decryptedUri!!,
+                            isFullyVisible = isFullyVisible,
                             isMuted = isMuted,
                             controlsVisible = controlsVisible,
                             onToggleControls = toggleControls,
@@ -223,27 +229,19 @@ fun MediaViewer(
                         )
                     } else {
                         ZoomableImage(
-                            uri = tempFileUri!!,
+                            uri = decryptedUri!!,
                             imageLoader = imageLoaderUsed,
                             zoomType = myAppState.selectedZoomType,
                             isVibrationEnabled = isVibrationEnabled,
                             onToggleControls = toggleControls
                         )
                     }
-                } else {
-                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            CircularProgressIndicator()
-                            Spacer(Modifier.height(8.dp))
-                            Text(stringResource(id = R.string.decrypting_file), color = Color.White)
-                        }
-                    }
                 }
             } else { // Original logic for non-secret items
                 if (item.isVideo) {
                     VideoPlayerPage(
                         uri = item.uri,
-                        isVisible = isVisible,
+                        isFullyVisible = isFullyVisible,
                         isMuted = isMuted,
                         controlsVisible = controlsVisible,
                         onToggleControls = toggleControls,
@@ -285,6 +283,7 @@ fun MediaViewer(
                 IconButton(onClick = {
                     if (isVibrationEnabled) performVibration(context)
                     myAppState.viewerState = null
+                    myAppState.secretViewerState = null
                 }) {
                     Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
                 }

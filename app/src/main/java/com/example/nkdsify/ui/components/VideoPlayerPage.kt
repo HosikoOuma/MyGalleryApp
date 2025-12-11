@@ -75,7 +75,7 @@ enum class SeekDirection {
 @Composable
 fun VideoPlayerPage(
     uri: Uri,
-    isVisible: Boolean,
+    isFullyVisible: Boolean,
     isMuted: Boolean,
     controlsVisible: Boolean,
     onToggleControls: () -> Unit,
@@ -125,15 +125,15 @@ fun VideoPlayerPage(
         }
     }
 
-    // Player Lifecycle
-    LaunchedEffect(uri, isVisible) {
-        if (isVisible) {
-            exoPlayer.setMediaItem(androidx.media3.common.MediaItem.fromUri(uri))
-            exoPlayer.prepare()
-            exoPlayer.playWhenReady = true
-        } else {
-            exoPlayer.pause()
-        }
+    // Player Lifecycle - Prepare the player only when the URI changes
+    LaunchedEffect(uri) {
+        exoPlayer.setMediaItem(androidx.media3.common.MediaItem.fromUri(uri))
+        exoPlayer.prepare()
+    }
+
+    // Player Lifecycle - Control play/pause based on visibility
+    LaunchedEffect(isFullyVisible) {
+        exoPlayer.playWhenReady = isFullyVisible
     }
 
     // App Lifecycle Observer
