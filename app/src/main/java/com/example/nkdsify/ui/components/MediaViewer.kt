@@ -153,6 +153,20 @@ fun MediaViewer(
         if (!isExternal && !isTrashMode && !isSecretMode) {
             items.getOrNull(pagerState.currentPage)?.let { item ->
                 ViewHistoryRepository.addToHistory(context, item.uri)
+                // Also update in-memory history so UI reflects changes immediately
+                try {
+                    val mutable = myAppState.viewHistory.toMutableList()
+                    // remove existing entry for this uri
+                    mutable.removeAll { it.uri == item.uri }
+                    // add to front
+                    mutable.add(0, item)
+                    // limit size to repository limit
+                    val maxSize = 200
+                    val trimmed = if (mutable.size > maxSize) mutable.subList(0, maxSize) else mutable
+                    myAppState.viewHistory = trimmed.toImmutableList()
+                } catch (_: Exception) {
+                    // ignore any concurrency issues
+                }
             }
         }
     }

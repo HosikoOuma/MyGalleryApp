@@ -35,7 +35,7 @@ object ViewHistoryRepository {
         // Save the updated list
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         val json = gson.toJson(trimmedHistory)
-        prefs.edit().putString(HISTORY_KEY, json).apply()
+        prefs.edit().putString(HISTORY_KEY, json).commit()
     }
 
     fun getHistory(context: Context): List<ViewedItem> {

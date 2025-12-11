@@ -214,7 +214,7 @@ fun MyApp(myAppState: MyAppState, initialUri: Uri? = null, screenWidth: Int, scr
             }
         }
 
-        LaunchedEffect(myAppState.currentScreen, myAppState.refreshTrigger) {
+        LaunchedEffect(myAppState.currentScreen, myAppState.refreshTrigger, myAppState.allMedia) {
             if (myAppState.currentScreen is Screen.SecretStorage) {
                 myAppState.secretItems = SecretRepository.getSecretMediaItems(context).toImmutableList()
             }
@@ -237,6 +237,10 @@ fun MyApp(myAppState: MyAppState, initialUri: Uri? = null, screenWidth: Int, scr
                     myAppState.viewHistory
                 }
             }
+        }
+        // Keep centralized state in sync so other components (MyAppNavigation etc.) can read the filtered history
+        LaunchedEffect(filteredViewHistory) {
+            myAppState.filteredViewHistory = filteredViewHistory.toImmutableList()
         }
         LaunchedEffect(initialUri, myAppState.hasPermissions) {
     if (initialUri != null && myAppState.hasPermissions) {

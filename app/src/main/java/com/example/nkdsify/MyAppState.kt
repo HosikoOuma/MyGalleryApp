@@ -99,7 +99,7 @@ class MyAppState(
     val favoritesList = mutableStateListOf<String>()
 
     // New: filtered view history (derived list stored here for Navigation)
-    var filteredViewHistory: ImmutableList<MediaItem> = persistentListOf()
+    var filteredViewHistory by mutableStateOf<ImmutableList<MediaItem>>(persistentListOf())
 
     // New: callbacks centralized
     var onAddNewTag: ((String) -> Unit)? = null

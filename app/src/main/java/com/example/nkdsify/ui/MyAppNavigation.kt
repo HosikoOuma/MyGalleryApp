@@ -1,7 +1,5 @@
 package com.example.nkdsify.ui
 
-import android.net.Uri
-import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -21,18 +19,13 @@ import androidx.compose.ui.platform.SoftwareKeyboardController
 import coil.ImageLoader
 import com.example.nkdsify.MyAppState
 import com.example.nkdsify.data.*
-import com.example.nkdsify.ui.components.MediaGrid
 import com.example.nkdsify.ui.components.utils.rememberCoilImageLoader
 import com.example.nkdsify.ui.screens.*
-import com.example.nkdsify.ui.utils.BiometricUtils
-import com.example.nkdsify.ui.utils.SettingsRepository
-import com.example.nkdsify.ui.utils.TagsRepository
 import com.example.nkdsify.ui.utils.parseQueryString
-import com.example.nkdsify.ui.utils.performVibration
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
-import kotlinx.coroutines.launch
 import java.util.*
+import com.example.nkdsify.ui.impl.*
 
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
@@ -170,379 +163,94 @@ fun MyAppNavigation(
         }
     }, label = "Screen Animation") { screen ->
         when (screen) {
-            is Screen.Folders -> FoldersGrid(
-                folders = visibleFolders,
+            is Screen.Folders -> FoldersScreen(
+                visibleFolders = visibleFolders,
                 imageLoader = imageLoader,
-                onFolderClick = { folder ->
-                    keyboardController?.hide()
-                    myAppState.currentScreen = Screen.FolderContent(folder)
-                },
-                isBlurEnabled = myAppState.isBlurEnabled,
-                gridState = foldersGridState,
-                isShowFileCountEnabled = myAppState.isShowFileCountEnabled,
-                blurType = myAppState.selectedBlurType
+                keyboardController = keyboardController,
+                myAppState = myAppState,
+                gridState = foldersGridState
             )
+
             is Screen.About -> {
                 AboutScreen()
             }
 
-            is Screen.FolderContent -> {
-                val folder = myAppState.allFolders.find { it.id == screen.folder.id } ?: screen.folder
-                val sortedItems = remember(folder.items, sortComparator) {
-                    folder.items.sortedWith(sortComparator).toImmutableList()
-                }
-                val items = if (myAppState.isSearchActive && myAppState.searchQuery.isNotEmpty()) {
-                    sortedItems.filter { it.name.contains(myAppState.searchQuery, ignoreCase = true) }.toImmutableList()
-                } else {
-                    sortedItems
-                }
-                MediaGrid(
-                    items = items,
-                    favorites = favorites,
-                    selectedItems = myAppState.selectedItems,
-                    imageLoader = imageLoader,
-                    isBlurEnabled = myAppState.isBlurInFolderEnabled,
-                    onItemClick = { item ->
-                        keyboardController?.hide()
-                        myAppState.viewerState = MediaViewerState(items = items, startIndex = items.indexOf(item))
-                    },
-                    onToggleSelection = { item ->
-                        if (myAppState.selectedItems.contains(item.uri)) {
-                            myAppState.selectedItems.remove(item.uri)
-                        } else {
-                            myAppState.selectedItems.add(item.uri)
-                        }
-                    },
-                    onClearSelection = { myAppState.selectedItems.clear() },
-                    blurType = myAppState.selectedBlurType,
-                    gridState = folderContentGridState
-                )
-            }
+            is Screen.FolderContent -> FolderContentScreen(
+                screen = screen,
+                sortComparator = sortComparator,
+                myAppState = myAppState,
+                imageLoader = imageLoader,
+                gridState = folderContentGridState,
+                keyboardController = keyboardController
+            )
 
-            is Screen.Favorites -> {
-                FavoritesScreen(
-                    items = filteredFavoriteItems,
-                    favorites = favorites,
-                    selectedItems = myAppState.selectedItems,
-                    imageLoader = imageLoader,
-                    tags = myAppState.tags,
-                    onItemClick = { items, item ->
-                        keyboardController?.hide()
-                        myAppState.viewerState = MediaViewerState(items = items.toImmutableList(), startIndex = items.indexOf(item))
-                    },
-                    onToggleSelection = { item ->
-                        if (myAppState.selectedItems.contains(item.uri)) {
-                            myAppState.selectedItems.remove(item.uri)
-                        } else {
-                            myAppState.selectedItems.add(item.uri)
-                        }
-                    },
-                    isBlurEnabled = myAppState.isBlurEnabled,
-                    isBlurInFolderEnabled = myAppState.isBlurInFolderEnabled,
-                    gridState = favoritesGridState,
-                    contentGridState = favoritesContentGridState,
-                    openAlbumName = screen.openAlbumName,
-                    onOpenAlbum = { albumName ->
-                        if (myAppState.isVibrationEnabled) performVibration(context)
-                        myAppState.currentScreen = Screen.Favorites(openAlbumName = albumName)
-                    },
-                    isShowFileCountEnabled = myAppState.isShowFileCountEnabled,
-                    onClearSelection = { myAppState.selectedItems.clear() },
-                    blurType = myAppState.selectedBlurType
-                )
-            }
+            is Screen.Favorites -> FavoritesScreenImpl(
+                filteredFavoriteItems = filteredFavoriteItems,
+                favorites = favorites,
+                myAppState = myAppState,
+                imageLoader = imageLoader,
+                gridState = favoritesGridState,
+                contentGridState = favoritesContentGridState,
+                keyboardController = keyboardController,
+                context = context
+            )
 
-            is Screen.Settings -> {
-                val settingsState = SettingsState(
-                    isBlurEnabled = myAppState.isBlurEnabled,
-                    isBlurInFolderEnabled = myAppState.isBlurInFolderEnabled,
-                    isTrashBlurEnabled = myAppState.isTrashBlurEnabled,
-                    isMuteVideoByDefault = myAppState.isMuteVideoByDefault,
-                    isBlurAllMediaEnabled = myAppState.isBlurAllMediaEnabled,
-                    selectedTheme = myAppState.selectedTheme,
-                    selectedZoomType = myAppState.selectedZoomType,
-                    isVibrationEnabled = myAppState.isVibrationEnabled,
-                    isShowFileCountEnabled = myAppState.isShowFileCountEnabled,
-                    isShuffleButtonVisible = myAppState.isShuffleButtonVisible,
-                    isShakeToBlurEnabled = myAppState.isShakeToBlurEnabled,
-                    isLoopVideoEnabled = myAppState.isLoopVideoEnabled,
-                    selectedBlurType = myAppState.selectedBlurType,
-                    isSwipeToDismissEnabled = myAppState.isSwipeToDismissEnabled,
-                    useLargeFab = myAppState.useLargeFab,
-                    autoDeleteTrashEnabled = myAppState.autoDeleteTrashEnabled,
-                    autoDeleteTrashDays = myAppState.autoDeleteTrashDays,
-                    selectedLanguage = myAppState.selectedLanguage,
-                    currentVersion = myAppState.currentVersion,
-                    selectedFabAction = myAppState.selectedFabAction,
-                    selectedFontFamily = myAppState.selectedFontFamily,
-                    isKeepControlsVisible = myAppState.isKeepControlsVisible
-                )
+            is Screen.Settings -> SettingsScreenImpl(
+                myAppState = myAppState,
+                coroutineScope = coroutineScope,
+                context = context,
+                onFontFamilyChange = onFontFamilyChange,
+                onFabActionChange = onFabActionChange
+            )
 
-                val settingsActions = SettingsActions(
-                    onBlurEnabledChange = {
-                        myAppState.isBlurEnabled = it
-                        SettingsRepository.setBlurEnabled(context, it)
-                    },
-                    onBlurInFolderEnabledChange = {
-                        myAppState.isBlurInFolderEnabled = it
-                        SettingsRepository.setBlurInFolderEnabled(context, it)
-                    },
-                    onTrashBlurEnabledChange = {
-                        myAppState.isTrashBlurEnabled = it
-                        SettingsRepository.setTrashBlurEnabled(context, it)
-                    },
-                    onMuteVideoByDefaultChange = {
-                        myAppState.isMuteVideoByDefault = it
-                        SettingsRepository.setMuteVideoByDefault(context, it)
-                    },
-                    onBlurAllMediaEnabledChange = {
-                        myAppState.isBlurAllMediaEnabled = it
-                        SettingsRepository.setBlurAllMediaEnabled(context, it)
-                    },
-                    onEasterEggClick = {
-                        if (myAppState.isVibrationEnabled) performVibration(context)
-                        myAppState.easterEggTapCount++
-                        if (myAppState.easterEggTapCount == 10) {
-                            myAppState.easterEggTapCount = 0
-                            myAppState.showEasterEggDialog = true
-                            val mediaPlayer = android.media.MediaPlayer.create(context, com.example.nkdsify.R.raw.uwu)
-                            mediaPlayer.setOnCompletionListener { it.release() }
-                            mediaPlayer.start()
-                        }
-                    },
-                    onThemeChange = { theme ->
-                        myAppState.selectedTheme = theme
-                        SettingsRepository.setTheme(context, theme)
-                    },
-                    onManageHiddenFoldersClick = {
-                        if (myAppState.isVibrationEnabled) performVibration(context)
-                        myAppState.showHiddenFoldersDialog = true
-                    },
-                    onZoomTypeChange = {
-                        myAppState.selectedZoomType = it
-                        SettingsRepository.setZoomType(context, it)
-                    },
-                    onManageTagsClick = {
-                        if (myAppState.isVibrationEnabled) performVibration(context)
-                        myAppState.currentScreen = Screen.TagManagement
-                    },
-                    onBackupAndRestoreClick = {
-                        if (myAppState.isVibrationEnabled) performVibration(context)
-                        myAppState.showBackupAndRestoreDialog = true
-                    },
-                    onGoToSecretStorage = {
-                        BiometricUtils.authenticate(
-                            activity = context as AppCompatActivity,
-                            onSuccess = { myAppState.currentScreen = Screen.SecretStorage },
-                            onError = { _, _ -> /* Do nothing */ },
-                            onFailed = { /* Do nothing */ }
-                        )
-                    },
-                    onViewHistoryClick = { myAppState.currentScreen = Screen.ViewHistory },
-                    onVibrationEnabledChange = {
-                        myAppState.isVibrationEnabled = it
-                        SettingsRepository.setVibrationEnabled(context, it)
-                    },
-                    onShowFileCountChange = {
-                        myAppState.isShowFileCountEnabled = it
-                        SettingsRepository.setShowFileCount(context, it)
-                    },
-                    onShuffleButtonVisibleChange = {
-                        myAppState.isShuffleButtonVisible = it
-                        SettingsRepository.setShuffleButtonVisible(context, it)
-                    },
-                    onShakeToBlurEnabledChange = {
-                        myAppState.isShakeToBlurEnabled = it
-                        SettingsRepository.setShakeToBlurEnabled(context, it)
-                    },
-                    onLoopVideoEnabledChange = {
-                        myAppState.isLoopVideoEnabled = it
-                        SettingsRepository.setLoopVideoEnabled(context, it)
-                    },
-                    onBlurTypeChange = {
-                        myAppState.selectedBlurType = it
-                        SettingsRepository.setBlurType(context, it)
-                    },
-                    onSwipeToDismissEnabledChange = {
-                        myAppState.isSwipeToDismissEnabled = it
-                        SettingsRepository.setSwipeToDismissEnabled(context, it)
-                    },
-                    onUseLargeFabChange = {
-                        myAppState.useLargeFab = it
-                        SettingsRepository.setUseLargeFab(context, it)
-                    },
-                    onAutoDeleteTrashEnabledChange = {
-                        myAppState.autoDeleteTrashEnabled = it
-                        SettingsRepository.setAutoDeleteTrashEnabled(context, it)
-                    },
-                    onAutoDeleteTrashDaysChange = {
-                        myAppState.autoDeleteTrashDays = it
-                        SettingsRepository.setAutoDeleteTrashDays(context, it)
-                    },
-                    onLanguageChange = { language -> myAppState.selectedLanguage = language },
-                    onCheckForUpdates = {
-                        coroutineScope.launch {
-                            myAppState.checkForUpdates(true)
-                        }
-                    },
-                    onAboutClick = { myAppState.currentScreen = Screen.About },
-                    onFontFamilyChange = onFontFamilyChange,
-                    onFabActionChange = onFabActionChange,
-                    onKeepControlsVisibleChange = {
-                        myAppState.isKeepControlsVisible = it
-                        SettingsRepository.setKeepControlsVisible(context, it)
-                    }
-                )
+            is Screen.TagManagement -> TagManagementScreenImpl(
+                myAppState = myAppState,
+                onAddNewTag = onAddNewTag,
+                onMoveTag = onMoveTag,
+                context = context
+            )
 
-                SettingsScreen(state = settingsState, actions = settingsActions)
-            }
+            is Screen.Trash -> TrashScreenImpl(
+                myAppState = myAppState,
+                imageLoader = imageLoader,
+                gridState = trashGridState,
+                keyboardController = keyboardController,
+                context = context
+            )
 
-            is Screen.TagManagement -> {
-                TagManagementScreen(
-                    onDeleteTag = {
-                        if (myAppState.isVibrationEnabled) performVibration(context)
-                        TagsRepository.removeTagFromAllItems(context, it)
-                        myAppState.tags = TagsRepository.getTags(context)
-                        myAppState.allTags = TagsRepository.getAllTags(context).toImmutableList()
-                    },
-                    onEditTag = { oldTag, newTag ->
-                        if (myAppState.isVibrationEnabled) performVibration(context)
-                        TagsRepository.renameTag(context, oldTag, newTag)
-                        myAppState.tags = TagsRepository.getTags(context)
-                        myAppState.allTags = TagsRepository.getAllTags(context).toImmutableList()
-                    },
-                    onTagClick = { tag -> myAppState.currentScreen = Screen.MediaByTag(tag) },
-                    allTags = myAppState.allTags,
-                    onAddNewTag = onAddNewTag,
-                    onMoveTag = onMoveTag,
-                    showAddDialog = myAppState.showAddDialog,
-                    onDismissAddDialog = { myAppState.showAddDialog = false }
-                )
-            }
+            is Screen.AllMedia -> AllMediaScreenImpl(
+                filteredAllMedia = filteredAllMedia,
+                favorites = favorites,
+                myAppState = myAppState,
+                imageLoader = imageLoader,
+                gridState = allMediaGridState,
+                keyboardController = keyboardController
+            )
 
-            is Screen.Trash -> {
-                TrashScreen(
-                    items = myAppState.trashedItems,
-                    selectedItems = myAppState.selectedItems.toList(),
-                    imageLoader = imageLoader,
-                    onItemClick = { item ->
-                        keyboardController?.hide()
-                        myAppState.viewerState = MediaViewerState(items = myAppState.trashedItems, startIndex = myAppState.trashedItems.indexOf(item))
-                    },
-                    onToggleSelection = { item ->
-                        if (myAppState.selectedItems.contains(item.uri)) {
-                            myAppState.selectedItems.remove(item.uri)
-                        } else {
-                            myAppState.selectedItems.add(item.uri)
-                        }
-                    },
-                    onClearTrash = {
-                        if (myAppState.isVibrationEnabled) performVibration(context)
-                        myAppState.isClearingTrash = true
-                        myAppState.itemsToDelete = myAppState.trashedItems.map { it.uri }.toImmutableList()
-                        myAppState.showConfirmDeleteDialog = true
-                    },
-                    isTrashBlurEnabled = myAppState.isTrashBlurEnabled,
-                    onClearSelection = { myAppState.selectedItems.clear() },
-                    blurType = myAppState.selectedBlurType,
-                    gridState = trashGridState
-                )
-            }
-            is Screen.AllMedia -> {
-                MediaGrid(
-                    items = filteredAllMedia,
-                    favorites = favorites,
-                    selectedItems = myAppState.selectedItems,
-                    imageLoader = imageLoader,
-                    isBlurEnabled = myAppState.isBlurAllMediaEnabled,
-                    onItemClick = { item ->
-                        keyboardController?.hide()
-                        myAppState.viewerState = MediaViewerState(items = filteredAllMedia.toImmutableList(), startIndex = filteredAllMedia.indexOf(item))
-                    },
-                    onToggleSelection = { item ->
-                        if (myAppState.selectedItems.contains(item.uri)) {
-                            myAppState.selectedItems.remove(item.uri)
-                        } else {
-                            myAppState.selectedItems.add(item.uri)
-                        }
-                    },
-                    onClearSelection = { myAppState.selectedItems.clear() },
-                    blurType = myAppState.selectedBlurType,
-                    gridState = allMediaGridState
-                )
-            }
-            is Screen.MediaByTag -> {
-                val mediaWithTag = remember(myAppState.allMedia, myAppState.tags, screen.tag) {
-                    val urisWithTag = myAppState.tags.filter { it.value.contains(screen.tag) }.keys
-                    myAppState.allMedia.filter { it.absolutePath in urisWithTag }.toImmutableList()
-                }
-                MediaGrid(
-                    items = mediaWithTag,
-                    favorites = favorites,
-                    selectedItems = myAppState.selectedItems,
-                    imageLoader = imageLoader,
-                    isBlurEnabled = myAppState.isBlurInFolderEnabled,
-                    onItemClick = { item ->
-                        keyboardController?.hide()
-                        myAppState.viewerState = MediaViewerState(items = mediaWithTag, startIndex = mediaWithTag.indexOf(item))
-                    },
-                    onToggleSelection = { item ->
-                        if (myAppState.selectedItems.contains(item.uri)) {
-                            myAppState.selectedItems.remove(item.uri)
-                        } else {
-                            myAppState.selectedItems.add(item.uri)
-                        }
-                    },
-                    onClearSelection = { myAppState.selectedItems.clear() },
-                    blurType = myAppState.selectedBlurType,
-                    gridState = favoritesGridState
-                )
-            }
-            is Screen.SecretStorage -> {
-                SecretStorageScreen(
-                    items = myAppState.secretItems,
-                    imageLoader = imageLoader,
-                    selectedItems = myAppState.selectedItems,
-                    onToggleSelection = { item ->
-                        if (myAppState.selectedItems.contains(item.uri)) {
-                            myAppState.selectedItems.remove(item.uri)
-                        } else {
-                            myAppState.selectedItems.add(item.uri)
-                        }
-                    },
-                    onClearSelection = { myAppState.selectedItems.clear() },
-                    onItemClick = { items, item ->
-                        keyboardController?.hide()
-                        myAppState.secretViewerState = MediaViewerState(items = items.toImmutableList(), startIndex = items.indexOf(item))
-                    },
-                    isBlurEnabled = myAppState.isBlurEnabled,
-                    blurType = myAppState.selectedBlurType,
-                    gridState = secretGridState
-                )
-            }
-            is Screen.ViewHistory -> {
-                ViewHistoryScreen(
-                    items = filteredViewHistory, // Use filtered list
-                    favorites = favorites,
-                    selectedItems = myAppState.selectedItems,
-                    imageLoader = imageLoader,
-                    onItemClick = { items, item ->
-                        keyboardController?.hide()
-                        myAppState.viewerState = MediaViewerState(items = items.toImmutableList(), startIndex = items.indexOf(item))
-                    },
-                    onToggleSelection = { item ->
-                        if (myAppState.selectedItems.contains(item.uri)) {
-                            myAppState.selectedItems.remove(item.uri)
-                        } else {
-                            myAppState.selectedItems.add(item.uri)
-                        }
-                    },
-                    onClearSelection = { myAppState.selectedItems.clear() },
-                    gridState = viewHistoryGridState,
-                    blurType = myAppState.selectedBlurType,
-                    isBlurEnabled = myAppState.isBlurEnabled
-                )
-            }
+            is Screen.MediaByTag -> MediaByTagScreenImpl(
+                myAppState = myAppState,
+                screen = screen,
+                imageLoader = imageLoader,
+                gridState = favoritesGridState,
+                keyboardController = keyboardController
+            )
+
+            is Screen.SecretStorage -> SecretStorageScreenImpl(
+                myAppState = myAppState,
+                imageLoader = imageLoader,
+                gridState = secretGridState,
+                keyboardController = keyboardController
+            )
+
+            is Screen.ViewHistory -> ViewHistoryScreenImpl(
+                filteredViewHistory = filteredViewHistory,
+                favorites = favorites,
+                myAppState = myAppState,
+                imageLoader = imageLoader,
+                gridState = viewHistoryGridState,
+                keyboardController = keyboardController
+            )
         }
     }
 }
+
