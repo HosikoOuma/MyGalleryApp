@@ -28,6 +28,7 @@ import com.example.nkdsify.data.FabAction
 import com.example.nkdsify.data.MediaViewerState
 import com.example.nkdsify.data.Screen
 import com.example.nkdsify.ui.utils.performVibration
+import com.example.nkdsify.ui.utils.parseQueryString
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -42,10 +43,11 @@ fun MyAppFAB(
     val isVibrationEnabled = myAppState.isVibrationEnabled
     val useLargeFab = myAppState.useLargeFab
 
+    // Allow FAB on MediaByTag as well; we'll handle shuffling tag-album content
     if (myAppState.isShuffleButtonVisible && myAppState.currentScreen !is Screen.Trash
         && myAppState.currentScreen !is Screen.Settings
         && myAppState.currentScreen !is Screen.TagManagement
-        && myAppState.currentScreen !is Screen.MediaByTag
+        // && myAppState.currentScreen !is Screen.MediaByTag -- removed exclusion
         && myAppState.currentScreen !is Screen.SecretStorage
         && myAppState.currentScreen !is Screen.ViewHistory
         && myAppState.currentScreen !is Screen.About) {
@@ -60,9 +62,11 @@ fun MyAppFAB(
             when (myAppState.selectedFabAction) {
                 FabAction.SHUFFLE -> {
                     coroutineScope.launch {
-                        val itemsToShuffle = when (val screen = myAppState.currentScreen) {
+                        // Build base itemsToShuffle depending on screen
+                        val itemsToShuffle: List<com.example.nkdsify.data.MediaItem> = when (val screen = myAppState.currentScreen) {
                             is Screen.FolderContent -> screen.folder.items
                             is Screen.AllMedia -> {
+                                // Respect media type filter
                                 withContext(Dispatchers.Default) {
                                     when (myAppState.mediaTypeFilter) {
                                         com.example.nkdsify.data.MediaTypeFilter.PHOTOS -> myAppState.allMedia.filter { !it.isVideo }
@@ -75,7 +79,7 @@ fun MyAppFAB(
                             is Screen.Favorites -> {
                                 if (screen.openAlbumName != null) {
                                     val taggedAlbums = myAppState.favoriteItems
-                                        .flatMap { item -> (myAppState.tags[item.uri.toString()] ?: emptySet()).map { tag -> tag to item } }
+                                        .flatMap { item -> (myAppState.tags[item.absolutePath] ?: emptySet()).map { tag -> tag to item } }
                                         .groupBy({ it.first }, { it.second })
                                     if (screen.openAlbumName == allFavoritesAlbumName) myAppState.favoriteItems else taggedAlbums[screen.openAlbumName]
                                         ?: emptyList()
@@ -83,13 +87,55 @@ fun MyAppFAB(
                                     myAppState.favoriteItems
                                 }
                             }
+                            is Screen.MediaByTag -> {
+                                // Items matching the opened tag
+                                myAppState.allMedia.filter { item ->
+                                    val itemTags = myAppState.tags[item.absolutePath] ?: emptySet()
+                                    itemTags.contains(screen.tag)
+                                }
+                            }
                             else -> emptyList()
                         }
 
-                        if (itemsToShuffle.isNotEmpty()) {
-                            val shuffledItems = withContext(Dispatchers.Default) {
-                                itemsToShuffle.shuffled()
+                        // If search is active, further filter itemsToShuffle by parsed query (supports +tag/-tag and plain terms)
+                        val filtered = if (myAppState.isSearchActive && myAppState.searchQuery.isNotBlank()) {
+                            val parsed = parseQueryString(myAppState.searchQuery)
+                            itemsToShuffle.filter { item ->
+                                val itemTags = myAppState.tags[item.absolutePath] ?: emptySet()
+                                // selectedDate filter
+                                myAppState.selectedDate?.let {
+                                    val calendar = java.util.Calendar.getInstance().apply { timeInMillis = it }
+                                    val itemCalendar = java.util.Calendar.getInstance().apply { timeInMillis = item.dateAdded * 1000 }
+                                    if (!(calendar.get(java.util.Calendar.YEAR) == itemCalendar.get(java.util.Calendar.YEAR) &&
+                                                calendar.get(java.util.Calendar.DAY_OF_YEAR) == itemCalendar.get(java.util.Calendar.DAY_OF_YEAR))) return@filter false
+                                }
+
+                                // Tag includes/excludes
+                                if (parsed.includedTags.isNotEmpty() && !itemTags.containsAll(parsed.includedTags)) return@filter false
+                                if (parsed.excludedTags.isNotEmpty() && itemTags.any { it in parsed.excludedTags }) return@filter false
+
+                                // Text terms
+                                if (parsed.searchTerms.isNotEmpty()) {
+                                    val name = item.name.lowercase()
+                                    if (!parsed.searchTerms.all { name.contains(it.lowercase()) }) return@filter false
+                                }
+
+                                true
                             }
+                        } else {
+                            // also apply selectedDate even when search not active
+                            if (myAppState.selectedDate != null) {
+                                itemsToShuffle.filter { item ->
+                                    val calendar = java.util.Calendar.getInstance().apply { timeInMillis = myAppState.selectedDate!! }
+                                    val itemCalendar = java.util.Calendar.getInstance().apply { timeInMillis = item.dateAdded * 1000 }
+                                    calendar.get(java.util.Calendar.YEAR) == itemCalendar.get(java.util.Calendar.YEAR) &&
+                                            calendar.get(java.util.Calendar.DAY_OF_YEAR) == itemCalendar.get(java.util.Calendar.DAY_OF_YEAR)
+                                }
+                            } else itemsToShuffle
+                        }
+
+                        if (filtered.isNotEmpty()) {
+                            val shuffledItems = withContext(Dispatchers.Default) { filtered.shuffled() }
                             myAppState.viewerState = MediaViewerState(items = shuffledItems.toImmutableList(), startIndex = 0)
                         }
                     }

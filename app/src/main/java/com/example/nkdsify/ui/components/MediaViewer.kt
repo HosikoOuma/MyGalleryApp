@@ -59,7 +59,6 @@ import coil.ImageLoader
 import com.example.nkdsify.R
 import com.example.nkdsify.MyAppState
 import com.example.nkdsify.data.MediaItem
-import com.example.nkdsify.data.ZoomType
 import com.example.nkdsify.ui.components.utils.rememberCoilImageLoader
 import com.example.nkdsify.ui.utils.CryptoUtils
 import com.example.nkdsify.ui.utils.ExternalMediaErrorDialog

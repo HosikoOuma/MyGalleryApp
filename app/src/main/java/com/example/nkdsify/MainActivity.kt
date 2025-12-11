@@ -2,16 +2,13 @@
 @file:kotlin.OptIn(ExperimentalMaterial3Api::class)
 package com.example.nkdsify
 
-import android.Manifest
 import android.content.Context
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import android.content.Intent
-import android.content.pm.PackageManager
 import android.hardware.Sensor
 import android.hardware.SensorManager
 import android.app.DownloadManager
 import android.net.Uri
-import android.os.Build
 import android.os.Bundle
 import android.os.Environment
 import android.provider.Settings
