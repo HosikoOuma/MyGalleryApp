@@ -133,35 +133,47 @@ fun MyAppNavigation(
         }
     }
 
-    val filteredAllMedia by remember(myAppState.allMedia, myAppState.isSearchActive, myAppState.searchQuery, myAppState.mediaTypeFilter, sortComparator, myAppState.selectedDate) {
+    val filteredAllMedia by remember(myAppState.allMedia, myAppState.isSearchActive, myAppState.searchQuery, myAppState.mediaTypeFilter, sortComparator, myAppState.selectedDate, myAppState.tags) {
         derivedStateOf {
-            myAppState.allMedia
-                .filter { item ->
-                    when (myAppState.mediaTypeFilter) {
-                        MediaTypeFilter.PHOTOS -> !item.isVideo
-                        MediaTypeFilter.VIDEOS -> item.isVideo
-                        else -> true
-                    }
-                }
-                .filter { item ->
-                    myAppState.selectedDate?.let {
-                        val calendar = Calendar.getInstance().apply { timeInMillis = it }
-                        val itemCalendar = Calendar.getInstance().apply { timeInMillis = item.dateAdded * 1000 }
-                        calendar.get(Calendar.YEAR) == itemCalendar.get(Calendar.YEAR) &&
-                                calendar.get(Calendar.DAY_OF_YEAR) == itemCalendar.get(Calendar.DAY_OF_YEAR)
-                    } ?: true
-                }
-                .filter { item ->
-                    if (myAppState.isSearchActive && myAppState.searchQuery.isNotEmpty()) {
-                        item.name.contains(myAppState.searchQuery, ignoreCase = true)
-                    } else {
-                        true
-                    }
-                }
-                .sortedWith(sortComparator)
-                .toImmutableList()
-        }
-    }
+            val parsedQuery = parseQueryString(myAppState.searchQuery)
+             myAppState.allMedia
+                 .filter { item ->
+                     when (myAppState.mediaTypeFilter) {
+                         MediaTypeFilter.PHOTOS -> !item.isVideo
+                         MediaTypeFilter.VIDEOS -> item.isVideo
+                         else -> true
+                     }
+                 }
+                 .filter { item ->
+                     myAppState.selectedDate?.let {
+                         val calendar = Calendar.getInstance().apply { timeInMillis = it }
+                         val itemCalendar = Calendar.getInstance().apply { timeInMillis = item.dateAdded * 1000 }
+                         calendar.get(Calendar.YEAR) == itemCalendar.get(Calendar.YEAR) &&
+                                 calendar.get(Calendar.DAY_OF_YEAR) == itemCalendar.get(Calendar.DAY_OF_YEAR)
+                     } ?: true
+                 }
+                 .filter { item ->
+                     if (myAppState.isSearchActive && myAppState.searchQuery.isNotEmpty()) {
+                         val itemTags = myAppState.tags[item.absolutePath] ?: emptySet()
+
+                         // If there are tag expressions in query, apply tag logic
+                         if (parsedQuery.includedTags.isNotEmpty() || parsedQuery.excludedTags.isNotEmpty()) {
+                             val includes = parsedQuery.includedTags.isEmpty() || itemTags.containsAll(parsedQuery.includedTags)
+                             val excludes = parsedQuery.excludedTags.isNotEmpty() && itemTags.any { it in parsedQuery.excludedTags }
+                             val textMatch = parsedQuery.searchTerms.isEmpty() || parsedQuery.searchTerms.all { term -> item.name.contains(term, ignoreCase = true) }
+                             includes && !excludes && textMatch
+                         } else {
+                             // Pure text search (no tag operators): match filename against all search terms
+                             parsedQuery.searchTerms.isEmpty() || parsedQuery.searchTerms.all { term -> item.name.contains(term, ignoreCase = true) }
+                         }
+                     } else {
+                         true
+                     }
+                 }
+                 .sortedWith(sortComparator)
+                 .toImmutableList()
+         }
+     }
 
 
     AnimatedContent(targetState = myAppState.currentScreen, transitionSpec = {

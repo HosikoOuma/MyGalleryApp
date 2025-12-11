@@ -114,8 +114,8 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-collections-immutable:0.3.7")
 
     // Room components
-    implementation("androidx.room:room-runtime:2.6.1")
-    implementation("androidx.room:room-ktx:2.6.1")
-    ksp("androidx.room:room-compiler:2.6.1")
-    implementation("androidx.room:room-paging:2.6.1")
+//    implementation("androidx.room:room-runtime:2.6.1")
+//    implementation("androidx.room:room-ktx:2.6.1")
+//    ksp("androidx.room:room-compiler:2.6.1")
+//    implementation("androidx.room:room-paging:2.6.1")
 }
