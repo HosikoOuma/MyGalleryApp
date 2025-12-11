@@ -67,13 +67,41 @@ fun MyAppNavigation(
         }
     }
 
-    val visibleFolders by remember(myAppState.allFolders, myAppState.hiddenFolders) {
+    val visibleFolders by remember(myAppState.allFolders, myAppState.hiddenFolders, myAppState.searchQuery, myAppState.isSearchActive, myAppState.tags) {
         derivedStateOf {
-            myAppState.allFolders
+            val base = myAppState.allFolders
                 .filterNot { myAppState.hiddenFolders.contains(it.id.toString()) }
-                .toImmutableList()
-        }
-    }
+
+            if (myAppState.isSearchActive && myAppState.searchQuery.isNotEmpty()) {
+                val parsed = parseQueryString(myAppState.searchQuery)
+                base.filter { folder ->
+                    // match folder name first
+                    val nameMatch = if (parsed.searchTerms.isNotEmpty()) parsed.searchTerms.all { term -> folder.name.contains(term, ignoreCase = true) } else false
+
+                    // or any item in folder matches parsed query (tags/text)
+                    val anyItemMatches = folder.items.any { item ->
+                        val itemTags = myAppState.tags[item.absolutePath] ?: emptySet()
+
+                        // included tags
+                        if (parsed.includedTags.isNotEmpty() && !itemTags.containsAll(parsed.includedTags)) return@any false
+                        // excluded tags
+                        if (parsed.excludedTags.isNotEmpty() && itemTags.any { it in parsed.excludedTags }) return@any false
+                        // text terms
+                        if (parsed.searchTerms.isNotEmpty()) {
+                            val lower = item.name.lowercase()
+                            parsed.searchTerms.all { term -> lower.contains(term.lowercase()) }
+                        } else {
+                            true
+                        }
+                    }
+
+                    nameMatch || anyItemMatches
+                }.toImmutableList()
+            } else {
+                base.toImmutableList()
+            }
+         }
+     }
 
     val filteredFavoriteItems by remember(myAppState.favoriteItems, myAppState.searchQuery, myAppState.isSearchActive, sortComparator, myAppState.selectedDate, myAppState.tags) {
         derivedStateOf {
@@ -192,7 +220,8 @@ fun MyAppNavigation(
                 gridState = favoritesGridState,
                 contentGridState = favoritesContentGridState,
                 keyboardController = keyboardController,
-                context = context
+                context = context,
+                openAlbumName = screen.openAlbumName
             )
 
             is Screen.Settings -> SettingsScreenImpl(
@@ -253,4 +282,3 @@ fun MyAppNavigation(
         }
     }
 }
-

@@ -22,7 +22,8 @@ fun FavoritesScreenImpl(
     gridState: LazyGridState,
     contentGridState: LazyGridState,
     keyboardController: SoftwareKeyboardController?,
-    context: android.content.Context
+    context: android.content.Context,
+    openAlbumName: String? = null
 ) {
     FavoritesScreen(
         items = filteredFavoriteItems,
@@ -45,7 +46,7 @@ fun FavoritesScreenImpl(
         isBlurInFolderEnabled = myAppState.isBlurInFolderEnabled,
         gridState = gridState,
         contentGridState = contentGridState,
-        openAlbumName = null,
+        openAlbumName = openAlbumName,
         onOpenAlbum = { albumName ->
             if (myAppState.isVibrationEnabled) performVibration(context)
             myAppState.currentScreen = Screen.Favorites(openAlbumName = albumName)
