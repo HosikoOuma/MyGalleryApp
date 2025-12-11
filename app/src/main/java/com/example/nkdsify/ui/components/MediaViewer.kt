@@ -57,13 +57,16 @@ import androidx.compose.ui.unit.dp
 import androidx.core.view.WindowCompat
 import coil.ImageLoader
 import com.example.nkdsify.R
+import com.example.nkdsify.MyAppState
 import com.example.nkdsify.data.MediaItem
 import com.example.nkdsify.data.ZoomType
+import com.example.nkdsify.ui.components.utils.rememberCoilImageLoader
 import com.example.nkdsify.ui.utils.CryptoUtils
 import com.example.nkdsify.ui.utils.ExternalMediaErrorDialog
 import com.example.nkdsify.ui.utils.SettingsRepository
 import com.example.nkdsify.ui.utils.ViewHistoryRepository
 import com.example.nkdsify.ui.utils.performVibration
+import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -73,24 +76,14 @@ import java.io.File
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun MediaViewer(
+    myAppState: MyAppState,
     items: List<MediaItem>,
     startIndex: Int,
-    favorites: List<String>,
-    onDismiss: () -> Unit,
-    imageLoader: ImageLoader,
-    onDelete: (List<Uri>) -> Unit,
-    onRestore: (List<Uri>) -> Unit,
-    onShowTagDialog: (Uri) -> Unit,
-    onToggleFavorite: (String) -> Unit,
-    onShowDetails: (Uri) -> Unit,
+    favorites: MutableList<String>? = null,
+    imageLoader: ImageLoader? = null,
     isExternal: Boolean = false,
-    isTrashMode: Boolean,
-    isSecretMode: Boolean = false,
-    isMuteVideoByDefault: Boolean,
-    zoomType: ZoomType,
-    isLoopVideoEnabled: Boolean,
-    isSwipeToDismissEnabled: Boolean,
-    isKeepControlsVisible: Boolean
+    isTrashMode: Boolean = false,
+    isSecretMode: Boolean = false
 ) {
     val pagerState = rememberPagerState(initialPage = startIndex, pageCount = { items.size })
     val context = LocalContext.current
@@ -146,13 +139,14 @@ fun MediaViewer(
             }
         }
     }
+
     val isVibrationEnabled = remember { SettingsRepository.isVibrationEnabled(context) }
     var showExternalMediaError by remember { mutableStateOf(false) }
-    var isMuted by remember(pagerState.currentPage) { mutableStateOf(isMuteVideoByDefault) }
+    var isMuted by remember(pagerState.currentPage) { mutableStateOf(myAppState.isMuteVideoByDefault) }
 
     LaunchedEffect(items.isEmpty()) {
         if (items.isEmpty()) {
-            onDismiss()
+            myAppState.viewerState = null
         }
     }
     LaunchedEffect(pagerState.currentPage) {
@@ -167,18 +161,21 @@ fun MediaViewer(
     var controlsVisible by remember { mutableStateOf(true) }
     val isVideo = items.getOrNull(pagerState.currentPage)?.isVideo == true
     val toggleControls = {
-        if (isVideo || !isKeepControlsVisible) {
+        if (isVideo || !myAppState.isKeepControlsVisible) {
             controlsVisible = !controlsVisible
         }
     }
 
     // Auto-hide controls
-    LaunchedEffect(controlsVisible, isKeepControlsVisible, pagerState.currentPage) {
-        if (controlsVisible && (isVideo || !isKeepControlsVisible)) {
+    LaunchedEffect(controlsVisible, myAppState.isKeepControlsVisible, pagerState.currentPage) {
+        if (controlsVisible && (isVideo || !myAppState.isKeepControlsVisible)) {
             delay(4000)
             controlsVisible = false
         }
     }
+
+    val favoritesListMutable: MutableList<String> = favorites ?: myAppState.favoritesList
+    val imageLoaderUsed: ImageLoader = imageLoader ?: myAppState.imageLoader ?: rememberCoilImageLoader(context)
 
     if (showExternalMediaError) {
         ExternalMediaErrorDialog(onDismiss = { showExternalMediaError = false })
@@ -193,7 +190,7 @@ fun MediaViewer(
             state = pagerState,
             modifier = Modifier.fillMaxSize(),
             key = { items[it].uri },
-            userScrollEnabled = isSwipeToDismissEnabled
+            userScrollEnabled = myAppState.isSwipeToDismissEnabled
         ) { page ->
             val item = items[page]
             val isVisible by remember { derivedStateOf { pagerState.currentPage == page } }
@@ -208,13 +205,13 @@ fun MediaViewer(
                             controlsVisible = controlsVisible,
                             onToggleControls = toggleControls,
                             onMuteClick = { isMuted = !isMuted },
-                            isLoopVideoEnabled = isLoopVideoEnabled
+                            isLoopVideoEnabled = myAppState.isLoopVideoEnabled
                         )
                     } else {
                         ZoomableImage(
                             uri = tempFileUri!!,
-                            imageLoader = imageLoader,
-                            zoomType = zoomType,
+                            imageLoader = imageLoaderUsed,
+                            zoomType = myAppState.selectedZoomType,
                             isVibrationEnabled = isVibrationEnabled,
                             onToggleControls = toggleControls
                         )
@@ -237,13 +234,13 @@ fun MediaViewer(
                         controlsVisible = controlsVisible,
                         onToggleControls = toggleControls,
                         onMuteClick = { isMuted = !isMuted },
-                        isLoopVideoEnabled = isLoopVideoEnabled
+                        isLoopVideoEnabled = myAppState.isLoopVideoEnabled
                     )
                 } else {
                     ZoomableImage(
                         uri = item.uri,
-                        imageLoader = imageLoader,
-                        zoomType = zoomType,
+                        imageLoader = imageLoaderUsed,
+                        zoomType = myAppState.selectedZoomType,
                         isVibrationEnabled = isVibrationEnabled,
                         onToggleControls = toggleControls
                     )
@@ -273,7 +270,7 @@ fun MediaViewer(
 
                 IconButton(onClick = {
                     if (isVibrationEnabled) performVibration(context)
-                    onDismiss()
+                    myAppState.viewerState = null
                 }) {
                     Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
                 }
@@ -285,15 +282,16 @@ fun MediaViewer(
                         isSecretMode -> {
                             IconButton(onClick = {
                                 if (isVibrationEnabled) performVibration(context)
-                                onRestore(listOf(currentItem.uri))
-                                //onDismiss()
+                                // Restore in secret mode
+                                myAppState.itemsToRestoreFromSecret = listOf(currentItem.uri).toImmutableList()
+                                myAppState.showConfirmRestoreFromSecretDialog = true
                             }) {
                                 Icon(Icons.Default.Restore, contentDescription = "Restore", tint = Color.White)
                             }
                             IconButton(onClick = {
                                 if (isVibrationEnabled) performVibration(context)
-                                onDelete(listOf(currentItem.uri))
-                                //onDismiss()
+                                myAppState.itemsToDeleteFromSecret = listOf(currentItem.uri).toImmutableList()
+                                myAppState.showConfirmDeleteFromSecretDialog = true
                             }) {
                                 Icon(Icons.Default.Delete, contentDescription = "Delete", tint = Color.White)
                             }
@@ -301,13 +299,15 @@ fun MediaViewer(
                         isTrashMode -> {
                             IconButton(onClick = {
                                 if (isVibrationEnabled) performVibration(context)
-                                onRestore(listOf(currentItem.uri))
+                                myAppState.itemsToRestore = listOf(currentItem.uri).toImmutableList()
+                                myAppState.showConfirmRestoreDialog = true
                             }) {
                                 Icon(Icons.Filled.RestoreFromTrash, contentDescription = "Restore", tint = Color.White)
                             }
                             IconButton(onClick = {
                                 if (isVibrationEnabled) performVibration(context)
-                                onDelete(listOf(currentItem.uri))
+                                myAppState.itemsToDelete = listOf(currentItem.uri).toImmutableList()
+                                myAppState.showConfirmDeleteDialog = true
                             }) {
                                 Icon(Icons.Filled.Delete, contentDescription = "Delete", tint = Color.White)
                             }
@@ -318,7 +318,7 @@ fun MediaViewer(
                                 if (isExternal) {
                                     showExternalMediaError = true
                                 } else {
-                                    onShowTagDialog(currentItem.uri)
+                                    myAppState.showTagDialog = currentItem.uri
                                 }
                             }) {
                                 Icon(Icons.AutoMirrored.Filled.Label, contentDescription = "Tags", tint = Color.White)
@@ -342,7 +342,9 @@ fun MediaViewer(
                                 if (isExternal) {
                                     showExternalMediaError = true
                                 } else {
-                                    onDelete(listOf(currentItem.uri))
+                                    // Delete -> move to trash
+                                    myAppState.itemsToTrash = listOf(currentItem.uri).toImmutableList()
+                                    myAppState.showConfirmTrashDialog = true
                                 }
                             }) {
                                 Icon(Icons.Filled.Delete, contentDescription = "Delete", tint = Color.White)
@@ -356,7 +358,11 @@ fun MediaViewer(
                                     showExternalMediaError = true
                                 } else {
                                     // Toggle favorite state first
-                                    onToggleFavorite(currentItem.absolutePath)
+                                    if (favoritesListMutable.contains(currentItem.absolutePath)) {
+                                        favoritesListMutable.remove(currentItem.absolutePath)
+                                    } else {
+                                        favoritesListMutable.add(currentItem.absolutePath)
+                                    }
                                     // Then run the animation
                                     coroutineScope.launch {
                                         scale.animateTo(
@@ -372,14 +378,14 @@ fun MediaViewer(
                             }) {
                                 Icon(
                                     modifier = Modifier.scale(scale.value),
-                                    imageVector = if (favorites.contains(currentItem.absolutePath)) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
+                                    imageVector = if (favoritesListMutable.contains(currentItem.absolutePath)) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
                                     contentDescription = "Favorite",
-                                    tint = if (favorites.contains(currentItem.absolutePath)) Color.Red else Color.White
+                                    tint = if (favoritesListMutable.contains(currentItem.absolutePath)) Color.Red else Color.White
                                 )
                             }
                             IconButton(onClick = {
                                 if (isVibrationEnabled) performVibration(context)
-                                onShowDetails(currentItem.uri)
+                                myAppState.showDetailsDialog = currentItem.uri
                             }) {
                                 Icon(Icons.Filled.Info, contentDescription = "Info", tint = Color.White)
                             }

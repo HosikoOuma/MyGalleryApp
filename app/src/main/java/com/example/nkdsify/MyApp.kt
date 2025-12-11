@@ -539,72 +539,26 @@ fun MyApp(myAppState: MyAppState, initialUri: Uri? = null, screenWidth: Int, scr
                 BackHandler { myAppState.viewerState = null }
                 val isTrashViewing = myAppState.viewerState?.items?.map { it.uri }?.intersect(myAppState.trashedItems.map { it.uri }.toSet())?.isNotEmpty() ?: false
                 MediaViewer(
+                    myAppState = myAppState,
                     items = myAppState.viewerState!!.items,
                     startIndex = myAppState.viewerState!!.startIndex,
                     favorites = favorites,
-                    onDismiss = { myAppState.viewerState = null },
                     imageLoader = imageLoader,
                     isExternal = myAppState.viewerState!!.isExternal,
-                    isTrashMode = isTrashViewing,
-                    onDelete = { uris ->
-                        if (isTrashViewing) {
-                            myAppState.itemsToDelete = uris.toImmutableList()
-                            myAppState.showConfirmDeleteDialog = true
-                        } else {
-                            myAppState.itemsToTrash = uris.toImmutableList()
-                            myAppState.showConfirmTrashDialog = true
-                        }
-                    },
-                    onRestore = { uris ->
-                        myAppState.itemsToRestore = uris.toImmutableList()
-                        myAppState.showConfirmRestoreDialog = true
-                    },
-                    onShowTagDialog = { uri -> myAppState.showTagDialog = uri },
-                    onShowDetails = { uri -> myAppState.showDetailsDialog = uri },
-                    onToggleFavorite = { path ->
-                        if (favorites.contains(path)) {
-                            favorites.remove(path)
-                        } else {
-                            favorites.add(path)
-                        }
-                    },
-                    isMuteVideoByDefault = myAppState.isMuteVideoByDefault,
-                    zoomType = myAppState.selectedZoomType,
-                    isLoopVideoEnabled = myAppState.isLoopVideoEnabled,
-                    isSwipeToDismissEnabled = myAppState.isSwipeToDismissEnabled,
-                    isKeepControlsVisible = myAppState.isKeepControlsVisible
+                    isTrashMode = isTrashViewing
                 )
-            }
-            if (myAppState.secretViewerState != null) {
-                BackHandler { myAppState.secretViewerState = null }
+             }
+             if (myAppState.secretViewerState != null) {
+                 BackHandler { myAppState.secretViewerState = null }
                 MediaViewer(
+                    myAppState = myAppState,
                     items = myAppState.secretViewerState!!.items,
                     startIndex = myAppState.secretViewerState!!.startIndex,
-                    favorites = emptyList(), // No favorites in secret mode
-                    onDismiss = { myAppState.secretViewerState = null },
+                    favorites = mutableListOf(), // No favorites in secret mode
                     imageLoader = imageLoader,
-                    isSecretMode = true,
-                    onRestore = { uris ->
-                        myAppState.itemsToRestoreFromSecret = uris.toImmutableList()
-                        myAppState.showConfirmRestoreFromSecretDialog = true
-                    },
-                    onDelete = { uris ->
-                        myAppState.itemsToDeleteFromSecret = uris.toImmutableList()
-                        myAppState.showConfirmDeleteFromSecretDialog = true
-                    },
-
-                    // Dummy parameters not used in secret mode
-                    onShowTagDialog = {},
-                    onToggleFavorite = {},
-                    onShowDetails = {},
-                    isTrashMode = false,
-                    isMuteVideoByDefault = myAppState.isMuteVideoByDefault,
-                    zoomType = myAppState.selectedZoomType,
-                    isLoopVideoEnabled = myAppState.isLoopVideoEnabled,
-                    isSwipeToDismissEnabled = myAppState.isSwipeToDismissEnabled,
-                    isKeepControlsVisible = myAppState.isKeepControlsVisible
+                    isSecretMode = true
                 )
-            }
-        }
-    }
-}
+             }
+         }
+     }
+ }
