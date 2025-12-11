@@ -14,14 +14,12 @@ import com.example.nkdsify.ui.MyAppNavigation
 import android.app.Activity
 import android.app.DownloadManager
 import android.content.BroadcastReceiver
-import android.content.ContentUris
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.net.Uri
 import android.os.Build
 import android.os.Environment
-import android.provider.MediaStore
 import android.provider.Settings
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -70,11 +68,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.core.net.toUri
-import coil.ImageLoader
-import coil.decode.GifDecoder
-import coil.decode.ImageDecoderDecoder
-import coil.decode.VideoFrameDecoder
-import com.example.nkdsify.data.MediaFolder
 import com.example.nkdsify.data.MediaItem
 import com.example.nkdsify.data.MediaViewerState
 import com.example.nkdsify.data.Screen
@@ -150,6 +143,10 @@ fun MyApp(myAppState: MyAppState, initialUri: Uri? = null, screenWidth: Int, scr
             val initialFavorites = FavoritesRepository.getFavorites(context)
             mutableStateListOf(*initialFavorites.toTypedArray())
         }
+        // Assign favorites into centralized state
+        myAppState.favoritesList.clear()
+        myAppState.favoritesList.addAll(favorites)
+
         myAppState.allTags = TagsRepository.getAllTags(context).toImmutableList()
         val onAddNewTag: (String) -> Unit = { newTag ->
             if (myAppState.isVibrationEnabled) performVibration(context)
@@ -166,6 +163,32 @@ fun MyApp(myAppState: MyAppState, initialUri: Uri? = null, screenWidth: Int, scr
             }
         }
         val imageLoader = rememberCoilImageLoader(context)
+
+        // Assign composition-scoped controllers/objects into MyAppState for centralized access
+        myAppState.imageLoader = imageLoader
+        myAppState.coroutineScope = coroutineScope
+        myAppState.keyboardController = keyboardController
+        myAppState.foldersGridState = foldersGridState
+        myAppState.folderContentGridState = folderContentGridState
+        myAppState.favoritesGridState = favoritesGridState
+        myAppState.favoritesContentGridState = favoritesContentGridState
+        myAppState.trashGridState = trashGridState
+        myAppState.allMediaGridState = allMediaGridState
+        myAppState.secretGridState = secretGridState
+        myAppState.viewHistoryGridState = viewHistoryGridState
+
+        // Assign callbacks into state
+        myAppState.onAddNewTag = onAddNewTag
+        myAppState.onMoveTag = onMoveTag
+        myAppState.onFontFamilyChange = {
+            myAppState.selectedFontFamily = it
+            SettingsRepository.setFontFamily(context, it)
+        }
+        myAppState.onFabActionChange = {
+            myAppState.selectedFabAction = it
+            SettingsRepository.setFabAction(context, it)
+        }
+
         val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { permissions ->
             myAppState.hasPermissions = permissions.values.all { it }
         }
@@ -190,6 +213,7 @@ fun MyApp(myAppState: MyAppState, initialUri: Uri? = null, screenWidth: Int, scr
                 }
             }
         }
+
         LaunchedEffect(myAppState.currentScreen, myAppState.refreshTrigger) {
             if (myAppState.currentScreen is Screen.SecretStorage) {
                 myAppState.secretItems = SecretRepository.getSecretMediaItems(context).toImmutableList()
@@ -460,11 +484,7 @@ fun MyApp(myAppState: MyAppState, initialUri: Uri? = null, screenWidth: Int, scr
                 },
                 floatingActionButton = {
                     MyAppFAB(
-                        myAppState = myAppState,
-                        coroutineScope = coroutineScope,
-                        context = context,
-                        isVibrationEnabled = myAppState.isVibrationEnabled,
-                        useLargeFab = myAppState.useLargeFab
+                        myAppState = myAppState
                     )
                 }
             ) { innerPadding ->
@@ -478,29 +498,7 @@ fun MyApp(myAppState: MyAppState, initialUri: Uri? = null, screenWidth: Int, scr
                 Box(modifier = boxModifier) {
                     if (myAppState.hasPermissions) {
                         MyAppNavigation(
-                            myAppState = myAppState,
-                            imageLoader = imageLoader,
-                            foldersGridState = foldersGridState,
-                            folderContentGridState = folderContentGridState,
-                            favoritesGridState = favoritesGridState,
-                            favoritesContentGridState = favoritesContentGridState,
-                            trashGridState = trashGridState,
-                            allMediaGridState = allMediaGridState,
-                            secretGridState = secretGridState,
-                            viewHistoryGridState = viewHistoryGridState,
-                            filteredViewHistory = filteredViewHistory.toImmutableList(),
-                            favorites = favorites,
-                            keyboardController = keyboardController,
-                            onMoveTag = onMoveTag,
-                            onAddNewTag = onAddNewTag,
-                            onFontFamilyChange = {
-                                myAppState.selectedFontFamily = it
-                                SettingsRepository.setFontFamily(context, it)
-                            },
-                            onFabActionChange = {
-                                myAppState.selectedFabAction = it
-                                SettingsRepository.setFabAction(context, it)
-                            },
+                            myAppState = myAppState
                         )
 
                     } else {

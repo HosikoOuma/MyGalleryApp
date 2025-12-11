@@ -9,6 +9,7 @@ import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.lazy.grid.LazyGridState
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
@@ -21,6 +22,7 @@ import coil.ImageLoader
 import com.example.nkdsify.MyAppState
 import com.example.nkdsify.data.*
 import com.example.nkdsify.ui.components.MediaGrid
+import com.example.nkdsify.ui.components.utils.rememberCoilImageLoader
 import com.example.nkdsify.ui.screens.*
 import com.example.nkdsify.ui.utils.BiometricUtils
 import com.example.nkdsify.ui.utils.SettingsRepository
@@ -35,26 +37,30 @@ import java.util.*
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
 fun MyAppNavigation(
-    myAppState: MyAppState,
-    imageLoader: ImageLoader,
-    foldersGridState: LazyGridState,
-    folderContentGridState: LazyGridState,
-    favoritesGridState: LazyGridState,
-    favoritesContentGridState: LazyGridState,
-    trashGridState: LazyGridState,
-    allMediaGridState: LazyGridState,
-    secretGridState: LazyGridState,
-    viewHistoryGridState: LazyGridState,
-    filteredViewHistory: ImmutableList<MediaItem>,
-    favorites: MutableList<String>,
-    keyboardController: SoftwareKeyboardController?,
-    onMoveTag: (Int, Int) -> Unit,
-    onAddNewTag: (String) -> Unit,
-    onFontFamilyChange: (AppFontFamily) -> Unit,
-    onFabActionChange: (FabAction) -> Unit
+    myAppState: MyAppState
 ) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
+
+    // Read centralized resources from state with safe fallbacks
+    val imageLoader: ImageLoader = myAppState.imageLoader ?: rememberCoilImageLoader(context)
+    val foldersGridState: LazyGridState = myAppState.foldersGridState ?: rememberLazyGridState()
+    val folderContentGridState: LazyGridState = myAppState.folderContentGridState ?: rememberLazyGridState()
+    val favoritesGridState: LazyGridState = myAppState.favoritesGridState ?: rememberLazyGridState()
+    val favoritesContentGridState: LazyGridState = myAppState.favoritesContentGridState ?: rememberLazyGridState()
+    val trashGridState: LazyGridState = myAppState.trashGridState ?: rememberLazyGridState()
+    val allMediaGridState: LazyGridState = myAppState.allMediaGridState ?: rememberLazyGridState()
+    val secretGridState: LazyGridState = myAppState.secretGridState ?: rememberLazyGridState()
+    val viewHistoryGridState: LazyGridState = myAppState.viewHistoryGridState ?: rememberLazyGridState()
+    val filteredViewHistory: ImmutableList<MediaItem> = myAppState.filteredViewHistory
+    val favorites: MutableList<String> = myAppState.favoritesList
+    val keyboardController: SoftwareKeyboardController? = myAppState.keyboardController
+
+    // Callbacks (provide no-op fallbacks)
+    val onMoveTag = myAppState.onMoveTag ?: { _, _ -> }
+    val onAddNewTag = myAppState.onAddNewTag ?: {}
+    val onFontFamilyChange = myAppState.onFontFamilyChange ?: {}
+    val onFabActionChange = myAppState.onFabActionChange ?: {}
 
     val sortComparator by remember(myAppState.sortType, myAppState.sortAscending) {
         derivedStateOf {

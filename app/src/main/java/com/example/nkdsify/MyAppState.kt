@@ -7,6 +7,7 @@ import android.net.Uri
 import android.os.Build
 import android.os.Environment
 import android.widget.Toast
+import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -15,7 +16,11 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.SoftwareKeyboardController
 import androidx.core.content.ContextCompat
+import coil.ImageLoader
+import com.example.nkdsify.data.AppFontFamily
+import com.example.nkdsify.data.FabAction
 import com.example.nkdsify.data.MediaTypeFilter
 import com.example.nkdsify.data.MediaFolder
 import com.example.nkdsify.data.MediaItem
@@ -27,6 +32,7 @@ import com.example.nkdsify.ui.utils.SettingsRepository
 import com.example.nkdsify.ui.utils.TagsRepository
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -73,6 +79,33 @@ class MyAppState(
     var showClearHistoryDialog by mutableStateOf(false)
     var viewHistory by mutableStateOf<ImmutableList<MediaItem>>(persistentListOf())
     var isKeepControlsVisible by mutableStateOf(SettingsRepository.isKeepControlsVisible(context))
+
+    // New: composition-provided controllers / objects (nullable for safe migration)
+    var imageLoader: ImageLoader? = null
+    var coroutineScope: CoroutineScope? = null
+    var keyboardController: SoftwareKeyboardController? = null
+
+    // New: lazy grid states (nullable, assign from MyApp after remember)
+    var foldersGridState: LazyGridState? = null
+    var folderContentGridState: LazyGridState? = null
+    var favoritesGridState: LazyGridState? = null
+    var favoritesContentGridState: LazyGridState? = null
+    var trashGridState: LazyGridState? = null
+    var allMediaGridState: LazyGridState? = null
+    var secretGridState: LazyGridState? = null
+    var viewHistoryGridState: LazyGridState? = null
+
+    // New: favorites list (UI stateful list of favorite paths)
+    val favoritesList = mutableStateListOf<String>()
+
+    // New: filtered view history (derived list stored here for Navigation)
+    var filteredViewHistory: ImmutableList<MediaItem> = persistentListOf()
+
+    // New: callbacks centralized
+    var onAddNewTag: ((String) -> Unit)? = null
+    var onMoveTag: ((Int, Int) -> Unit)? = null
+    var onFontFamilyChange: ((AppFontFamily) -> Unit)? = null
+    var onFabActionChange: ((FabAction) -> Unit)? = null
 
     var showUpdateDialog by mutableStateOf(false)
     var latestVersion by mutableStateOf<String?>(null)
