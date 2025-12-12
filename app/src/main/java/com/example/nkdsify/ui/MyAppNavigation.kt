@@ -81,18 +81,11 @@ fun MyAppNavigation(
                     // or any item in folder matches parsed query (tags/text)
                     val anyItemMatches = folder.items.any { item ->
                         val itemTags = myAppState.tags[item.absolutePath] ?: emptySet()
+                        val textMatch = parsed.searchTerms.all { term -> item.name.contains(term, ignoreCase = true) }
+                        val tagMatch = parsed.includedTagGroups.all { group -> group.any { tag -> itemTags.contains(tag) } } &&
+                                (parsed.excludedTags.isEmpty() || !itemTags.any { it in parsed.excludedTags })
 
-                        // included tags
-                        if (parsed.includedTags.isNotEmpty() && !itemTags.containsAll(parsed.includedTags)) return@any false
-                        // excluded tags
-                        if (parsed.excludedTags.isNotEmpty() && itemTags.any { it in parsed.excludedTags }) return@any false
-                        // text terms
-                        if (parsed.searchTerms.isNotEmpty()) {
-                            val lower = item.name.lowercase()
-                            parsed.searchTerms.all { term -> lower.contains(term.lowercase()) }
-                        } else {
-                            true
-                        }
+                        textMatch && tagMatch
                     }
 
                     nameMatch || anyItemMatches
@@ -100,8 +93,8 @@ fun MyAppNavigation(
             } else {
                 base.toImmutableList()
             }
-         }
-     }
+        }
+    }
 
     val filteredFavoriteItems by remember(myAppState.favoriteItems, myAppState.searchQuery, myAppState.isSearchActive, sortComparator, myAppState.selectedDate, myAppState.tags) {
         derivedStateOf {
@@ -119,11 +112,11 @@ fun MyAppNavigation(
                 .filter { item ->
                     if (myAppState.isSearchActive && myAppState.searchQuery.isNotEmpty()) {
                         val itemTags = myAppState.tags[item.absolutePath] ?: emptySet()
-                        val includes = parsedQuery.includedTags.isEmpty() || itemTags.containsAll(parsedQuery.includedTags)
-                        val excludes = parsedQuery.excludedTags.isNotEmpty() && itemTags.any { it in parsedQuery.excludedTags }
-                        val textMatch = parsedQuery.searchTerms.isEmpty() || parsedQuery.searchTerms.all { term -> item.name.contains(term, ignoreCase = true) }
+                        val textMatch = parsedQuery.searchTerms.all { term -> item.name.contains(term, ignoreCase = true) }
+                        val tagMatch = parsedQuery.includedTagGroups.all { group -> group.any { tag -> itemTags.contains(tag) } } &&
+                                (parsedQuery.excludedTags.isEmpty() || !itemTags.any { it in parsedQuery.excludedTags })
 
-                        includes && !excludes && textMatch
+                        textMatch && tagMatch
                     } else {
                         true
                     }
@@ -154,18 +147,12 @@ fun MyAppNavigation(
                  }
                  .filter { item ->
                      if (myAppState.isSearchActive && myAppState.searchQuery.isNotEmpty()) {
-                         val itemTags = myAppState.tags[item.absolutePath] ?: emptySet()
+                        val itemTags = myAppState.tags[item.absolutePath] ?: emptySet()
+                        val textMatch = parsedQuery.searchTerms.all { term -> item.name.contains(term, ignoreCase = true) }
+                        val tagMatch = parsedQuery.includedTagGroups.all { group -> group.any { tag -> itemTags.contains(tag) } } &&
+                                (parsedQuery.excludedTags.isEmpty() || !itemTags.any { it in parsedQuery.excludedTags })
 
-                         // If there are tag expressions in query, apply tag logic
-                         if (parsedQuery.includedTags.isNotEmpty() || parsedQuery.excludedTags.isNotEmpty()) {
-                             val includes = parsedQuery.includedTags.isEmpty() || itemTags.containsAll(parsedQuery.includedTags)
-                             val excludes = parsedQuery.excludedTags.isNotEmpty() && itemTags.any { it in parsedQuery.excludedTags }
-                             val textMatch = parsedQuery.searchTerms.isEmpty() || parsedQuery.searchTerms.all { term -> item.name.contains(term, ignoreCase = true) }
-                             includes && !excludes && textMatch
-                         } else {
-                             // Pure text search (no tag operators): match filename against all search terms
-                             parsedQuery.searchTerms.isEmpty() || parsedQuery.searchTerms.all { term -> item.name.contains(term, ignoreCase = true) }
-                         }
+                        textMatch && tagMatch
                      } else {
                          true
                      }

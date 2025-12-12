@@ -119,17 +119,11 @@ fun MyAppFAB(
                                                     calendar.get(java.util.Calendar.DAY_OF_YEAR) == itemCalendar.get(java.util.Calendar.DAY_OF_YEAR))) return@filter false
                                     }
 
-                                    // Tag includes/excludes
-                                    if (parsed.includedTags.isNotEmpty() && !itemTags.containsAll(parsed.includedTags)) return@filter false
-                                    if (parsed.excludedTags.isNotEmpty() && itemTags.any { it in parsed.excludedTags }) return@filter false
+                                    val textMatch = parsed.searchTerms.all { term -> item.name.contains(term, ignoreCase = true) }
+                                    val tagMatch = parsed.includedTagGroups.all { group -> group.any { tag -> itemTags.contains(tag) } } &&
+                                            (parsed.excludedTags.isEmpty() || !itemTags.any { it in parsed.excludedTags })
 
-                                    // Text terms
-                                    if (parsed.searchTerms.isNotEmpty()) {
-                                        val name = item.name.lowercase()
-                                        if (!parsed.searchTerms.all { name.contains(it.lowercase()) }) return@filter false
-                                    }
-
-                                    true
+                                    textMatch && tagMatch
                                 }
                             } else {
                                 // also apply selectedDate even when search not active

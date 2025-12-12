@@ -57,13 +57,13 @@ fun TopBar(
             if (query.isNullOrBlank()) return true
             val parsed = parseQueryString(query)
             val itemTags = myAppState.tags[item.absolutePath] ?: emptySet()
-            if (parsed.includedTags.isNotEmpty() && !itemTags.containsAll(parsed.includedTags)) return false
-            if (parsed.excludedTags.isNotEmpty() && itemTags.any { it in parsed.excludedTags }) return false
-            if (parsed.searchTerms.isNotEmpty()) {
-                val name = item.name.lowercase()
-                if (!parsed.searchTerms.all { name.contains(it.lowercase()) }) return false
-            }
-            return true
+
+            val textMatch = parsed.searchTerms.all { term -> item.name.contains(term, ignoreCase = true) }
+
+            val tagMatch = parsed.includedTagGroups.all { group -> group.any { tag -> itemTags.contains(tag) } } &&
+                    (parsed.excludedTags.isEmpty() || !itemTags.any { it in parsed.excludedTags })
+
+            return textMatch && tagMatch
         }
 
         val currentItemsUris = when (val screen = myAppState.currentScreen) {

@@ -7,22 +7,23 @@ import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.input.OffsetMapping
 import androidx.compose.ui.text.input.TransformedText
 import androidx.compose.ui.text.input.VisualTransformation
-import com.example.nkdsify.ui.utils.parseQueryString
 
 class TagVisualTransformation(private val backgroundColor: Color) : VisualTransformation {
     override fun filter(text: AnnotatedString): TransformedText {
         val annotatedString = buildAnnotatedString {
             append(text)
-            val parsedQuery = parseQueryString(text.text)
             val tagStyle = SpanStyle(background = backgroundColor)
 
             text.text.split(' ').forEach { part ->
                 if (part.isNotBlank()) {
-                    val isTag = (part.startsWith("+") || part.startsWith("-")) && part.length > 1
+                    val isTag = (part.startsWith("+") || part.startsWith("-") || part.startsWith("=")) && part.length > 1
                     if (isTag) {
-                        val startIndex = text.text.indexOf(part)
-                        val endIndex = startIndex + part.length
-                        addStyle(tagStyle, startIndex, endIndex)
+                        var startIndex = text.text.indexOf(part)
+                        while (startIndex != -1) {
+                            val endIndex = startIndex + part.length
+                            addStyle(tagStyle, startIndex, endIndex)
+                            startIndex = text.text.indexOf(part, startIndex + 1)
+                        }
                     }
                 }
             }
