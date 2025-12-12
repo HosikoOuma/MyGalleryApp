@@ -2,6 +2,8 @@ package com.example.nkdsify.ui.impl
 
 import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.SoftwareKeyboardController
 import coil.ImageLoader
@@ -10,6 +12,7 @@ import com.example.nkdsify.data.MediaItem
 import com.example.nkdsify.data.MediaViewerState
 import com.example.nkdsify.data.Screen
 import com.example.nkdsify.ui.components.MediaGrid
+import com.example.nkdsify.ui.utils.parseQueryString
 import kotlinx.collections.immutable.toImmutableList
 import java.util.Comparator
 
@@ -23,14 +26,28 @@ fun FolderContentScreen(
     keyboardController: SoftwareKeyboardController?
 ) {
     val folder = myAppState.allFolders.find { it.id == screen.folder.id } ?: screen.folder
-    val sortedItems = remember(folder.items, sortComparator) {
-        folder.items.sortedWith(sortComparator).toImmutableList()
+
+    val items by remember(folder.items, sortComparator, myAppState.isSearchActive, myAppState.searchQuery, myAppState.tags) {
+        derivedStateOf {
+            val sortedItems = folder.items.sortedWith(sortComparator)
+
+            if (myAppState.isSearchActive && myAppState.searchQuery.isNotEmpty()) {
+                val parsed = parseQueryString(myAppState.searchQuery)
+                sortedItems.filter { item ->
+                    val itemTags = myAppState.tags[item.absolutePath] ?: emptySet()
+
+                    val textMatch = parsed.searchTerms.all { term -> item.name.contains(term, ignoreCase = true) }
+                    val tagMatch = parsed.includedTagGroups.all { group -> group.any { tag -> itemTags.contains(tag) } } &&
+                            (parsed.excludedTags.isEmpty() || !itemTags.any { it in parsed.excludedTags })
+
+                    textMatch && tagMatch
+                }.toImmutableList()
+            } else {
+                sortedItems.toImmutableList()
+            }
+        }
     }
-    val items = if (myAppState.isSearchActive && myAppState.searchQuery.isNotEmpty()) {
-        sortedItems.filter { it.name.contains(myAppState.searchQuery, ignoreCase = true) }.toImmutableList()
-    } else {
-        sortedItems
-    }
+
     MediaGrid(
         items = items,
         favorites = myAppState.favoritesList,
@@ -53,5 +70,3 @@ fun FolderContentScreen(
         gridState = gridState
     )
 }
-
-
