@@ -54,14 +54,14 @@
     <string name="clear_trash_button">Очистить корзину</string>
     <string name="auto_delete_trash_label">Автоудаление корзины</string>
     <string name="auto_delete_trash_days_label">Автоудаление корзины через (дни)</string>
-    <string name="use_large_shuffle_button_label">Большая кнопка перемешивания</string>
+    <string name="use_large_shuffle_button_label">Большая FAB кнопка</string>
     <string name="blur_folder_previews_label">Размытие превью папок</string>
     <string name="blur_in_folders_label">Размытие в папках</string>
     <string name="blur_media_in_trash_label">Размытие медиа в корзине</string>
     <string name="mute_video_by_default_label">Выключать звук видео по умолчанию</string>
     <string name="blur_all_media_label">Размыть все медиа</string>
     <string name="show_file_count_in_folders_label">Показывать количество файлов в папках</string>
-    <string name="show_shuffle_button_label">Показывать кнопку перемешивания</string>
+    <string name="show_shuffle_button_label">Показывать FAB кнопку</string>
     <string name="vibration_label">Вибрация</string>
     <string name="shake_to_blur_label">Встряхнуть для размытия</string>
     <string name="loop_video_label">Зациклить видео</string>

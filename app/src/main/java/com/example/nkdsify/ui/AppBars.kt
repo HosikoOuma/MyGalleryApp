@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.DriveFileMove
+import androidx.compose.material.icons.automirrored.filled.Label
 import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -205,7 +206,7 @@ fun TopBar(
                             if (myAppState.isVibrationEnabled) performVibration(context)
                             myAppState.showBulkTagDialog = true
                         }) {
-                            Icon(Icons.Default.Edit, contentDescription = stringResource(id = R.string.edit_tags_content_description))
+                            Icon(Icons.AutoMirrored.Filled.Label, contentDescription = stringResource(id = R.string.edit_tags_content_description))
                         }
                         IconButton(onClick = {
                             if (myAppState.isVibrationEnabled) performVibration(context)
@@ -233,20 +234,22 @@ fun TopBar(
                         }) {
                             Icon(Icons.Default.Share, contentDescription = stringResource(id = R.string.share_content_description))
                         }
-                        IconButton(onClick = {
-                            if (myAppState.isVibrationEnabled) performVibration(context)
-                            myAppState.itemsToTrash = myAppState.selectedItems.toImmutableList()
-                            myAppState.showConfirmTrashDialog = true
-                        }) {
-                            Icon(Icons.Default.Delete, contentDescription = stringResource(id = R.string.delete_content_description))
-                        }
+
+                        val selectedPaths = myAppState.selectedItems.mapNotNull { uri -> myAppState.allMedia.find { it.uri == uri }?.absolutePath }
+                        val areAllFavorites = selectedPaths.isNotEmpty() && selectedPaths.all { it in favorites }
+
                         val coroutineScope = rememberCoroutineScope()
                         val scale = remember { Animatable(1f) }
                         IconButton(onClick = {
                             if (myAppState.isVibrationEnabled) performVibration(context)
-                            val selectedPaths = myAppState.selectedItems.mapNotNull { uri -> myAppState.allMedia.find { it.uri == uri }?.absolutePath }
-                            selectedPaths.forEach { path ->
-                                if (favorites.contains(path)) favorites.remove(path) else favorites.add(path)
+                            if (areAllFavorites) {
+                                favorites.removeAll(selectedPaths.toSet())
+                            } else {
+                                selectedPaths.forEach { path ->
+                                    if (!favorites.contains(path)) {
+                                        favorites.add(path)
+                                    }
+                                }
                             }
                             coroutineScope.launch {
                                 scale.animateTo(
@@ -261,9 +264,9 @@ fun TopBar(
                         }) {
                             Icon(
                                 modifier = Modifier.scale(scale.value),
-                                imageVector = if (isFavoritesScreen) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
-                                contentDescription = if (isFavoritesScreen) stringResource(id = R.string.remove_from_favorites_content_description) else stringResource(id = R.string.add_to_favorites_content_description),
-                                tint = if (isFavoritesScreen) Color.Red else MaterialTheme.colorScheme.onSurface
+                                imageVector = if (areAllFavorites) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
+                                contentDescription = if (areAllFavorites) stringResource(id = R.string.remove_from_favorites_content_description) else stringResource(id = R.string.add_to_favorites_content_description),
+                                tint = if (areAllFavorites) Color.Red else MaterialTheme.colorScheme.onSurface
                             )
                         }
 
@@ -300,6 +303,16 @@ fun TopBar(
                                     text = { Text(stringResource(id = R.string.move_to_secret_storage_button)) },
                                     onClick = { if (myAppState.isVibrationEnabled) performVibration(context); performMoveToSecret(); menuExpanded = false },
                                     leadingIcon = { Icon(Icons.Default.Lock, contentDescription = stringResource(id = R.string.move_to_secret_storage_button)) }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(id = R.string.delete_content_description)) },
+                                    onClick = {
+                                        if (myAppState.isVibrationEnabled) performVibration(context)
+                                        myAppState.itemsToTrash = myAppState.selectedItems.toImmutableList()
+                                        myAppState.showConfirmTrashDialog = true
+                                        menuExpanded = false
+                                    },
+                                    leadingIcon = { Icon(Icons.Default.Delete, contentDescription = stringResource(id = R.string.delete_content_description)) }
                                 )
                             }
                         }

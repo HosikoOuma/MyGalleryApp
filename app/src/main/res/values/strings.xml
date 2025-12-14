@@ -54,14 +54,14 @@
     <string name="clear_trash_button">Clear Trash</string>
     <string name="auto_delete_trash_label">Auto-delete trash</string>
     <string name="auto_delete_trash_days_label">Auto-delete trash after (days)</string>
-    <string name="use_large_shuffle_button_label">Use large shuffle button</string>
+    <string name="use_large_shuffle_button_label">Use large FAB button</string>
     <string name="blur_folder_previews_label">Blur folder previews</string>
     <string name="blur_in_folders_label">Blur in folders</string>
     <string name="blur_media_in_trash_label">Blur media in trash</string>
     <string name="mute_video_by_default_label">Mute video by default</string>
     <string name="blur_all_media_label">Blur all media</string>
     <string name="show_file_count_in_folders_label">Show file count in folders</string>
-    <string name="show_shuffle_button_label">Show Shuffle Button</string>
+    <string name="show_shuffle_button_label">Show FAB Button</string>
     <string name="vibration_label">Vibration</string>
     <string name="shake_to_blur_label">Shake to blur</string>
     <string name="loop_video_label">Loop video</string>

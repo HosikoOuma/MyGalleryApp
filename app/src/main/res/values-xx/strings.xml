@@ -54,14 +54,14 @@
     <string name="clear_trash_button">Ёбнуть трещ</string>
     <string name="auto_delete_trash_label">Аутоёб треща</string>
     <string name="auto_delete_trash_days_label">Аутоёб треща через (дни)</string>
-    <string name="use_large_shuffle_button_label">ОГРОМНАЯ кнопка шафла</string>
+    <string name="use_large_shuffle_button_label">ОГРОМНАЯ FAB кнопка</string>
     <string name="blur_folder_previews_label">Блюр превью папок и ФАВ</string>
     <string name="blur_in_folders_label">Блюр в папках</string>
     <string name="blur_media_in_trash_label">Блюр в треще</string>
     <string name="mute_video_by_default_label">Мут видео сразу</string>
     <string name="blur_all_media_label">Блюр всего порно)</string>
     <string name="show_file_count_in_folders_label">Шоуить кол-во филесов в пап04ках</string>
-    <string name="show_shuffle_button_label">Шоуть шафл порно-кнопку</string>
+    <string name="show_shuffle_button_label">Шоуть ФАП порно-кнопку</string>
     <string name="vibration_label">Вибро-хуибро</string>
     <string name="shake_to_blur_label">ШЕЙК-ТО-БЛЮР бляьб</string>
     <string name="loop_video_label">заЛУПИТЬ видосики</string>
