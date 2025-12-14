@@ -16,7 +16,7 @@ import kotlin.coroutines.resume
 
 object SecretRepository {
     private const val SECRET_FOLDER_NAME = ".secret"
-    private const val THUMBNAIL_SUFFIX = ".thumb"
+    private const val THUMBNAIL_SUFFIX = ".thumb" // Keep for cleanup of old files, but no longer create new ones
 
     internal fun getSecretFolder(context: Context): File {
         return File(context.filesDir, SECRET_FOLDER_NAME).apply {
@@ -33,7 +33,6 @@ object SecretRepository {
                     val (originalFileName, _) = getFileInfo(context, uri)
                     if (originalFileName != null) {
                         val encryptedFile = File(secretFolder, originalFileName)
-                        val encryptedThumbFile = File(secretFolder, originalFileName + THUMBNAIL_SUFFIX)
 
                         // Encrypt original file
                         context.contentResolver.openInputStream(uri)?.use { input ->
@@ -42,15 +41,7 @@ object SecretRepository {
                             }
                         }
 
-                        // Create and encrypt thumbnail
-                        createThumbnail(context, uri)?.let { thumbFile ->
-                            thumbFile.inputStream().use { input ->
-                                encryptedThumbFile.outputStream().use { output ->
-                                    CryptoUtils.encrypt(input, output)
-                                }
-                            }
-                            thumbFile.delete() // Delete temporary thumbnail
-                        }
+                        // Thumbnail creation is now removed. Coil will handle this automatically.
 
                         isSuccess = true
                     }
@@ -77,6 +68,7 @@ object SecretRepository {
             async {
                 try {
                     val encryptedFile = File(uri.path!!)
+                    // Legacy thumbnail file, to be deleted if it exists
                     val encryptedThumbFile = File(uri.path!! + THUMBNAIL_SUFFIX)
                     val restoredFile = File(picturesFolder, encryptedFile.name)
 
@@ -95,6 +87,7 @@ object SecretRepository {
                     }
 
                     encryptedFile.delete()
+                    // Delete the old thumbnail file if it exists
                     if (encryptedThumbFile.exists()) encryptedThumbFile.delete()
 
                 } catch (e: Exception) {
@@ -109,6 +102,7 @@ object SecretRepository {
             async {
                 try {
                     val file = File(uri.path!!)
+                    // Legacy thumbnail file, to be deleted if it exists
                     val thumbFile = File(uri.path!! + THUMBNAIL_SUFFIX)
                     if (file.exists()) file.delete()
                     if (thumbFile.exists()) thumbFile.delete()
@@ -121,6 +115,7 @@ object SecretRepository {
 
     suspend fun getSecretMediaItems(context: Context): List<MediaItem> = withContext(Dispatchers.IO) {
         val secretFolder = getSecretFolder(context)
+        // This filter will now correctly ignore any old .thumb files that might still exist.
         secretFolder.listFiles { _, name -> !name.endsWith(THUMBNAIL_SUFFIX) }?.mapNotNull { file ->
             try {
                 val uri = Uri.fromFile(file)
