@@ -17,8 +17,16 @@ object TrashRepository {
         val trashDir = File(Environment.getExternalStorageDirectory(), ".trash")
         if (!trashDir.exists()) {
             trashDir.mkdirs()
-            // Create a .nomedia file to hide media from scanners
-            File(trashDir, ".nomedia").createNewFile()
+        }
+        // Ensure .nomedia file exists to hide media from scanners
+        val noMedia = File(trashDir, ".nomedia")
+        if (!noMedia.exists()) {
+            try {
+                noMedia.createNewFile()
+            } catch (e: Exception) {
+                // Log or handle the exception if needed
+                e.printStackTrace()
+            }
         }
         return trashDir
     }

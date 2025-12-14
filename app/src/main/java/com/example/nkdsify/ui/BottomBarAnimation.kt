@@ -5,6 +5,7 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -37,6 +38,12 @@ fun RowScope.AnimatableNavigationBarItem(
                 modifier = Modifier.scale(scale)
             )
         },
-        label = { Text(label) }
+        label = { 
+            Text(
+                text = label, 
+                softWrap = false, 
+                style = MaterialTheme.typography.labelSmall
+            )
+        }
     )
 }

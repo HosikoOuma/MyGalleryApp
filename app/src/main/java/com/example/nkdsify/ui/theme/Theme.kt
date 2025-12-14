@@ -37,17 +37,6 @@ private val DarkColors = darkColorScheme(
     tertiary = Color(0xFFEFB8C8)
 )
 
-private val AmoledColorScheme = darkColorScheme(
-    background = Color.Black,
-    surface = Color.Black,
-    surfaceContainerHigh = Color.Black,
-    primary = Color(0xFFD0BCFF),
-    secondary = Color(0xFFCCC2DC),
-    tertiary = Color(0xFFEFB8C8),
-    onBackground = Color.White,
-    onSurface = Color.White
-)
-
 
 @Suppress("DEPRECATION")
 @Composable
@@ -61,12 +50,28 @@ fun NkdsifyAppTheme(
     val useDarkTheme = when (theme) {
         Theme.SYSTEM -> isSystemInDarkTheme()
         Theme.LIGHT -> false
-        Theme.DARK -> true
-        Theme.AMOLED -> true // AMOLED is always dark
+        Theme.DARK, Theme.AMOLED -> true
     }
 
     val colors = when {
-        theme == Theme.AMOLED -> AmoledColorScheme
+        theme == Theme.AMOLED && dynamicColor -> dynamicDarkColorScheme(context).copy(
+            background = Color.Black,
+            surface = Color.Black,
+            surfaceContainer = Color.Black,
+            surfaceContainerLow = Color.Black,
+            surfaceContainerLowest = Color.Black,
+            surfaceContainerHigh = Color.Black,
+            surfaceContainerHighest = Color.Black
+        )
+        theme == Theme.AMOLED && !dynamicColor -> DarkColors.copy(
+            background = Color.Black,
+            surface = Color.Black,
+            surfaceContainer = Color.Black,
+            surfaceContainerLow = Color.Black,
+            surfaceContainerLowest = Color.Black,
+            surfaceContainerHigh = Color.Black,
+            surfaceContainerHighest = Color.Black
+        )
         dynamicColor && useDarkTheme -> dynamicDarkColorScheme(context)
         dynamicColor && !useDarkTheme -> dynamicLightColorScheme(context)
         useDarkTheme -> DarkColors
@@ -77,8 +82,18 @@ fun NkdsifyAppTheme(
     if (!view.isInEditMode) {
         SideEffect {
             val window = (view.context as Activity).window
-            window.statusBarColor = colors.primary.toArgb()
-            WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = !useDarkTheme
+
+            // Enable edge-to-edge display
+            WindowCompat.setDecorFitsSystemWindows(window, false)
+
+            // Set system bars to transparent
+            window.statusBarColor = Color.Transparent.toArgb()
+            window.navigationBarColor = Color.Transparent.toArgb()
+
+            // Set system bar icon colors
+            val insetsController = WindowCompat.getInsetsController(window, view)
+            insetsController.isAppearanceLightStatusBars = !useDarkTheme
+            insetsController.isAppearanceLightNavigationBars = !useDarkTheme
         }
     }
     val typography = when (appFontFamily) {
