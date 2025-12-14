@@ -16,7 +16,7 @@ import kotlin.coroutines.resume
 
 object SecretRepository {
     private const val SECRET_FOLDER_NAME = ".secret"
-    private const val THUMBNAIL_SUFFIX = ".thumb" // Keep for cleanup of old files, but no longer create new ones
+    private const val THUMBNAIL_SUFFIX = ".thumb"
 
     internal fun getSecretFolder(context: Context): File {
         return File(context.filesDir, SECRET_FOLDER_NAME).apply {
@@ -33,6 +33,7 @@ object SecretRepository {
                     val (originalFileName, _) = getFileInfo(context, uri)
                     if (originalFileName != null) {
                         val encryptedFile = File(secretFolder, originalFileName)
+                        val encryptedThumbFile = File(secretFolder, originalFileName + THUMBNAIL_SUFFIX)
 
                         // Encrypt original file
                         context.contentResolver.openInputStream(uri)?.use { input ->
@@ -41,7 +42,15 @@ object SecretRepository {
                             }
                         }
 
-                        // Thumbnail creation is now removed. Coil will handle this automatically.
+                        // Create and encrypt thumbnail
+                        createThumbnail(context, uri)?.let { thumbFile ->
+                            thumbFile.inputStream().use { input ->
+                                encryptedThumbFile.outputStream().use { output ->
+                                    CryptoUtils.encrypt(input, output)
+                                }
+                            }
+                            thumbFile.delete() // Delete temporary thumbnail
+                        }
 
                         isSuccess = true
                     }
@@ -68,7 +77,6 @@ object SecretRepository {
             async {
                 try {
                     val encryptedFile = File(uri.path!!)
-                    // Legacy thumbnail file, to be deleted if it exists
                     val encryptedThumbFile = File(uri.path!! + THUMBNAIL_SUFFIX)
                     val restoredFile = File(picturesFolder, encryptedFile.name)
 
@@ -87,7 +95,6 @@ object SecretRepository {
                     }
 
                     encryptedFile.delete()
-                    // Delete the old thumbnail file if it exists
                     if (encryptedThumbFile.exists()) encryptedThumbFile.delete()
 
                 } catch (e: Exception) {
@@ -102,7 +109,6 @@ object SecretRepository {
             async {
                 try {
                     val file = File(uri.path!!)
-                    // Legacy thumbnail file, to be deleted if it exists
                     val thumbFile = File(uri.path!! + THUMBNAIL_SUFFIX)
                     if (file.exists()) file.delete()
                     if (thumbFile.exists()) thumbFile.delete()
@@ -115,14 +121,20 @@ object SecretRepository {
 
     suspend fun getSecretMediaItems(context: Context): List<MediaItem> = withContext(Dispatchers.IO) {
         val secretFolder = getSecretFolder(context)
-        // This filter will now correctly ignore any old .thumb files that might still exist.
         secretFolder.listFiles { _, name -> !name.endsWith(THUMBNAIL_SUFFIX) }?.mapNotNull { file ->
             try {
                 val uri = Uri.fromFile(file)
                 val name = file.name
-                val isVideo = name.endsWith(".mp4", true) || name.endsWith(".webm", true) 
-                // The URI for MediaItem should point to the full file, not the thumbnail
-                MediaItem(uri, name, file.absolutePath, isVideo, 0, 0, 0)
+                val isVideo = name.endsWith(".mp4", true) || name.endsWith(".webm", true)
+                MediaItem(
+                    uri = uri,
+                    name = name,
+                    absolutePath = file.absolutePath,
+                    isVideo = isVideo,
+                    dateAdded = file.lastModified() / 1000, // Correctly use file's last modified time
+                    dateModified = file.lastModified() / 1000,
+                    size = file.length()
+                )
             } catch (e: Exception) {
                 null
             }
