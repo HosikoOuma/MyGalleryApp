@@ -163,3 +163,5 @@ class MainActivity : AppCompatActivity() {
         sensorManager?.unregisterListener(shakeDetector)
     }
 }
+
+//Хосико любит тебя)
