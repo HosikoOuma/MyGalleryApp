@@ -6,8 +6,11 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
@@ -28,7 +31,8 @@ fun UpdateDialog(
     onConfirm: () -> Unit,
     onDoNotShowAgain: () -> Unit,
     onDownload: () -> Unit,
-    latestVersion: String
+    latestVersion: String,
+    releaseBody: String?
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
@@ -51,6 +55,21 @@ fun UpdateDialog(
                 style = MaterialTheme.typography.bodyLarge,
                 modifier = Modifier.padding(bottom = 16.dp)
             )
+
+            if (!releaseBody.isNullOrBlank()) {
+                val scroll = rememberScrollState()
+                Column(
+                    modifier = Modifier
+                        .heightIn(max = 200.dp)
+                        .verticalScroll(scroll)
+                ) {
+                    Text(
+                        text = releaseBody,
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
+                Spacer(Modifier.height(16.dp))
+            }
 
             Column(
                 modifier = Modifier.fillMaxWidth(),

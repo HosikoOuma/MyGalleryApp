@@ -43,7 +43,8 @@ fun OthersDialogs(myAppState: MyAppState) {
                 }
                 myAppState.showUpdateDialog = false
             },
-            latestVersion = myAppState.latestVersion!!
+            latestVersion = myAppState.latestVersion!!,
+            releaseBody = myAppState.releaseBody
         )
     }
 

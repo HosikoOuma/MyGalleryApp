@@ -154,7 +154,7 @@
     <string name="activate_button">Activate</string>
     <string name="update_available_title">Update Available</string>
     <string name="update_available_text">A new version (%1$s) is available. Would you like to update?</string>
-    <string name="update_button">Update</string>
+    <string name="update_button">See on Github</string>
     <string name="check_for_updates_button">Check for updates</string>
     <string name="no_updates_available">You have the latest version installed.</string>
     <string name="version_label">Version: %1$s</string>

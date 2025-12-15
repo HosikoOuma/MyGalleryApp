@@ -12,7 +12,8 @@ data class GithubAsset(
 
 data class GithubRelease(
     val tag_name: String,
-    val assets: List<GithubAsset>
+    val assets: List<GithubAsset>,
+    val body: String
 )
 
 interface GithubApiService {

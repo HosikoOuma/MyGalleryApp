@@ -152,7 +152,7 @@
     <string name="activate_button">У</string>
     <string name="update_available_title">Апдейт есть!</string>
     <string name="update_available_text">Новая версия (%1$s) есть. Ебануть обнову?</string>
-    <string name="update_button">Апдейт</string>
+    <string name="update_button">Чекну на гитхабе</string>
     <string name="check_for_updates_button">Чекнуть апдейты</string>
     <string name="no_updates_available">У тебя последняя версия, братик)</string>
     <string name="version_label">Версия: %1$s</string>

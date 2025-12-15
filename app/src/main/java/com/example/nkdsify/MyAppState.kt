@@ -109,6 +109,7 @@ class MyAppState(
 
     var showUpdateDialog by mutableStateOf(false)
     var latestVersion by mutableStateOf<String?>(null)
+    var releaseBody by mutableStateOf<String?>(null)
     val currentVersion: String =
         context.packageManager.getPackageInfo(context.packageName, 0).versionName ?: "0.0"
 
@@ -195,6 +196,7 @@ class MyAppState(
                         withContext(Dispatchers.Main) {
                             latestVersion = it.tag_name
                             downloadUrl = apkAsset.browser_download_url
+                            releaseBody = it.body
                             showUpdateDialog = true
                            // showUpdateNotification(context, it.tag_name)
                         }
@@ -208,6 +210,16 @@ class MyAppState(
                                 Toast.LENGTH_SHORT
                             ).show()
                         }
+                    }
+                }
+            } ?: run {
+                if (isTriggeredByUser) {
+                    withContext(Dispatchers.Main) {
+                        Toast.makeText(
+                            context,
+                            "Failed to check for updates. Please check your internet connection.",
+                            Toast.LENGTH_LONG
+                        ).show()
                     }
                 }
             }
