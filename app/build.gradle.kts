@@ -10,7 +10,7 @@ android {
 
     defaultConfig {
         applicationId = "com.nkds.hosikoouma.nekolery"
-        minSdk = 29
+        minSdk = 28
         targetSdk = 36
         versionCode = 34
         versionName = "2.0.15"
@@ -29,8 +29,8 @@ android {
         }
         debug {
             applicationIdSuffix = ".debug"
-            isMinifyEnabled = true
-            isShrinkResources = true
+            isMinifyEnabled = false
+            isShrinkResources = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
