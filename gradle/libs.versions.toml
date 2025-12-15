@@ -23,7 +23,6 @@ foundationLayoutVersion = "1.9.4"
 retrofit = "2.9.0"
 biometricKtx = "1.1.0"
 uiText = "1.9.5"
-ksp = "2.0.21-1.0.27"
 uiVersion = "1.10.0"
 
 [libraries]
@@ -72,4 +71,3 @@ android-application = { id = "com.android.application", version.ref = "agp" }
 kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 android-library = { id = "com.android.library", version.ref = "agp" }
-ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }

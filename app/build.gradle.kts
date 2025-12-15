@@ -2,7 +2,6 @@ plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.plugin.compose")
-    alias(libs.plugins.ksp)
 }
 
 android {
@@ -15,14 +14,14 @@ android {
         targetSdk = 36
         versionCode = 34
         versionName = "2.0.15"
-        //1.16
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -30,6 +29,12 @@ android {
         }
         debug {
             applicationIdSuffix = ".debug"
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
         }
     }
 
@@ -56,7 +61,6 @@ android {
 dependencies {
     implementation(libs.androidx.compose.ui.text)
     implementation(libs.ui)
-    //implementation(libs.androidx.foundation.layout)
     // Import the Compose BOM. This should be first to control the versions of other Compose libraries.
     val composeBom = platform("androidx.compose:compose-bom:2024.06.00")
     implementation(composeBom)
@@ -69,11 +73,11 @@ dependencies {
     implementation(libs.androidx.core.ktx.v1131)
     implementation("androidx.activity:activity-compose:1.9.0")
     implementation("androidx.core:core-splashscreen:1.0.1")
+    implementation ("androidx.appcompat:appcompat:1.6.1")
+    implementation("androidx.exifinterface:exifinterface:1.3.7")
 
     // Compose UI Components. These are now managed by the BOM.
     // No need to specify foundation separately, it's included transitively.
-    //implementation(libs.androidx.ui)
-    //implementation(libs.androidx.material3)
     implementation("androidx.compose.material:material-icons-extended-android")
 
     // Compose Tooling
@@ -87,7 +91,6 @@ dependencies {
     implementation(libs.coil.compose)
     implementation(libs.coil.gif)
     implementation(libs.coil.video)
-    implementation("com.github.yalantis:ucrop:2.2.8")
     implementation("com.vanniktech:android-image-cropper:4.5.0")
 
     // Media3 for video playback (versions are not in Compose BOM)
@@ -112,10 +115,4 @@ dependencies {
     debugImplementation("androidx.compose.ui:ui-test-manifest")
     implementation("sh.calvin.reorderable:reorderable:2.4.1")
     implementation("org.jetbrains.kotlinx:kotlinx-collections-immutable:0.3.7")
-
-    // Room components
-//    implementation("androidx.room:room-runtime:2.6.1")
-//    implementation("androidx.room:room-ktx:2.6.1")
-//    ksp("androidx.room:room-compiler:2.6.1")
-//    implementation("androidx.room:room-paging:2.6.1")
 }

@@ -1,5 +1,6 @@
 package com.example.nkdsify.ui.components
 
+import android.graphics.Bitmap
 import android.net.Uri
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
@@ -58,6 +59,7 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.dp
 import coil.ImageLoader
 import coil.compose.AsyncImage
+import coil.request.ImageRequest
 import com.example.nkdsify.data.BlurType
 import com.example.nkdsify.data.MediaItem
 import com.example.nkdsify.ui.utils.SettingsRepository
@@ -143,7 +145,11 @@ fun MediaGrid(
                             }
                         } else {
                             AsyncImage(
-                                model = item.uri,
+                                model = ImageRequest.Builder(context)
+                                    .data(item.uri)
+                                    .bitmapConfig(Bitmap.Config.RGB_565)
+                                    .allowHardware(false)
+                                    .build(),
                                 imageLoader = imageLoader,
                                 contentDescription = null,
                                 contentScale = ContentScale.Crop,
