@@ -2,6 +2,9 @@
 # You can find general rules for popular libraries at
 # https://github.com/consumer-proguard-rules/rules.
 
+# Disabling optimization as it seems to be causing issues with cryptography.
+-dontoptimize
+
 # Keep the data class used by Gson untouched
 -keep class com.example.nkdsify.ui.utils.ViewedItem { *; }
 -keepclassmembers class com.example.nkdsify.ui.utils.ViewedItem { *; }
@@ -10,14 +13,23 @@
 -keep class com.example.nkdsify.ui.dialogs.TagsBackup { *; }
 -keepclassmembers class com.example.nkdsify.ui.dialogs.TagsBackup { *; }
 
+# Keep Github update checker data classes
+-keep class com.example.nkdsify.ui.utils.GithubRelease { *; }
+-keepclassmembers class com.example.nkdsify.ui.utils.GithubRelease { *; }
+-keep class com.example.nkdsify.ui.utils.GithubAsset { *; }
+-keepclassmembers class com.example.nkdsify.ui.utils.GithubAsset { *; }
+-keep interface com.example.nkdsify.ui.utils.GithubApiService { *; }
+
 # Keep other data classes that might be used with Gson or reflection
 -keep class com.example.nkdsify.data.** { *; }
 -keepclassmembers class com.example.nkdsify.data.** { *; }
 
+# Keep cryptography classes from being obfuscated
+-keep class com.example.nkdsify.ui.utils.CryptoUtils { *; }
+-keepclassmembers class com.example.nkdsify.ui.utils.CryptoUtils { *; }
+
 # General rule for keeping data classes, which is good practice with ProGuard
--keepattributes Signature
--keepattributes InnerClasses
--keepattributes *Annotation*
+-keepattributes Signature,InnerClasses,*Annotation*,EnclosingMethod
 -keep class * extends java.lang.annotation.Annotation { *; }
 -keepclassmembers,allowshrinking,allowoptimization enum * {
     public static **[] values();
@@ -25,12 +37,27 @@
 }
 -keep class kotlin.Metadata { *; }
 
+# Keep all security providers to prevent crypto errors like BadPaddingException
+-keep class * extends java.security.Provider { *; }
+-keep class java.security.** { *; }
+-keep class javax.crypto.** { *; }
+-dontwarn java.security.**
+-dontwarn javax.crypto.**
+
 # Rules for Coil
 -dontwarn coil.**
 
-# Rules for Retrofit and Gson
--dontwarn retrofit2.**
--keep class retrofit2.** { *; }
+# Rules for Retrofit, OkHttp, and Gson
+# Conscrypt is the security provider. Keep it to prevent crypto errors.
+-keep class org.conscrypt.** { *; }
+-dontwarn org.conscrypt.**
+-keepclassmembers class com.squareup.okhttp3.internal.publicsuffix.PublicSuffixDatabase { *; }
+-dontwarn okio.**
+-dontwarn retrofit2.Platform$Java8
+-keep,allowobfuscation,allowshrinking interface retrofit2.Call
+-keep,allowobfuscation,allowshrinking class retrofit2.Response
+-keep,allowobfuscation,allowshrinking class kotlin.coroutines.Continuation
+
 
 # Gson specific rules to preserve generic type information for TypeToken
 -keep class com.google.gson.reflect.TypeToken { *; }

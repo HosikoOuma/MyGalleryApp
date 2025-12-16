@@ -1,19 +1,20 @@
 package com.example.nkdsify.ui.utils
 
+import com.google.gson.annotations.SerializedName
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import retrofit2.http.GET
 import retrofit2.http.Path
 
 data class GithubAsset(
-    val name: String,
-    val browser_download_url: String
+    @SerializedName("name") val name: String,
+    @SerializedName("browser_download_url") val browser_download_url: String
 )
 
 data class GithubRelease(
-    val tag_name: String,
-    val assets: List<GithubAsset>,
-    val body: String
+    @SerializedName("tag_name") val tag_name: String,
+    @SerializedName("assets") val assets: List<GithubAsset>,
+    @SerializedName("body") val body: String
 )
 
 interface GithubApiService {
