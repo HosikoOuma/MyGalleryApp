@@ -176,6 +176,7 @@ fun MyAppNavigation(
             is Screen.TagManagement -> 14
             is Screen.MediaByTag -> 15
             is Screen.About -> 20
+            is Screen.Help -> 21
         }
 
         val initialOrder = getScreenOrder(initialState)
@@ -200,6 +201,10 @@ fun MyAppNavigation(
 
             is Screen.About -> {
                 AboutScreen()
+            }
+
+            is Screen.Help -> {
+                HelpScreen()
             }
 
             is Screen.FolderContent -> FolderContentScreen(

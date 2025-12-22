@@ -12,8 +12,8 @@ android {
         applicationId = "com.nkds.hosikoouma.nekolery"
         minSdk = 30
         targetSdk = 36
-        versionCode = 37
-        versionName = "2.0.17"
+        versionCode = 38
+        versionName = "2.0.18"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -29,8 +29,8 @@ android {
         }
         debug {
             applicationIdSuffix = ".debug"
-            isMinifyEnabled = true
-            isShrinkResources = true
+            isMinifyEnabled = false
+            isShrinkResources = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"

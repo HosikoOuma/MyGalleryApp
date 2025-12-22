@@ -61,5 +61,6 @@ data class SettingsActions(
     val onViewHistoryClick: () -> Unit,
     val onAboutClick: () -> Unit,
     val onFontFamilyChange: (AppFontFamily) -> Unit,
-    val onKeepControlsVisibleChange: (Boolean) -> Unit
+    val onKeepControlsVisibleChange: (Boolean) -> Unit,
+    val onHelpClick: () -> Unit
 )

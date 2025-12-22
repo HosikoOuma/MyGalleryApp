@@ -20,6 +20,7 @@ sealed class Screen {
     data object SecretStorage : Screen()
     data object ViewHistory : Screen()
     data object About : Screen()
+    data object Help : Screen()
 }
 
 enum class AppFontFamily {
@@ -132,4 +133,3 @@ enum class FabAction {
     SHUFFLE,
     CAMERA
 }
-

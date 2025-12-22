@@ -389,7 +389,8 @@ fun MyApp(myAppState: MyAppState, initialUri: Uri? = null, screenWidth: Int, scr
             is Screen.MediaByTag -> screen.tag
             is Screen.SecretStorage -> stringResource(id = R.string.secret_storage)
             is Screen.ViewHistory -> stringResource(id = R.string.view_history_title)
-            is Screen.About -> "Hi"
+            is Screen.About -> stringResource(id = R.string.about_button)
+            is Screen.Help -> stringResource(id = R.string.help_button)
         }
 
         OthersDialogs(myAppState = myAppState)
@@ -566,3 +567,5 @@ fun MyApp(myAppState: MyAppState, initialUri: Uri? = null, screenWidth: Int, scr
          }
      }
  }
+
+//Лёся почему же ты ушёл...

@@ -425,7 +425,7 @@ fun TopBar(
                                 }
                             }
 
-                            if (currentScreen !is Screen.Settings && currentScreen !is Screen.TagManagement && currentScreen !is Screen.SecretStorage && currentScreen !is Screen.About) {
+                            if (currentScreen !is Screen.Settings && currentScreen !is Screen.TagManagement && currentScreen !is Screen.SecretStorage && currentScreen !is Screen.About && currentScreen !is Screen.Help) {
 
                                 if (currentScreen !is Screen.Trash) {
                                     IconButton(onClick = {

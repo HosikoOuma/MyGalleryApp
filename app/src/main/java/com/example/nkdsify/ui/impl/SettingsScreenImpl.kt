@@ -1,8 +1,15 @@
 package com.example.nkdsify.ui.impl
 
+import android.content.Context
+import android.media.AudioManager
+import android.net.Uri
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.runtime.Composable
 import com.example.nkdsify.MyAppState
+import com.example.nkdsify.R
+import com.example.nkdsify.data.Language
+import com.example.nkdsify.data.MediaItem
+import com.example.nkdsify.data.MediaViewerState
 import com.example.nkdsify.data.Screen
 import com.example.nkdsify.ui.screens.SettingsActions
 import com.example.nkdsify.ui.screens.SettingsScreen
@@ -10,8 +17,10 @@ import com.example.nkdsify.ui.screens.SettingsState
 import com.example.nkdsify.ui.utils.BiometricUtils
 import com.example.nkdsify.ui.utils.SettingsRepository
 import com.example.nkdsify.ui.utils.performVibration
+import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
+
 @Composable
 fun SettingsScreenImpl(
     myAppState: MyAppState,
@@ -72,7 +81,7 @@ fun SettingsScreenImpl(
             if (myAppState.easterEggTapCount == 10) {
                 myAppState.easterEggTapCount = 0
                 myAppState.showEasterEggDialog = true
-                val mediaPlayer = android.media.MediaPlayer.create(context, com.example.nkdsify.R.raw.uwu)
+                val mediaPlayer = android.media.MediaPlayer.create(context, R.raw.uwu)
                 mediaPlayer.setOnCompletionListener { it.release() }
                 mediaPlayer.start()
             }
@@ -158,6 +167,14 @@ fun SettingsScreenImpl(
         onKeepControlsVisibleChange = {
             myAppState.isKeepControlsVisible = it
             SettingsRepository.setKeepControlsVisible(context, it)
+        },
+        onHelpClick = {
+            if (myAppState.isVibrationEnabled) performVibration(context)
+            if (myAppState.selectedLanguage == Language.SPECIAL) {
+                myAppState.showHelpAttentionDialog = true
+            } else {
+                myAppState.currentScreen = Screen.Help
+            }
         }
     )
 

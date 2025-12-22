@@ -6,15 +6,28 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Environment
 import android.widget.Toast
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Button
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberDatePickerState
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import com.example.nkdsify.MyAppState
 import com.example.nkdsify.R
 import com.example.nkdsify.ui.components.UpdateDialog
@@ -60,6 +73,40 @@ fun OthersDialogs(myAppState: MyAppState) {
             }
         }) {
             DatePicker(state = datePickerState)
+        }
+    }
+
+    // NEW: Secret help attention dialog
+    if (myAppState.showHelpAttentionDialog) {
+        val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+        ModalBottomSheet(
+            onDismissRequest = { myAppState.showHelpAttentionDialog = false },
+            sheetState = sheetState
+        ) {
+            Column(
+                modifier = Modifier
+                    .padding(horizontal = 24.dp)
+                    .navigationBarsPadding()
+                    .padding(bottom = 24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(
+                    text = "Attention!", // Будет заменено на ресурс в след. шаге
+                    style = MaterialTheme.typography.headlineSmall,
+                    modifier = Modifier.padding(bottom = 12.dp)
+                )
+                Text(
+                    text = stringResource(id = R.string.hp_attention),
+                    style = MaterialTheme.typography.bodyLarge,
+                    modifier = Modifier.padding(bottom = 24.dp)
+                )
+                Button(
+                    onClick = { myAppState.showHelpAttentionDialog = false },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(stringResource(id = R.string.dialog_ok))
+                }
+            }
         }
     }
 }

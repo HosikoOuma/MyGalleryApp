@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">mygalleryapp</string>
+    <string name="app_name">Nekolery</string>
     <string name="wallpaper_set_successfully">Wallpaper set successfully!</string>
     <string name="failed_to_set_wallpaper">Failed to set wallpaper: %1$s</string>
     <string name="favorites_imported_successfully">Favorites imported successfully!</string>
@@ -251,4 +251,120 @@
     <string name="permission_permanently_denied_title">Permission Denied</string>
     <string name="permission_permanently_denied_message">You have permanently denied the permission. To use this feature, please go to the app settings and grant the permission.</string>
     <string name="go_to_settings_button">Go to Settings</string>
+    <string name="help_button">Help</string>
+    <string name="about_button">About app</string>
+    <string name="easter_egg_about_button">🐱</string>
+    <string name="about_screen_title">About</string>
+    <string name="author_info">NKDS \n Hosiko Ouma</string>
+    <string name="app_type_description">Gallery</string>
+    <string name="tg_handle">@NekoDosi</string>
+
+    <!-- Help Screen Topics -->
+    <string name="help_topic_general">Navigation</string>
+    <string name="help_topic_privacy">Privacy &amp; Security</string>
+    <string name="help_topic_media">Main Functionality</string>
+    <string name="help_topic_tags">Tags &amp; Search</string>
+    <string name="hps">Settings</string>
+
+
+    <!-- Help Content (Markdown Placeholder) -->
+    <string name="help_content_general">Navigation - here you can understand how the app navigation works.\n\n
+    Folders - the main screen of the application. Here you see all media folders on your device. Tapping a folder opens its contents.\n\n
+    All Media - a screen with a list of all media files on the device.\n\n
+    Favorites - a screen similar to "Folders" in functionality. The main item is "All Favorites". When you open a "folder," you see all media marked as "Favorite". When you add tags to media, folders for those tags will appear on this screen.\n\n
+    Trash - a screen with media that has been moved to the trash for later deletion or restoration.\n\n
+    Settings - a screen with application settings (see Settings) and additional navigation items.\n\n
+    History - a screen that stores the history of media viewed in the application on this device.\n\n
+    Secret Storage - a screen with media that has been "hidden." This item does not appear if there is no protection method on the device (password, PIN, fingerprint, face unlock).\n\n
+    Tag Management - a screen showing all tags in the application. Tapping a tag shows the media containing it.\n\n
+    Viewer Screen - used for viewing media.\n\n
+    While using the application, you may encounter the following windows or bottom sheets:\n\n
+    - Confirmation for deleting media, moving to trash, deleting from secret storage, adding to secret storage, or removing tags;\n\n
+    - Copy and move media windows;\n\n
+    - Windows for adding tags or changing tags for media;\n\n
+    - Media details view;\n\n
+    - Backup and Restore;\n\n
+    - Update availability dialog;</string>
+
+    <string name="help_content_privacy">Secret Storage: protect your files using AES encryption.\n\n
+    Biometrics: use your fingerprint or password to access your media;\n\n
+    Hidden media is not visible in other applications, it is accessible only within Nekolery and is destroyed if the application is uninstalled.</string>
+
+    <string name="help_content_media">Main Functionality - here you can learn about the main features of the application.\n\n
+    While viewing photos, you can use the top bar, which contains the following buttons:\n\n
+    - Back\n\n
+    - Edit Tags\n\n
+    - Share\n\n
+    - Delete\n\n
+    - Add to Favorites\n\n
+    - Details\n\n
+    In the Details view, you can see information such as:\n\n
+    - Name\n\n
+    - Path\n\n
+    - Size\n\n
+    - Date Added\n\n
+    - Date Modified\n\n
+    - Resolution\n\n
+    Below are buttons for:\n\n
+    - Set as wallpaper\n\n
+    - Copy/Move\n\n
+    - Rename\n\n
+    - Move to Secret Storage\n\n
+    - Open media location in folder (using the back gesture will return you to the previous media list)\n\n
+    Floating Action Button (FAB) - starts viewing media in a shuffled order from the current screen\'s list.\n\n
+    Selecting the camera action will open the camera app.\n\n
+    When viewing media from the Trash or Secret Storage, \"Restore\" and \"Delete\" functions are available.\n\n
+    When editing tags, you can enter them separated by a comma and a space \", \". Once saved, you can select them from the list of existing tags in the future.\n\n
+    Update checks are performed once when entering the app. You can go to the GitHub page to download it from there, or download the update directly.\n\n</string>
+
+    <string name="help_content_tags">
+        Tags and Search - here you will learn how to work with tags and how the search functionality works.\n\n
+        Tags are stored locally, linked to the file path where the media is located.\n\n
+        On the Tag Management screen, you can view, edit (rename), delete, and reorder tags.\n\n
+        Renaming a tag updates it for all media files that contain it.\n\n
+        When viewing media, you can add new tags or use existing ones (by typing in the field or selecting from the list).\n\n
+        When you add tags to media, folders (or albums) for those tags are created on the Favorites screen, sorted alphabetically.\n\n
+        Search - works by media filename. On the "All Media" screen, search displays files with the matching name. On the Favorites and Folders screens, it shows folders containing media with the matching name. Tapping a folder will show the specific files.\n\n
+        Tag Search works as follows:\n\n
+        Special characters are used in the input field to activate tag filtering.\n\n
+        \"+\" - adds a tag to the search, narrowing down the results (AND logic).\n\n
+        \"-\" - excludes a tag from the search (NOT logic).\n\n
+        \"=\" - adds another tag to the search, expanding the results (OR logic).\n\n
+        Examples:\n\n
+        +cat -dog =mouse\n\n
+        In this example, you are searching for media tagged \"Cat,\" excluding those tagged \"Dog,\" and also including anything tagged \"Mouse.\"\n\n
+        +summer +sea +resort -city -lake =beach\n\n
+        Here, the search is for tags \"Summer, Sea, Resort,\" excluding \"City\" and \"Lake,\" and adding \"Beach.\"\n\n
+        Sorting - available by specific date, date added, date modified, name, and size.\n\n
+        The \"All Media\" screen includes sorting by media type: All media, Photos only, or Videos only.\n\n
+    </string>
+
+
+    <string name="hcs">Settings - here you can find out what each item does and how to use it.\n    Language - here you can choose the app localization: system, Russian, or English.\n\n
+    Theme - here you can choose the app theme: system, dark, light, or AMOLED (black).\n\n
+    Floating Action Button (FAB) - a button in the bottom right corner for which you can choose an action: open the camera or shuffle media.\n\n
+    Font - you can change the font from standard (system) to JetBrains Mono or Google Sans.\n\n
+    Auto-empty Trash - when enabled, you can specify the time after which the trash will be cleared.\n\n
+    Show FAB and Large FAB - these control the visibility and size of the floating action button.\n\n
+    Vibration - enables or disables haptic feedback when pressing buttons.\n\n
+    Show file count in folders - enables or disables the display of media count next to the folder name.\n\n
+    The "Privacy" section mainly deals with enabling media blur in the app. You can enable it for folder previews (thumbnails), media within a folder, media in the trash, or for the "All Media" screen.\n\n
+    Shake to blur - activates a "shake" gesture to quickly toggle all types of blur on or off.\n\n
+    Blur type - here you can choose the type of blur:\n\n
+    Blur - blurs the image,\n\n
+    Placeholder - completely hides the image, masking it with a placeholder.\n\n
+    Hidden folders management - here you can select folders whose media will not be displayed in the lists.\n\n
+    Mute video by default - when enabled, videos will open without sound.\n\n
+    Loop video - when enabled, videos will play continuously.\n\n
+    Keep controls visible - when enabled, the control panel will always be shown when viewing media (except during video playback).\n\n
+    Disable swipe while viewing - disables the ability to swipe through media while viewing.\n\n
+    Zoom gesture - here you can choose the zoom gesture type: Pinch or Double Tap.\n\n
+    Tag management - here you can go to the tag management screen (see Tags and Search).\n\n
+    Backup and Restore - in this window, you can export or import lists of favorite media and their tags. When exporting, the data file is saved to the /Downloads folder.\n\n
+    Check for updates - here you can check for a new version of the app.</string>
+    <!-- New Strings for Cleanup -->
+    <string name="app_logo_content_description">App Logo</string>
+    <string name="help_nav_label">Help Navigation</string>
+    <string name="hp_attention">This is a secret attention message!</string>
+    <string name="thanks">Thank, Hosiko_)</string>
 </resources>

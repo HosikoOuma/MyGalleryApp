@@ -168,6 +168,9 @@ class MyAppState(
     val selectedItems = mutableStateListOf<Uri>()
     val isSelectionMode get() = selectedItems.isNotEmpty()
 
+    // NEW: Secret help attention dialog state
+    var showHelpAttentionDialog by mutableStateOf(false)
+
     fun compareVersionNames(v1: String, v2: String): Int {
         val parts1 = v1.removePrefix("v").split('.').map { it.toIntOrNull() ?: 0 }
         val parts2 = v2.removePrefix("v").split('.').map { it.toIntOrNull() ?: 0 }

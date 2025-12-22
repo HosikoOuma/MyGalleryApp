@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">ФапГаллерея</string>
+    <string name="app_name">Nekolery</string>
     <string name="wallpaper_set_successfully">Обои заебенены)</string>
     <string name="failed_to_set_wallpaper">Не смог поставить обои: %1$s</string>
     <string name="favorites_imported_successfully">ФАВы импортированы)</string>
@@ -248,4 +248,6 @@
     <string name="permission_permanently_denied_title">.</string>
     <string name="permission_permanently_denied_message">.</string>
     <string name="go_to_settings_button">.</string>
+    <string name="hp_attention">Если ты смог открыть этот перевод - то это ты Неко, тебе точно не нужна помощь, балбес ебаный)</string>
+    <string name="thanks">ХОСИКО ТРАХНИ МЕНЯ Я ЛЮБЛЮ ТЕБЯ МЯМЯМЯМЯМ ХОЧУ ТВОЕГО МОЛОКА КООТИК *стонет, еле сдерживая свои чувства и стержень, метки сильно пульсируют розовым цветом*</string>
 </resources>

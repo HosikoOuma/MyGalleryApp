@@ -29,6 +29,8 @@ import androidx.compose.ui.unit.dp
 import com.example.nkdsify.R
 import com.example.nkdsify.data.Language
 import com.example.nkdsify.ui.utils.SettingsRepository
+import com.example.nkdsify.ui.components.utils.lexapro
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -39,7 +41,7 @@ fun SpecialLanguageDialog(
     vibrate: () -> Unit
 ) {
     val context = LocalContext.current
-    var code by remember { mutableStateOf("") }
+    var input by remember { mutableStateOf("") }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     ModalBottomSheet(
@@ -58,8 +60,8 @@ fun SpecialLanguageDialog(
                 modifier = Modifier.padding(bottom = 16.dp)
             )
             TextField(
-                value = code,
-                onValueChange = { code = it },
+                value = input,
+                onValueChange = { input = it },
                 label = { Text(stringResource(id = R.string.special_language_code_label)) },
                 modifier = Modifier.fillMaxWidth()
             )
@@ -79,7 +81,7 @@ fun SpecialLanguageDialog(
                     Text(stringResource(id = R.string.dialog_cancel))
                 }
                 Button(onClick = {
-                    if (code == "Трип-МоиПрефиолетовыеВнутренности") {
+                    if (lexapro(input)) {
                         SettingsRepository.setSpecialLanguageUnlocked(context, true)
                         onSpecialLanguageUnlocked()
                         onLanguageChange(Language.SPECIAL)
@@ -93,3 +95,5 @@ fun SpecialLanguageDialog(
         }
     }
 }
+
+

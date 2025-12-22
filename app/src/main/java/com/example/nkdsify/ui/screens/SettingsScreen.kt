@@ -1,6 +1,9 @@
 package com.example.nkdsify.ui.screens
 
+import android.content.Context
 import android.content.Intent
+import android.media.AudioManager
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -16,6 +19,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Label
 import androidx.compose.material.icons.filled.Build
+import androidx.compose.material.icons.filled.Help
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Photo
 import androidx.compose.material.icons.filled.PrivacyTip
@@ -44,7 +48,6 @@ import com.example.nkdsify.ui.utils.BiometricUtils
 import com.example.nkdsify.ui.utils.SettingsRepository
 import com.example.nkdsify.ui.utils.getDisplayName
 import com.example.nkdsify.ui.utils.performVibration
-import androidx.compose.animation.AnimatedVisibility
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -222,15 +225,28 @@ fun SettingsScreen(
             .padding(bottom = 8.dp)) {
             Column(modifier = Modifier.padding(16.dp)) {
                 SettingsHeader(title = stringResource(id = R.string.about_section_title), icon = Icons.Default.Info)
+                
+                SettingsButtonRow(onClick = {
+                    vibrate()
+                    actions.onHelpClick()
+                }, text = stringResource(id = R.string.help_button))
+
+                SettingsButtonRow(onClick = {
+                    vibrate()
+                    actions.onAboutClick()
+                }, text = stringResource(id = R.string.about_button))
+
                 SettingsButtonRow(onClick = {
                     vibrate()
                     val intent = Intent(Intent.ACTION_VIEW, "https://github.com/HosikoOuma/MyGalleryApp".toUri())
                     context.startActivity(intent)
                 }, text = stringResource(id = R.string.github_button))
+
                 SettingsButtonRow(onClick = {
                     vibrate()
                     actions.onCheckForUpdates()
                 }, text = stringResource(id = R.string.check_for_updates_button))
+
                 Spacer(modifier = Modifier.height(16.dp))
                 Text(
                     text = stringResource(id = R.string.version_label, state.currentVersion),
@@ -239,19 +255,6 @@ fun SettingsScreen(
                 )
             }
         }
-
-        Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
-            Spacer(modifier = Modifier.width(16.dp))
-            Button(
-                onClick = {
-                    vibrate()
-                    actions.onAboutClick()
-                },
-                shape = RoundedCornerShape(12.dp)
-            ) {
-                Text(stringResource(id = R.string.easter_egg_button))
-            }
-            Spacer(modifier = Modifier.height(16.dp))
-        }
+        Spacer(modifier = Modifier.height(16.dp))
     }
 }
