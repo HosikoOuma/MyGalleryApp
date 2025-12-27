@@ -1,60 +1,38 @@
 package com.example.nkdsify.ui.components
 
 import android.net.Uri
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
+import androidx.compose.animation.*
+import androidx.compose.animation.core.*
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.calculatePan
 import androidx.compose.foundation.gestures.calculateZoom
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.navigationBarsPadding
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.VolumeOff
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
-import androidx.compose.material.icons.filled.FastForward
-import androidx.compose.material.icons.filled.FastRewind
-import androidx.compose.material.icons.filled.Pause
-import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Speed
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.Slider
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableLongStateOf
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -67,9 +45,43 @@ import androidx.media3.ui.PlayerView
 import com.example.nkdsify.ui.components.utils.calculateCentroid
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.delay
+import com.example.nkdsify.ui.utils.AesDataSourceFactory
+import androidx.media3.exoplayer.source.ProgressiveMediaSource
+import kotlin.math.sin
 
 enum class SeekDirection {
     FORWARD, BACKWARD
+}
+
+@Composable
+fun AnimatedPlayPauseIcon(
+    isPlaying: Boolean,
+    modifier: Modifier = Modifier,
+    size: Dp = 32.dp,
+    tint: Color = Color.Unspecified
+) {
+    val rotation by animateFloatAsState(
+        targetValue = if (isPlaying) 180f else 0f,
+        animationSpec = tween(durationMillis = 400, easing = FastOutSlowInEasing),
+        label = "iconRotation"
+    )
+
+    AnimatedContent(
+        targetState = isPlaying,
+        transitionSpec = {
+            (fadeIn(animationSpec = tween(400)) + scaleIn(initialScale = 0.6f))
+                .togetherWith(fadeOut(animationSpec = tween(400)) + scaleOut(targetScale = 0.6f))
+        },
+        label = "PlayPauseAnimation",
+        modifier = modifier.graphicsLayer { rotationZ = rotation }
+    ) { playing ->
+        Icon(
+            imageVector = if (playing) Icons.Filled.Pause else Icons.Filled.PlayArrow,
+            contentDescription = null,
+            modifier = Modifier.size(size),
+            tint = tint
+        )
+    }
 }
 
 @Composable
@@ -80,10 +92,22 @@ fun VideoPlayerPage(
     controlsVisible: Boolean,
     onToggleControls: () -> Unit,
     onMuteClick: () -> Unit,
-    isLoopVideoEnabled: Boolean
+    isLoopVideoEnabled: Boolean,
+    isSecretMode: Boolean = false
 ) {
     val context = LocalContext.current
-    val exoPlayer = remember { ExoPlayer.Builder(context).build() }
+    
+    // Create the player. If in secret mode, we use our custom AesDataSourceFactory.
+    val exoPlayer = remember {
+        ExoPlayer.Builder(context).build().apply {
+            if (isSecretMode) {
+                val dataSourceFactory = AesDataSourceFactory()
+                val mediaSource = ProgressiveMediaSource.Factory(dataSourceFactory)
+                    .createMediaSource(androidx.media3.common.MediaItem.fromUri(uri))
+                setMediaSource(mediaSource)
+            }
+        }
+    }
 
     // --- State Management ---
     var isPlaying by remember { mutableStateOf(exoPlayer.isPlaying) }
@@ -127,7 +151,9 @@ fun VideoPlayerPage(
 
     // Player Lifecycle - Prepare the player only when the URI changes
     LaunchedEffect(uri) {
-        exoPlayer.setMediaItem(androidx.media3.common.MediaItem.fromUri(uri))
+        if (!isSecretMode) {
+            exoPlayer.setMediaItem(androidx.media3.common.MediaItem.fromUri(uri))
+        }
         exoPlayer.prepare()
     }
 
@@ -346,27 +372,31 @@ fun VideoPlayerPage(
                             )
                             .background(Color.Black.copy(alpha = 0.5f))
                     ) {
-                        val icon = if (isPlaying && playbackState != Player.STATE_ENDED) Icons.Filled.Pause else Icons.Filled.PlayArrow
-                        Icon(
-                            imageVector = icon,
-                            contentDescription = "Play/Pause",
-                            tint = Color.White,
-                            modifier = Modifier.fillMaxSize(0.7f)
+                        AnimatedPlayPauseIcon(
+                            isPlaying = isPlaying && playbackState != Player.STATE_ENDED,
+                            size = 40.dp,
+                            tint = Color.White
                         )
                     }
 
-                    Slider(
-                        value = playbackPosition.toFloat(),
-                        onValueChange = { newPosition ->
+                    WaveProgressSlider(
+                        progress = if (totalDuration > 0) playbackPosition.toFloat() / totalDuration.toFloat() else 0f,
+                        isPlaying = isPlaying && playbackState != Player.STATE_ENDED,
+                        onValueChange = { newProgress ->
                             isSeeking = true
-                            playbackPosition = newPosition.toLong()
-                            exoPlayer.seekTo(newPosition.toLong())
+                            val newPosition = (newProgress * totalDuration.toFloat()).toLong()
+                            playbackPosition = newPosition
+                            exoPlayer.seekTo(newPosition)
                         },
                         onValueChangeFinished = {
                             isSeeking = false
                         },
-                        valueRange = 0f..totalDuration.toFloat().coerceAtLeast(0f)
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(40.dp)
+                            .padding(vertical = 8.dp)
                     )
+
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -406,6 +436,106 @@ fun VideoPlayerPage(
 
                         Text(text = formatDuration(totalDuration), color = Color.White)
                     }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun WaveProgressSlider(
+    progress: Float,
+    isPlaying: Boolean,
+    onValueChange: (Float) -> Unit,
+    onValueChangeFinished: () -> Unit,
+    modifier: Modifier = Modifier,
+    color: Color = MaterialTheme.colorScheme.primary,
+    trackColor: Color = Color.White.copy(alpha = 0.3f)
+) {
+    val infiniteTransition = rememberInfiniteTransition(label = "wave")
+    val phase by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 2f * Math.PI.toFloat(),
+        animationSpec = infiniteRepeatable(
+            animation = tween(1500, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "phase"
+    )
+
+    // Анимация амплитуды: если видео на паузе, амплитуда плавно уходит в 0
+    val amplitude by animateFloatAsState(
+        targetValue = if (isPlaying) 12f else 0f,
+        animationSpec = spring(dampingRatio = 0.7f, stiffness = 300f),
+        label = "amplitude"
+    )
+
+    BoxWithConstraints(
+        modifier = modifier
+            .fillMaxWidth()
+            .pointerInput(Unit) {
+                detectTapGestures { offset ->
+                    onValueChange((offset.x / size.width).coerceIn(0f, 1f))
+                    onValueChangeFinished()
+                }
+            }
+            .pointerInput(Unit) {
+                detectDragGestures(
+                    onDragEnd = { onValueChangeFinished() },
+                    onDragCancel = { onValueChangeFinished() },
+                    onDrag = { change, _ ->
+                        change.consume()
+                        onValueChange((change.position.x / size.width).coerceIn(0f, 1f))
+                    }
+                )
+            }
+    ) {
+        val width = constraints.maxWidth.toFloat()
+        val height = constraints.maxHeight.toFloat()
+        val progressWidth = width * progress
+
+        Canvas(modifier = Modifier.fillMaxSize()) {
+            val points = 100
+            val frequency = 2f
+            
+            // Track (inactive part)
+            drawLine(
+                color = trackColor,
+                start = Offset(progressWidth, height / 2),
+                end = Offset(width, height / 2),
+                strokeWidth = 10f,
+                cap = StrokeCap.Round
+            )
+
+            // Active wavy part
+            val activePath = Path()
+            val activePoints = (points * progress).toInt()
+            
+            if (activePoints >= 0) {
+                for (i in 0..activePoints) {
+                    val x = (i.toFloat() / points) * width
+                    // Используем анимированную амплитуду
+                    val y = height / 2 + (sin(i.toFloat() / frequency + phase) * amplitude)
+                    if (i == 0) activePath.moveTo(x, y) else activePath.lineTo(x, y)
+                }
+                
+                val xEnd = progressWidth
+                val yEnd = height / 2 + (sin((progress * points) / frequency + phase) * amplitude)
+                activePath.lineTo(xEnd, yEnd)
+                
+                drawPath(activePath, color, style = Stroke(width = 10f, cap = StrokeCap.Round))
+                
+                if (progress > 0f) {
+                    drawCircle(
+                        color = color,
+                        radius = 8.dp.toPx(),
+                        center = Offset(xEnd, yEnd)
+                    )
+                    drawCircle(
+                        color = Color.White.copy(alpha = 0.3f),
+                        radius = 3.dp.toPx(),
+                        center = Offset(xEnd, yEnd)
+                    )
                 }
             }
         }

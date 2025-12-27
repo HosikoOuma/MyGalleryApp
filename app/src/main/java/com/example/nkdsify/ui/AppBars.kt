@@ -370,7 +370,7 @@ fun TopBar(
                         )
                     }
                 }
-                if (currentScreen is Screen.TagManagement || currentScreen is Screen.SecretStorage) {
+                if (currentScreen is Screen.TagManagement || currentScreen is Screen.SecretStorage || currentScreen is Screen.About || currentScreen is Screen.Help) {
                     IconButton(onClick = {
                         if (myAppState.isVibrationEnabled) performVibration(context)
                         myAppState.currentScreen = Screen.Settings

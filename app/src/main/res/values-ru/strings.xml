@@ -366,4 +366,5 @@
     <string name="app_logo_content_description">Логотип приложения</string>
     <string name="hp_attention">Это секретное сообщение!</string>
     <string name="thanks">Спасибо, Хосико_)</string>
+    <string name="invert_selection">Инвертировать выбор</string>
 </resources>

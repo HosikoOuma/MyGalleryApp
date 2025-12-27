@@ -52,8 +52,6 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
-import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
 import androidx.core.view.WindowCompat
 import coil.ImageLoader
 import com.example.nkdsify.R
@@ -71,6 +69,8 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -103,9 +103,17 @@ fun MediaViewer(
 
     if (isSecretMode) {
         LaunchedEffect(pagerState.currentPage) {
+            val item = items[pagerState.currentPage]
+            
+            // Skip full decryption for videos - they will be streamed
+            if (item.isVideo) {
+                isDecrypting = false
+                decryptedUri = null
+                return@LaunchedEffect
+            }
+
             isDecrypting = true
             decryptedUri = null
-            val item = items[pagerState.currentPage]
 
             val decryptedFile = withContext(Dispatchers.IO) {
                 val cacheDir = context.cacheDir.resolve("decrypted_media")
@@ -146,9 +154,21 @@ fun MediaViewer(
             myAppState.viewerState = null
         }
     }
-    LaunchedEffect(pagerState.currentPage) {
+
+    // --- Unified Controls Visibility State ---
+    var controlsVisible by remember { mutableStateOf(true) }
+    
+    LaunchedEffect(pagerState.currentPage, myAppState.isKeepControlsVisible) {
+        val currentItem = items.getOrNull(pagerState.currentPage)
+        val isVideoItem = currentItem?.isVideo == true
+        
+        // Force show controls if it's a photo and "keep controls visible" is enabled
+        if (!isVideoItem && myAppState.isKeepControlsVisible) {
+            controlsVisible = true
+        }
+
         if (!isExternal && !isTrashMode && !isSecretMode) {
-            items.getOrNull(pagerState.currentPage)?.let { item ->
+            currentItem?.let { item ->
                 ViewHistoryRepository.addToHistory(context, item.uri)
                 // Also update in-memory history so UI reflects changes immediately
                 try {
@@ -168,8 +188,6 @@ fun MediaViewer(
         }
     }
 
-    // --- Unified Controls Visibility State ---
-    var controlsVisible by remember { mutableStateOf(true) }
     val isVideo = items.getOrNull(pagerState.currentPage)?.isVideo == true
     val toggleControls = {
         if (isVideo || !myAppState.isKeepControlsVisible) {
@@ -207,26 +225,27 @@ fun MediaViewer(
             val isFullyVisible by remember { derivedStateOf { !pagerState.isScrollInProgress && pagerState.currentPage == page } }
 
             if (isSecretMode) {
-                if (isDecrypting) {
-                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            CircularProgressIndicator()
-                            Spacer(Modifier.height(8.dp))
-                            Text(stringResource(id = R.string.decrypting_file), color = Color.White)
+                if (item.isVideo) {
+                    VideoPlayerPage(
+                        uri = item.uri, // Original encrypted URI
+                        isFullyVisible = isFullyVisible,
+                        isMuted = isMuted,
+                        controlsVisible = controlsVisible,
+                        onToggleControls = toggleControls,
+                        onMuteClick = { isMuted = !isMuted },
+                        isLoopVideoEnabled = myAppState.isLoopVideoEnabled,
+                        isSecretMode = true // Use streaming decryption
+                    )
+                } else {
+                    if (isDecrypting) {
+                        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                CircularProgressIndicator()
+                                Spacer(Modifier.height(8.dp))
+                                Text(stringResource(id = R.string.decrypting_file), color = Color.White)
+                            }
                         }
-                    }
-                } else if (decryptedUri != null) {
-                    if (item.isVideo) {
-                        VideoPlayerPage(
-                            uri = decryptedUri!!,
-                            isFullyVisible = isFullyVisible,
-                            isMuted = isMuted,
-                            controlsVisible = controlsVisible,
-                            onToggleControls = toggleControls,
-                            onMuteClick = { isMuted = !isMuted },
-                            isLoopVideoEnabled = myAppState.isLoopVideoEnabled
-                        )
-                    } else {
+                    } else if (decryptedUri != null) {
                         ZoomableImage(
                             uri = decryptedUri!!,
                             imageLoader = imageLoaderUsed,
@@ -245,7 +264,8 @@ fun MediaViewer(
                         controlsVisible = controlsVisible,
                         onToggleControls = toggleControls,
                         onMuteClick = { isMuted = !isMuted },
-                        isLoopVideoEnabled = myAppState.isLoopVideoEnabled
+                        isLoopVideoEnabled = myAppState.isLoopVideoEnabled,
+                        isSecretMode = false
                     )
                 } else {
                     ZoomableImage(

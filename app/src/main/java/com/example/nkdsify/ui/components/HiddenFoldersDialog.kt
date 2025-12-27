@@ -17,6 +17,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -49,11 +50,32 @@ fun HiddenFoldersDialog(
                 .padding(horizontal = 24.dp)
                 .navigationBarsPadding()
         ) {
-            Text(
-                text = stringResource(id = R.string.manage_hidden_folders_title),
-                style = MaterialTheme.typography.headlineSmall,
-                modifier = Modifier.padding(bottom = 16.dp)
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = stringResource(id = R.string.manage_hidden_folders_title),
+                    style = MaterialTheme.typography.headlineSmall,
+                    modifier = Modifier.weight(1f)
+                )
+                
+                if (allFolders.isNotEmpty()) {
+                    TextButton(onClick = {
+                        if (isVibrationEnabled(context)) performVibration(context)
+                        allFolders.forEach { folder ->
+                            val folderId = folder.id.toString()
+                            val isCurrentlyHidden = hiddenFolders.contains(folderId)
+                            onFolderHiddenChange(folderId, !isCurrentlyHidden)
+                        }
+                    }) {
+                        Text(stringResource(id = R.string.invert_selection))
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
 
             if (allFolders.isEmpty()) {
                 Text(stringResource(id = R.string.no_folders_to_hide))

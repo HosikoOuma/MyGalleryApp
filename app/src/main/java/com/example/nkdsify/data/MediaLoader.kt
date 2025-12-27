@@ -219,14 +219,7 @@ fun loadMediaFolders(
     }.sortedBy { it.name }.toImmutableList()
 }
 
-fun loadFavoriteMediaItems(
-    context: Context,
-    favoritePaths: Set<String>,
-    sortType: SortType,
-    sortAscending: Boolean,
-    hiddenFolderIds: Set<String>,
-    selectedDate: Long? = null
-): ImmutableList<MediaItem> {
+fun loadFavoriteMediaItems(context: Context, favoritePaths: Set<String>, sortType: SortType, sortAscending: Boolean, hiddenFolderIds: Set<String>, selectedDate: Long? = null): ImmutableList<MediaItem> {
     if (favoritePaths.isEmpty()) {
         return persistentListOf()
     }

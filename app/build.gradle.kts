@@ -107,6 +107,9 @@ dependencies {
     implementation("androidx.paging:paging-runtime-ktx:3.3.6")
     implementation("androidx.paging:paging-compose:3.3.6")
 
+    // Graphics Shapes
+    implementation("androidx.graphics:graphics-shapes:1.0.1")
+
     // Test Dependencies
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.mockito:mockito-core:4.5.1")

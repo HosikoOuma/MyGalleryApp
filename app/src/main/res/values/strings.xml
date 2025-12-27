@@ -367,4 +367,5 @@
     <string name="help_nav_label">Help Navigation</string>
     <string name="hp_attention">This is a secret attention message!</string>
     <string name="thanks">Thank, Hosiko_)</string>
+    <string name="invert_selection">Invert Selection</string>
 </resources>

@@ -91,7 +91,6 @@ fun SettingsScreenImpl(
             SettingsRepository.setTheme(context, theme)
         },
         onManageHiddenFoldersClick = {
-            if (myAppState.isVibrationEnabled) performVibration(context)
             myAppState.showHiddenFoldersDialog = true
         },
         onZoomTypeChange = {
@@ -99,11 +98,9 @@ fun SettingsScreenImpl(
             SettingsRepository.setZoomType(context, it)
         },
         onManageTagsClick = {
-            if (myAppState.isVibrationEnabled) performVibration(context)
             myAppState.currentScreen = Screen.TagManagement
         },
         onBackupAndRestoreClick = {
-            if (myAppState.isVibrationEnabled) performVibration(context)
             myAppState.showBackupAndRestoreDialog = true
         },
         onGoToSecretStorage = {
@@ -169,7 +166,6 @@ fun SettingsScreenImpl(
             SettingsRepository.setKeepControlsVisible(context, it)
         },
         onHelpClick = {
-            if (myAppState.isVibrationEnabled) performVibration(context)
             if (myAppState.selectedLanguage == Language.SPECIAL) {
                 myAppState.showHelpAttentionDialog = true
             } else {
