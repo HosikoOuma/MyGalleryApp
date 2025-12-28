@@ -39,6 +39,7 @@ fun ViewHistoryScreenImpl(
         onClearSelection = { myAppState.selectedItems.clear() },
         gridState = gridState,
         blurType = myAppState.selectedBlurType,
-        isBlurEnabled = myAppState.isBlurEnabled
+        isBlurEnabled = myAppState.isBlurEnabled,
+        blurredUris = myAppState.blurredUris
     )
 }

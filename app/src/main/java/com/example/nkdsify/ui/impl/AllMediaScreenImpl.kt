@@ -39,6 +39,7 @@ fun AllMediaScreenImpl(
         },
         onClearSelection = { myAppState.selectedItems.clear() },
         blurType = myAppState.selectedBlurType,
-        gridState = gridState
+        gridState = gridState,
+        blurredUris = myAppState.blurredUris
     )
 }

@@ -71,6 +71,10 @@ import kotlinx.coroutines.withContext
 import java.io.File
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.draw.blur
+import com.example.nkdsify.data.BlurType
+import androidx.compose.foundation.layout.size
+import androidx.compose.material.icons.filled.FrontHand
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -223,58 +227,78 @@ fun MediaViewer(
         ) { page ->
             val item = items[page]
             val isFullyVisible by remember { derivedStateOf { !pagerState.isScrollInProgress && pagerState.currentPage == page } }
+            val isIndividualBlurred = item.uri.toString() in myAppState.blurredUris
 
-            if (isSecretMode) {
-                if (item.isVideo) {
-                    VideoPlayerPage(
-                        uri = item.uri, // Original encrypted URI
-                        isFullyVisible = isFullyVisible,
-                        isMuted = isMuted,
-                        controlsVisible = controlsVisible,
-                        onToggleControls = toggleControls,
-                        onMuteClick = { isMuted = !isMuted },
-                        isLoopVideoEnabled = myAppState.isLoopVideoEnabled,
-                        isSecretMode = true // Use streaming decryption
-                    )
-                } else {
-                    if (isDecrypting) {
-                        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                CircularProgressIndicator()
-                                Spacer(Modifier.height(8.dp))
-                                Text(stringResource(id = R.string.decrypting_file), color = Color.White)
+            Box(modifier = Modifier.fillMaxSize()) {
+                if (isSecretMode) {
+                    if (item.isVideo) {
+                        VideoPlayerPage(
+                            uri = item.uri, // Original encrypted URI
+                            isFullyVisible = isFullyVisible,
+                            isMuted = isMuted,
+                            controlsVisible = controlsVisible,
+                            onToggleControls = toggleControls,
+                            onMuteClick = { isMuted = !isMuted },
+                            isLoopVideoEnabled = myAppState.isLoopVideoEnabled,
+                            isSecretMode = true // Use streaming decryption
+                        )
+                    } else {
+                        if (isDecrypting) {
+                            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    CircularProgressIndicator()
+                                    Spacer(Modifier.height(8.dp))
+                                    Text(stringResource(id = R.string.decrypting_file), color = Color.White)
+                                }
                             }
+                        } else if (decryptedUri != null) {
+                            ZoomableImage(
+                                uri = decryptedUri!!,
+                                imageLoader = imageLoaderUsed,
+                                zoomType = myAppState.selectedZoomType,
+                                isVibrationEnabled = isVibrationEnabled,
+                                onToggleControls = toggleControls
+                            )
                         }
-                    } else if (decryptedUri != null) {
+                    }
+                } else { // Original logic for non-secret items
+                    if (item.isVideo) {
+                        VideoPlayerPage(
+                            uri = item.uri,
+                            isFullyVisible = isFullyVisible,
+                            isMuted = isMuted,
+                            controlsVisible = controlsVisible,
+                            onToggleControls = toggleControls,
+                            onMuteClick = { isMuted = !isMuted },
+                            isLoopVideoEnabled = myAppState.isLoopVideoEnabled,
+                            isSecretMode = false
+                        )
+                    } else {
                         ZoomableImage(
-                            uri = decryptedUri!!,
+                            uri = item.uri,
                             imageLoader = imageLoaderUsed,
                             zoomType = myAppState.selectedZoomType,
                             isVibrationEnabled = isVibrationEnabled,
-                            onToggleControls = toggleControls
+                            onToggleControls = toggleControls,
+                            modifier = if (isIndividualBlurred && myAppState.selectedBlurType == BlurType.BLUR) Modifier.blur(30.dp) else Modifier
                         )
                     }
                 }
-            } else { // Original logic for non-secret items
-                if (item.isVideo) {
-                    VideoPlayerPage(
-                        uri = item.uri,
-                        isFullyVisible = isFullyVisible,
-                        isMuted = isMuted,
-                        controlsVisible = controlsVisible,
-                        onToggleControls = toggleControls,
-                        onMuteClick = { isMuted = !isMuted },
-                        isLoopVideoEnabled = myAppState.isLoopVideoEnabled,
-                        isSecretMode = false
-                    )
-                } else {
-                    ZoomableImage(
-                        uri = item.uri,
-                        imageLoader = imageLoaderUsed,
-                        zoomType = myAppState.selectedZoomType,
-                        isVibrationEnabled = isVibrationEnabled,
-                        onToggleControls = toggleControls
-                    )
+
+                if (isIndividualBlurred && myAppState.selectedBlurType == BlurType.PLACEHOLDER && !item.isVideo) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(Color.Black),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.FrontHand,
+                            contentDescription = null,
+                            tint = Color.Gray,
+                            modifier = Modifier.size(64.dp)
+                        )
+                    }
                 }
             }
         }

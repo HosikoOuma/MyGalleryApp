@@ -42,6 +42,7 @@ fun TrashScreenImpl(
         isTrashBlurEnabled = myAppState.isTrashBlurEnabled,
         onClearSelection = { myAppState.selectedItems.clear() },
         blurType = myAppState.selectedBlurType,
-        gridState = gridState
+        gridState = gridState,
+        blurredUris = myAppState.blurredUris
     )
 }

@@ -41,7 +41,8 @@ fun TrashScreen(
     isTrashBlurEnabled: Boolean,
     onClearSelection: () -> Unit,
     blurType: BlurType,
-    gridState: LazyGridState
+    gridState: LazyGridState,
+    blurredUris: Set<String> = emptySet()
 ) {
     if (items.isEmpty()) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -75,7 +76,8 @@ fun TrashScreen(
             isBlurEnabled = isTrashBlurEnabled,
             onClearSelection = onClearSelection,
             blurType = blurType,
-            gridState = gridState
+            gridState = gridState,
+            blurredUris = blurredUris
         )
 
         AnimatedVisibility(

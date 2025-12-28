@@ -35,6 +35,7 @@ object SettingsRepository {
     private const val FAB_ACTION_KEY = "fab_action"
     private const val FIRST_LAUNCH_KEY = "first_launch"
     private const val KEEP_CONTROLS_VISIBLE_KEY = "keep_controls_visible"
+    private const val BLURRED_URIS_KEY = "blurred_uris"
 
 
     fun setFontFamily(context: Context, fontFamily: AppFontFamily) {context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit().putString("font_family", fontFamily.name).apply()
@@ -336,6 +337,18 @@ object SettingsRepository {
     fun isKeepControlsVisible(context: Context): Boolean {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         return prefs.getBoolean(KEEP_CONTROLS_VISIBLE_KEY, false)
+    }
+
+    fun setBlurredUris(context: Context, uris: Set<String>) {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit {
+            putStringSet(BLURRED_URIS_KEY, uris)
+        }
+    }
+
+    fun getBlurredUris(context: Context): Set<String> {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        return prefs.getStringSet(BLURRED_URIS_KEY, emptySet()) ?: emptySet()
     }
 
 }

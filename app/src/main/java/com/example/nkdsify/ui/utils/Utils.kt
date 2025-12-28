@@ -51,6 +51,8 @@ import android.media.MediaMetadataRetriever
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.DriveFileMove
+import androidx.compose.material.icons.filled.BlurOff
+import androidx.compose.material.icons.filled.BlurOn
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Lock
@@ -378,6 +380,7 @@ fun ExternalMediaErrorDialog(onDismiss: () -> Unit) {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MediaDetailsDialog(
+    uri: Uri,
     details: MediaDetails,
     onDismiss: () -> Unit,
     onSetAsWallpaper: () -> Unit,
@@ -385,6 +388,8 @@ fun MediaDetailsDialog(
     onMove: () -> Unit,
     onRename: () -> Unit,
     onMoveToSecret: () -> Unit,
+    onBlur: () -> Unit,
+    isBlurred: Boolean,
     onFind: () -> Unit
 ) {
     val context = LocalContext.current
@@ -432,6 +437,9 @@ fun MediaDetailsDialog(
             ) {
                 item { TextButton(onClick = { vibrate(); onSetAsWallpaper() }) { 
                     Icon(Icons.Default.Wallpaper, contentDescription = stringResource(id = R.string.set_as_wallpaper_content_description))
+                } }
+                item { TextButton(onClick = { vibrate(); onBlur() }) { 
+                    Icon(if (isBlurred) Icons.Default.BlurOff else Icons.Default.BlurOn, contentDescription = null)
                 } }
                 item { TextButton(onClick = { vibrate(); onCopy() }) { 
                     Icon(Icons.Default.ContentCopy, contentDescription = stringResource(id = R.string.copy_content_description))

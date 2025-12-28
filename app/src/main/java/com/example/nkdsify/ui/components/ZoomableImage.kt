@@ -45,12 +45,13 @@ fun ZoomableImage(
     imageLoader: ImageLoader,
     zoomType: ZoomType,
     isVibrationEnabled: Boolean,
-    onToggleControls: () -> Unit
+    onToggleControls: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
     var scale by rememberSaveable { mutableFloatStateOf(1f) }
     var offsetX by rememberSaveable { mutableFloatStateOf(0f) }
     var offsetY by rememberSaveable { mutableFloatStateOf(0f) }
-    var size by remember { mutableStateOf(IntSize.Zero) }
+    var viewSize by remember { mutableStateOf(IntSize.Zero) }
     val coroutineScope = rememberCoroutineScope()
     val context = LocalContext.current
 
@@ -78,7 +79,7 @@ fun ZoomableImage(
                             Triple(1f, 0f, 0f)
                         } else {
                             val targetS = 3f
-                            val center = Offset(size.width / 2f, size.height / 2f)
+                            val center = Offset(viewSize.width / 2f, viewSize.height / 2f)
                             val targetX = (tapOffset.x - center.x) * (1 - targetS)
                             val targetY = (tapOffset.y - center.y) * (1 - targetS)
                             Triple(targetS, targetX, targetY)
@@ -136,12 +137,12 @@ fun ZoomableImage(
                             scale = 1f
                         } else {
                             val newOffsetX =
-                                offsetX + pan.x + (centroid.x - size.width / 2) * (1 - zoom)
+                                offsetX + pan.x + (centroid.x - viewSize.width / 2) * (1 - zoom)
                             val newOffsetY =
-                                offsetY + pan.y + (centroid.y - size.height / 2) * (1 - zoom)
+                                offsetY + pan.y + (centroid.y - viewSize.height / 2) * (1 - zoom)
 
-                            val maxOffsetX = (size.width * (newScale - 1)) / 2f
-                            val maxOffsetY = (size.height * (newScale - 1)) / 2f
+                            val maxOffsetX = (viewSize.width * (newScale - 1)) / 2f
+                            val maxOffsetY = (viewSize.height * (newScale - 1)) / 2f
 
                             if (zoom != 1f || pan != Offset.Zero) {
                                 event.changes.forEach { it.consume() }
@@ -153,7 +154,8 @@ fun ZoomableImage(
                         }
                     } while (event.changes.any { it.pressed })
                 }
-            },
+            }
+            .then(modifier),
         contentAlignment = Alignment.Center
     ) {
         Image(
@@ -164,7 +166,7 @@ fun ZoomableImage(
             contentDescription = "Full screen image",
             modifier = Modifier
                 .fillMaxSize()
-                .onSizeChanged { size = it }
+                .onSizeChanged { viewSize = it }
                 .graphicsLayer {
                     scaleX = scale
                     scaleY = scale

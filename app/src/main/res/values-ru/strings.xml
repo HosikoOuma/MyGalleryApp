@@ -367,4 +367,6 @@
     <string name="hp_attention">Это секретное сообщение!</string>
     <string name="thanks">Спасибо, Хосико_)</string>
     <string name="invert_selection">Инвертировать выбор</string>
+    <string name="blur_action">Заблюрить</string>
+    <string name="unblur_action">Разблюрить</string>
 </resources>

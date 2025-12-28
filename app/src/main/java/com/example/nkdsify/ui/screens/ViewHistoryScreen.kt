@@ -27,7 +27,8 @@ fun ViewHistoryScreen(
     onClearSelection: () -> Unit,
     gridState: LazyGridState,
     isBlurEnabled: Boolean,
-    blurType: BlurType
+    blurType: BlurType,
+    blurredUris: Set<String> = emptySet()
 ) {
     if (items.isEmpty()) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -45,7 +46,8 @@ fun ViewHistoryScreen(
                 onClearSelection = onClearSelection,
                 gridState = gridState,
                 isBlurEnabled = isBlurEnabled,
-                blurType = blurType
+                blurType = blurType,
+                blurredUris = blurredUris
             )
         }
     }

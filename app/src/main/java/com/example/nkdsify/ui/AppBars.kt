@@ -289,6 +289,16 @@ fun TopBar(
                                     onClick = { if (myAppState.isVibrationEnabled) performVibration(context); showSelectionDetails(); menuExpanded = false },
                                     leadingIcon = { Icon(Icons.Default.Info, contentDescription = stringResource(id = R.string.details_content_description)) }
                                 )
+                                val allSelectedBlurred = myAppState.selectedItems.all { it.toString() in myAppState.blurredUris }
+                                DropdownMenuItem(
+                                    text = { Text(if (allSelectedBlurred) stringResource(id = R.string.unblur_action) else stringResource(id = R.string.blur_action)) },
+                                    onClick = {
+                                        if (myAppState.isVibrationEnabled) performVibration(context)
+                                        myAppState.toggleBlurForUris(myAppState.selectedItems.toList())
+                                        menuExpanded = false
+                                    },
+                                    leadingIcon = { Icon(if (allSelectedBlurred) Icons.Default.BlurOff else Icons.Default.BlurOn, contentDescription = null) }
+                                )
                                 DropdownMenuItem(
                                     text = { Text(stringResource(id = R.string.copy_button)) },
                                     onClick = { if (myAppState.isVibrationEnabled) performVibration(context); performCopy(); menuExpanded = false },

@@ -57,7 +57,8 @@ fun FavoritesScreen(
     onOpenAlbum: (String) -> Unit,
     isShowFileCountEnabled: Boolean,
     onClearSelection: () -> Unit,
-    blurType: BlurType
+    blurType: BlurType,
+    blurredUris: Set<String> = emptySet()
 ) {
     val taggedAlbums = items
         .flatMap { item -> (tags[item.absolutePath] ?: emptySet()).map { tag -> tag to item } }
@@ -83,7 +84,8 @@ fun FavoritesScreen(
             onClearSelection = onClearSelection,
             blurType = blurType,
             isBlurEnabled = isBlurInFolderEnabled,
-            gridState = contentGridState
+            gridState = contentGridState,
+            blurredUris = blurredUris
         )
     } else {
         if (displayAlbums.isEmpty()) {

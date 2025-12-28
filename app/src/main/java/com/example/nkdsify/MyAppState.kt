@@ -80,6 +80,8 @@ class MyAppState(
     var viewHistory by mutableStateOf<ImmutableList<MediaItem>>(persistentListOf())
     var isKeepControlsVisible by mutableStateOf(SettingsRepository.isKeepControlsVisible(context))
 
+    var blurredUris by mutableStateOf(SettingsRepository.getBlurredUris(context))
+
     // New: composition-provided controllers / objects (nullable for safe migration)
     var imageLoader: ImageLoader? = null
     var coroutineScope: CoroutineScope? = null
@@ -227,5 +229,17 @@ class MyAppState(
                 }
             }
         }
+    }
+
+    fun toggleBlurForUris(uris: List<Uri>) {
+        val current = blurredUris.toMutableSet()
+        val uriStrings = uris.map { it.toString() }
+        if (uriStrings.all { it in current }) {
+            current.removeAll(uriStrings.toSet())
+        } else {
+            current.addAll(uriStrings)
+        }
+        blurredUris = current
+        SettingsRepository.setBlurredUris(context, current)
     }
 }

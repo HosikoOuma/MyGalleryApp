@@ -58,6 +58,7 @@ fun InfoDialogs(myAppState: MyAppState, screenWidth: Int, screenHeight: Int, onF
         val details = getMediaDetails(context, uri)
         if (details != null) {
             MediaDetailsDialog(
+                uri = uri,
                 details = details,
                 onDismiss = { myAppState.showDetailsDialog = null },
                 onSetAsWallpaper = {
@@ -92,6 +93,10 @@ fun InfoDialogs(myAppState: MyAppState, screenWidth: Int, screenHeight: Int, onF
                 onMoveToSecret = {
                     myAppState.showConfirmMoveToSecretDialog = true
                 },
+                onBlur = {
+                    myAppState.toggleBlurForUris(listOf(uri))
+                },
+                isBlurred = uri.toString() in myAppState.blurredUris,
                 onFind = onFind
             )
         }

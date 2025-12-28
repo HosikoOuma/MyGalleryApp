@@ -82,7 +82,8 @@ fun MediaGrid(
     onClearSelection: () -> Unit,
     isBlurEnabled: Boolean = false,
     blurType: BlurType,
-    gridState: LazyGridState
+    gridState: LazyGridState,
+    blurredUris: Set<String> = emptySet()
 ) {
     if (items.isEmpty()) {
         Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -108,6 +109,8 @@ fun MediaGrid(
         ) {
             items(items, key = { it.uri }, contentType = { "media" }) { item ->
                 val isSelected = selectedItems.contains(item.uri)
+                val isIndividualBlurred = item.uri.toString() in blurredUris
+                val effectiveBlur = isBlurEnabled || isIndividualBlurred
                 Box(modifier = Modifier.padding(4.dp)) {
                     Card(modifier = Modifier
                         .fillMaxSize()
@@ -128,7 +131,7 @@ fun MediaGrid(
                                 }
                             })
                         }) {
-                        if (isBlurEnabled && blurType == BlurType.PLACEHOLDER) {
+                        if (effectiveBlur && blurType == BlurType.PLACEHOLDER) {
                             Box(
                                 modifier = Modifier
                                     .fillMaxSize()
@@ -155,7 +158,7 @@ fun MediaGrid(
                                 modifier = Modifier
                                     .fillMaxSize()
                                     .then(if (isSelected) Modifier.alpha(0.5f) else Modifier)
-                                    .then(if (isBlurEnabled && blurType == BlurType.BLUR) Modifier.blur(20.dp) else Modifier)
+                                    .then(if (effectiveBlur && blurType == BlurType.BLUR) Modifier.blur(20.dp) else Modifier)
                             )
                         }
                     }
