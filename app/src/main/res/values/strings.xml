@@ -370,4 +370,11 @@
     <string name="invert_selection">Invert Selection</string>
     <string name="blur_action">Blur</string>
     <string name="unblur_action">Unblur</string>
+    <string name="viewer_controls_position_label">Viewer Controls Position</string>
+    <string name="viewer_controls_position_top">Top</string>
+    <string name="viewer_controls_position_bottom">Bottom</string>
+    <string name="download_started_toast">Download started. Check your notifications for progress.</string>
+    <string name="download_failed_toast">Download failed: %1$s</string>
+    <string name="attention_title">Attention!</string>
+    <string name="no_media">No media files found</string>
 </resources>

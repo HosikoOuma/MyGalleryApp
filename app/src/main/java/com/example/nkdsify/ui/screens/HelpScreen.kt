@@ -12,11 +12,13 @@ import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -62,7 +64,6 @@ fun HelpScreen() {
 
     val topics = remember {
         listOf(
-            // Пример добавления картинки: imageRes = R.drawable.your_help_image
             HelpTopic(R.string.help_topic_general, R.string.help_content_general),
             HelpTopic(R.string.help_topic_privacy, R.string.help_content_privacy),
             HelpTopic(R.string.help_topic_media, R.string.help_content_media),
@@ -84,7 +85,7 @@ fun HelpScreen() {
                 (slideInHorizontally { -it } + fadeIn()) togetherWith (slideOutHorizontally { it } + fadeOut())
             }
         },
-        //label = stringResource(id = R.string.help_nav_label)
+        label = "HelpScreenAnimation"
     ) { topic ->
         if (topic == null) {
             HelpTopicList(topics = topics, onTopicClick = { selectedTopic = it })
@@ -97,18 +98,10 @@ fun HelpScreen() {
 @Composable
 fun HelpTopicList(topics: List<HelpTopic>, onTopicClick: (HelpTopic) -> Unit) {
     LazyColumn(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp)
+        modifier = Modifier.fillMaxSize(),
+        // Добавляем отступ 110.dp снизу для плавающего NavBar
+        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 110.dp)
     ) {
-//        item {
-//            Text(
-//                text = stringResource(id = R.string.help_button),
-//                style = MaterialTheme.typography.headlineMedium,
-//                fontWeight = FontWeight.Bold,
-//                modifier = Modifier.padding(bottom = 24.dp)
-//            )
-//        }
         items(topics) { topic ->
             Card(
                 modifier = Modifier
@@ -177,7 +170,6 @@ fun HelpTopicDetail(topic: HelpTopic, onBack: () -> Unit) {
                 .padding(16.dp)
                 .verticalScroll(rememberScrollState())
         ) {
-            // Отображаем картинку, если она есть в модели
             topic.imageRes?.let { resId ->
                 Image(
                     painter = painterResource(id = resId),
@@ -195,7 +187,13 @@ fun HelpTopicDetail(topic: HelpTopic, onBack: () -> Unit) {
                 text = stringResource(id = topic.contentRes),
                 style = MaterialTheme.typography.bodyLarge
             )
-            Spacer(modifier = Modifier.height(32.dp))
+            
+            // Добавляем большой отступ в конце текста детализации
+            Spacer(
+                modifier = Modifier
+                    .navigationBarsPadding()
+                    .height(110.dp)
+            )
         }
     }
 }

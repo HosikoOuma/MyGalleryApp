@@ -242,7 +242,7 @@
     <string name="details_total_size">Общий размер</string>
     <string name="details_date_range">Диапазон дат</string>
     <string name="details_item_count">Количество элементов</string>
-    <string name="selection_details_text">Выбрано: %1$d\Общий вес %2$s</string>
+    <string name="selection_details_text">Выбрано: %1$d\nОбщий вес %2$s</string>
     <string name="theme_gruvbox">Gruvbox</string>
     <string name="remove_tag_content_description">Удалить тег</string>
     <string name="add_tag_placeholder">Добавить тег</string>
@@ -369,4 +369,11 @@
     <string name="invert_selection">Инвертировать выбор</string>
     <string name="blur_action">Заблюрить</string>
     <string name="unblur_action">Разблюрить</string>
+    <string name="viewer_controls_position_label">Положение панели управления</string>
+    <string name="viewer_controls_position_top">Сверху</string>
+    <string name="viewer_controls_position_bottom">Снизу</string>
+    <string name="download_started_toast">Скачивание началось. Проверить прогресс можно в уведомлении.</string>
+    <string name="download_failed_toast">Не удалось скачать: %1$s</string>
+    <string name="attention_title">Внимание!</string>
+    <string name="no_media">Медиафайлы не найдены</string>
 </resources>

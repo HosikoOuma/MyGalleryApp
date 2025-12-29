@@ -93,11 +93,11 @@ fun VideoPlayerPage(
     onToggleControls: () -> Unit,
     onMuteClick: () -> Unit,
     isLoopVideoEnabled: Boolean,
-    isSecretMode: Boolean = false
+    isSecretMode: Boolean = false,
+    bottomPadding: Dp = 0.dp
 ) {
     val context = LocalContext.current
     
-    // Create the player. If in secret mode, we use our custom AesDataSourceFactory.
     val exoPlayer = remember {
         ExoPlayer.Builder(context).build().apply {
             if (isSecretMode) {
@@ -109,31 +109,24 @@ fun VideoPlayerPage(
         }
     }
 
-    // --- State Management ---
     var isPlaying by remember { mutableStateOf(exoPlayer.isPlaying) }
     var playbackState by remember { mutableIntStateOf(exoPlayer.playbackState) }
     var playbackPosition by remember { mutableLongStateOf(0L) }
     var totalDuration by remember { mutableLongStateOf(0L) }
 
-    // --- New Feature States ---
     var speed by rememberSaveable { mutableFloatStateOf(1f) }
     var showSpeedMenu by remember { mutableStateOf(false) }
     var seekDirection by remember { mutableStateOf<SeekDirection?>(null) }
     var isSeeking by remember { mutableStateOf(false) }
 
-    // --- Zoom State ---
     var scale by rememberSaveable { mutableFloatStateOf(1f) }
     var offsetX by rememberSaveable { mutableFloatStateOf(0f) }
     var offsetY by rememberSaveable { mutableFloatStateOf(0f) }
     var size by remember { mutableStateOf(IntSize.Zero) }
 
-    // --- Lifecycle State ---
     val lifecycleOwner = LocalLifecycleOwner.current
     var wasPlayingBeforePause by rememberSaveable { mutableStateOf(false) }
 
-
-    // --- Effects ---
-    // Reset states when uri changes
     LaunchedEffect(key1 = uri) {
         scale = 1f
         offsetX = 0f
@@ -141,7 +134,7 @@ fun VideoPlayerPage(
         speed = 1f
         exoPlayer.setPlaybackSpeed(1f)
     }
-    // Seek feedback visibility
+
     LaunchedEffect(seekDirection) {
         if (seekDirection != null) {
             delay(800L)
@@ -149,7 +142,6 @@ fun VideoPlayerPage(
         }
     }
 
-    // Player Lifecycle - Prepare the player only when the URI changes
     LaunchedEffect(uri) {
         if (!isSecretMode) {
             exoPlayer.setMediaItem(androidx.media3.common.MediaItem.fromUri(uri))
@@ -157,12 +149,10 @@ fun VideoPlayerPage(
         exoPlayer.prepare()
     }
 
-    // Player Lifecycle - Control play/pause based on visibility
     LaunchedEffect(isFullyVisible) {
         exoPlayer.playWhenReady = isFullyVisible
     }
 
-    // App Lifecycle Observer
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             when (event) {
@@ -187,17 +177,14 @@ fun VideoPlayerPage(
         }
     }
 
-
     LaunchedEffect(isLoopVideoEnabled) {
         exoPlayer.repeatMode = if (isLoopVideoEnabled) Player.REPEAT_MODE_ONE else Player.REPEAT_MODE_OFF
     }
 
-    // Mute state
     LaunchedEffect(isMuted) {
         exoPlayer.volume = if (isMuted) 0f else 1f
     }
 
-    // Player state listener and position updater
     DisposableEffect(exoPlayer) {
         val listener = object : Player.Listener {
             override fun onIsPlayingChanged(playing: Boolean) {
@@ -212,14 +199,12 @@ fun VideoPlayerPage(
             }
         }
         exoPlayer.addListener(listener)
-
         onDispose {
             exoPlayer.removeListener(listener)
             exoPlayer.release()
         }
     }
 
-    // Coroutine to update playback position
     LaunchedEffect(isPlaying, isSeeking) {
         if (!isSeeking) {
             while(isPlaying) {
@@ -229,7 +214,6 @@ fun VideoPlayerPage(
         }
     }
 
-    // --- UI ---
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -240,11 +224,7 @@ fun VideoPlayerPage(
                     onTap = { onToggleControls() },
                     onDoubleTap = { offset ->
                         seekDirection = if (offset.x > size.width / 2) {
-                            exoPlayer.seekTo(
-                                (exoPlayer.currentPosition + 10000).coerceAtMost(
-                                    totalDuration
-                                )
-                            )
+                            exoPlayer.seekTo((exoPlayer.currentPosition + 10000).coerceAtMost(totalDuration))
                             SeekDirection.FORWARD
                         } else {
                             exoPlayer.seekTo((exoPlayer.currentPosition - 10000).coerceAtLeast(0))
@@ -260,26 +240,15 @@ fun VideoPlayerPage(
                         val zoom = event.calculateZoom()
                         val pan = event.calculatePan()
                         val centroid = event.calculateCentroid(useCurrentPosition = true)
-
                         val newScale = (scale * zoom).coerceIn(1f, 5f)
-
                         if (newScale <= 1f) {
-                            offsetX = 0f
-                            offsetY = 0f
-                            scale = 1f
+                            offsetX = 0f; offsetY = 0f; scale = 1f
                         } else {
-                            val newOffsetX =
-                                offsetX + pan.x + (centroid.x - size.width / 2) * (1 - zoom)
-                            val newOffsetY =
-                                offsetY + pan.y + (centroid.y - size.height / 2) * (1 - zoom)
-
+                            val newOffsetX = offsetX + pan.x + (centroid.x - size.width / 2) * (1 - zoom)
+                            val newOffsetY = offsetY + pan.y + (centroid.y - size.height / 2) * (1 - zoom)
                             val maxOffsetX = (size.width * (newScale - 1)) / 2f
                             val maxOffsetY = (size.height * (newScale - 1)) / 2f
-
-                            if (zoom != 1f || pan != Offset.Zero) {
-                                event.changes.forEach { it.consume() }
-                            }
-
+                            if (zoom != 1f || pan != Offset.Zero) { event.changes.forEach { it.consume() } }
                             scale = newScale
                             offsetX = newOffsetX.coerceIn(-maxOffsetX, maxOffsetX)
                             offsetY = newOffsetY.coerceIn(-maxOffsetY, maxOffsetY)
@@ -289,56 +258,25 @@ fun VideoPlayerPage(
             }
     ) {
         AndroidView(
-            factory = {
-                PlayerView(it).apply {
-                    useController = false
-                    player = exoPlayer
-                }
-            },
-            modifier = Modifier
-                .fillMaxSize()
-                .graphicsLayer {
-                    scaleX = scale
-                    scaleY = scale
-                    translationX = offsetX
-                    translationY = offsetY
-                }
+            factory = { PlayerView(it).apply { useController = false; player = exoPlayer } },
+            modifier = Modifier.fillMaxSize().graphicsLayer { scaleX = scale; scaleY = scale; translationX = offsetX; translationY = offsetY }
         )
 
-        // Scrim for better controls visibility
-        AnimatedVisibility(
-            visible = controlsVisible || seekDirection != null,
-            enter = fadeIn(),
-            exit = fadeOut(),
-            modifier = Modifier.fillMaxSize()
-        ) {
-            Box(modifier = Modifier.background(Color.Black.copy(alpha = 0.6f))) {}
+        AnimatedVisibility(visible = controlsVisible || seekDirection != null, enter = fadeIn(), exit = fadeOut(), modifier = Modifier.fillMaxSize()) {
+            Box(modifier = Modifier.background(Color.Black.copy(alpha = 0.6f)))
         }
 
         val seekAnimSide = if (seekDirection == SeekDirection.FORWARD) Alignment.CenterEnd else Alignment.CenterStart
-        AnimatedVisibility(
-            visible = seekDirection != null,
-            enter = fadeIn(),
-            exit = fadeOut(),
-            modifier = Modifier.align(seekAnimSide)
-        ) {
+        AnimatedVisibility(visible = seekDirection != null, enter = fadeIn(), exit = fadeOut(), modifier = Modifier.align(seekAnimSide)) {
             Icon(
                 imageVector = if (seekDirection == SeekDirection.FORWARD) Icons.Default.FastForward else Icons.Default.FastRewind,
-                contentDescription = "Seek",
+                contentDescription = null,
                 tint = Color.White.copy(alpha = 0.7f),
-                modifier = Modifier
-                    .size(64.dp)
-                    .padding(horizontal = 16.dp)
+                modifier = Modifier.size(64.dp).padding(horizontal = 16.dp)
             )
         }
 
-        // Custom Controls
-        AnimatedVisibility(
-            visible = controlsVisible,
-            enter = fadeIn(),
-            exit = fadeOut(),
-            modifier = Modifier.fillMaxSize()
-        ) {
+        AnimatedVisibility(visible = controlsVisible, enter = fadeIn(), exit = fadeOut(), modifier = Modifier.fillMaxSize()) {
             Box(modifier = Modifier.fillMaxSize()) {
                 if (playbackState == Player.STATE_BUFFERING) {
                     CircularProgressIndicator(modifier = Modifier.align(Alignment.Center), color = Color.White)
@@ -349,34 +287,20 @@ fun VideoPlayerPage(
                         .align(Alignment.BottomCenter)
                         .fillMaxWidth()
                         .navigationBarsPadding()
+                        .padding(bottom = bottomPadding) 
                         .padding(16.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     IconButton(
                         onClick = {
-                            if (playbackState == Player.STATE_ENDED) {
-                                exoPlayer.seekTo(0)
-                                exoPlayer.play()
-                            } else {
-                                if (exoPlayer.isPlaying) exoPlayer.pause() else exoPlayer.play()
-                            }
+                            if (playbackState == Player.STATE_ENDED) { exoPlayer.seekTo(0); exoPlayer.play() }
+                            else { if (exoPlayer.isPlaying) exoPlayer.pause() else exoPlayer.play() }
                         },
-                        modifier = Modifier
-                            .padding(bottom = 16.dp)
-                            .size(64.dp)
-                            .clip(RoundedCornerShape(16.dp))
-                            .border(
-                                1.dp,
-                                Color.White.copy(alpha = 0.1f),
-                                shape = RoundedCornerShape(16.dp)
-                            )
+                        modifier = Modifier.padding(bottom = 16.dp).size(64.dp).clip(RoundedCornerShape(16.dp))
+                            .border(1.dp, Color.White.copy(alpha = 0.1f), shape = RoundedCornerShape(16.dp))
                             .background(Color.Black.copy(alpha = 0.5f))
                     ) {
-                        AnimatedPlayPauseIcon(
-                            isPlaying = isPlaying && playbackState != Player.STATE_ENDED,
-                            size = 40.dp,
-                            tint = Color.White
-                        )
+                        AnimatedPlayPauseIcon(isPlaying = isPlaying && playbackState != Player.STATE_ENDED, size = 40.dp, tint = Color.White)
                     }
 
                     WaveProgressSlider(
@@ -388,52 +312,25 @@ fun VideoPlayerPage(
                             playbackPosition = newPosition
                             exoPlayer.seekTo(newPosition)
                         },
-                        onValueChangeFinished = {
-                            isSeeking = false
-                        },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(40.dp)
-                            .padding(vertical = 8.dp)
+                        onValueChangeFinished = { isSeeking = false },
+                        modifier = Modifier.fillMaxWidth().height(40.dp).padding(vertical = 8.dp)
                     )
 
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                         Text(text = formatDuration(playbackPosition), color = Color.White)
-
                         Row(horizontalArrangement = Arrangement.spacedBy(0.dp)) {
                             IconButton(onClick = onMuteClick) {
-                                Icon(
-                                    imageVector = if (isMuted) Icons.AutoMirrored.Filled.VolumeOff else Icons.AutoMirrored.Filled.VolumeUp,
-                                    contentDescription = "Mute/Unmute",
-                                    tint = Color.White
-                                )
+                                Icon(imageVector = if (isMuted) Icons.AutoMirrored.Filled.VolumeOff else Icons.AutoMirrored.Filled.VolumeUp, contentDescription = null, tint = Color.White)
                             }
                             Box {
-                                IconButton(onClick = { showSpeedMenu = true }) {
-                                    Icon(imageVector = Icons.Default.Speed, contentDescription = "Playback Speed", tint = Color.White)
-                                }
-                                DropdownMenu(
-                                    expanded = showSpeedMenu,
-                                    onDismissRequest = { showSpeedMenu = false }
-                                ) {
+                                IconButton(onClick = { showSpeedMenu = true }) { Icon(imageVector = Icons.Default.Speed, contentDescription = null, tint = Color.White) }
+                                DropdownMenu(expanded = showSpeedMenu, onDismissRequest = { showSpeedMenu = false }) {
                                     listOf(0.5f, 1.0f, 1.5f, 2.0f).forEach { speedValue ->
-                                        DropdownMenuItem(
-                                            text = { Text(text = "${speedValue}x") },
-                                            onClick = {
-                                                speed = speedValue
-                                                exoPlayer.setPlaybackSpeed(speed)
-                                                showSpeedMenu = false
-                                            }
-                                        )
+                                        DropdownMenuItem(text = { Text(text = "${speedValue}x") }, onClick = { speed = speedValue; exoPlayer.setPlaybackSpeed(speed); showSpeedMenu = false })
                                     }
                                 }
                             }
                         }
-
                         Text(text = formatDuration(totalDuration), color = Color.White)
                     }
                 }
@@ -456,86 +353,38 @@ fun WaveProgressSlider(
     val phase by infiniteTransition.animateFloat(
         initialValue = 0f,
         targetValue = 2f * Math.PI.toFloat(),
-        animationSpec = infiniteRepeatable(
-            animation = tween(1500, easing = LinearEasing),
-            repeatMode = RepeatMode.Restart
-        ),
+        animationSpec = infiniteRepeatable(animation = tween(1500, easing = LinearEasing), repeatMode = RepeatMode.Restart),
         label = "phase"
     )
-
-    // Анимация амплитуды: если видео на паузе, амплитуда плавно уходит в 0
-    val amplitude by animateFloatAsState(
-        targetValue = if (isPlaying) 12f else 0f,
-        animationSpec = spring(dampingRatio = 0.7f, stiffness = 300f),
-        label = "amplitude"
-    )
+    val amplitude by animateFloatAsState(targetValue = if (isPlaying) 12f else 0f, animationSpec = spring(dampingRatio = 0.7f, stiffness = 300f), label = "amplitude")
 
     BoxWithConstraints(
-        modifier = modifier
-            .fillMaxWidth()
-            .pointerInput(Unit) {
-                detectTapGestures { offset ->
-                    onValueChange((offset.x / size.width).coerceIn(0f, 1f))
-                    onValueChangeFinished()
-                }
-            }
-            .pointerInput(Unit) {
-                detectDragGestures(
-                    onDragEnd = { onValueChangeFinished() },
-                    onDragCancel = { onValueChangeFinished() },
-                    onDrag = { change, _ ->
-                        change.consume()
-                        onValueChange((change.position.x / size.width).coerceIn(0f, 1f))
-                    }
-                )
-            }
+        modifier = modifier.fillMaxWidth()
+            .pointerInput(Unit) { detectTapGestures { offset -> onValueChange((offset.x / size.width).coerceIn(0f, 1f)); onValueChangeFinished() } }
+            .pointerInput(Unit) { detectDragGestures(onDragEnd = { onValueChangeFinished() }, onDragCancel = { onValueChangeFinished() }, onDrag = { change, _ -> change.consume(); onValueChange((change.position.x / size.width).coerceIn(0f, 1f)) }) }
     ) {
         val width = constraints.maxWidth.toFloat()
         val height = constraints.maxHeight.toFloat()
         val progressWidth = width * progress
-
         Canvas(modifier = Modifier.fillMaxSize()) {
             val points = 100
             val frequency = 2f
-            
-            // Track (inactive part)
-            drawLine(
-                color = trackColor,
-                start = Offset(progressWidth, height / 2),
-                end = Offset(width, height / 2),
-                strokeWidth = 10f,
-                cap = StrokeCap.Round
-            )
-
-            // Active wavy part
+            drawLine(color = trackColor, start = Offset(progressWidth, height / 2), end = Offset(width, height / 2), strokeWidth = 10f, cap = StrokeCap.Round)
             val activePath = Path()
             val activePoints = (points * progress).toInt()
-            
             if (activePoints >= 0) {
                 for (i in 0..activePoints) {
                     val x = (i.toFloat() / points) * width
-                    // Используем анимированную амплитуду
                     val y = height / 2 + (sin(i.toFloat() / frequency + phase) * amplitude)
                     if (i == 0) activePath.moveTo(x, y) else activePath.lineTo(x, y)
                 }
-                
                 val xEnd = progressWidth
                 val yEnd = height / 2 + (sin((progress * points) / frequency + phase) * amplitude)
                 activePath.lineTo(xEnd, yEnd)
-                
                 drawPath(activePath, color, style = Stroke(width = 10f, cap = StrokeCap.Round))
-                
                 if (progress > 0f) {
-                    drawCircle(
-                        color = color,
-                        radius = 8.dp.toPx(),
-                        center = Offset(xEnd, yEnd)
-                    )
-                    drawCircle(
-                        color = Color.White.copy(alpha = 0.3f),
-                        radius = 3.dp.toPx(),
-                        center = Offset(xEnd, yEnd)
-                    )
+                    drawCircle(color = color, radius = 8.dp.toPx(), center = Offset(xEnd, yEnd))
+                    drawCircle(color = Color.White.copy(alpha = 0.3f), radius = 3.dp.toPx(), center = Offset(xEnd, yEnd))
                 }
             }
         }

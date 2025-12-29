@@ -6,6 +6,7 @@ import com.example.nkdsify.data.FabAction
 import com.example.nkdsify.data.Language
 import com.example.nkdsify.data.Theme
 import com.example.nkdsify.data.ZoomType
+import com.example.nkdsify.data.ViewerControlsPosition
 
 data class SettingsState(
     val isBlurEnabled: Boolean,
@@ -29,7 +30,8 @@ data class SettingsState(
     val currentVersion: String,
     val selectedFabAction: FabAction,
     val selectedFontFamily: AppFontFamily,
-    val isKeepControlsVisible: Boolean
+    val isKeepControlsVisible: Boolean,
+    val viewerControlsPosition: ViewerControlsPosition
 )
 
 data class SettingsActions(
@@ -62,5 +64,6 @@ data class SettingsActions(
     val onAboutClick: () -> Unit,
     val onFontFamilyChange: (AppFontFamily) -> Unit,
     val onKeepControlsVisibleChange: (Boolean) -> Unit,
-    val onHelpClick: () -> Unit
+    val onHelpClick: () -> Unit,
+    val onViewerControlsPositionChange: (ViewerControlsPosition) -> Unit
 )

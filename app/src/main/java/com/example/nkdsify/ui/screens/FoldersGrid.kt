@@ -63,7 +63,8 @@ fun FoldersGrid(
     LazyVerticalGrid(
         columns = GridCells.Fixed(2),
         state = gridState,
-        contentPadding = PaddingValues(8.dp)
+        // Добавляем 80.dp снизу, чтобы контент не перекрывался NavBar
+        contentPadding = PaddingValues(start = 8.dp, top = 8.dp, end = 8.dp, bottom = 80.dp)
     ) {
         items(folders, key = { it.id }) { folder ->
             if (folder.items.isNotEmpty()) {
@@ -90,7 +91,7 @@ fun FoldersGrid(
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Icon(
-                                        imageVector = Icons.Default.FrontHand, // Вы можете поменять эту иконку на любую другую, например, на иконку руки
+                                        imageVector = Icons.Default.FrontHand,
                                         contentDescription = "Hidden content",
                                         tint = Color.Gray,
                                         modifier = Modifier.size(48.dp)

@@ -51,7 +51,8 @@ fun SettingsScreenImpl(
         currentVersion = myAppState.currentVersion,
         selectedFabAction = myAppState.selectedFabAction,
         selectedFontFamily = myAppState.selectedFontFamily,
-        isKeepControlsVisible = myAppState.isKeepControlsVisible
+        isKeepControlsVisible = myAppState.isKeepControlsVisible,
+        viewerControlsPosition = myAppState.viewerControlsPosition
     )
 
     val settingsActions = SettingsActions(
@@ -171,6 +172,10 @@ fun SettingsScreenImpl(
             } else {
                 myAppState.currentScreen = Screen.Help
             }
+        },
+        onViewerControlsPositionChange = {
+            myAppState.viewerControlsPosition = it
+            SettingsRepository.setViewerControlsPosition(context, it)
         }
     )
 

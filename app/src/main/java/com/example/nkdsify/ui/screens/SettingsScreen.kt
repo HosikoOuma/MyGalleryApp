@@ -43,6 +43,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import com.example.nkdsify.R
 import com.example.nkdsify.data.Language
+import com.example.nkdsify.data.ViewerControlsPosition
 import com.example.nkdsify.ui.dialogs.SpecialLanguageDialog
 import com.example.nkdsify.ui.utils.BiometricUtils
 import com.example.nkdsify.ui.utils.SettingsRepository
@@ -201,6 +202,15 @@ fun SettingsScreen(
                     onItemSelected = actions.onZoomTypeChange,
                     vibrate = vibrate
                 )
+                // Добавляем новый пункт в раздел Media
+                SettingsDropdown(
+                    title = stringResource(id = R.string.viewer_controls_position_label),
+                    selectedValue = state.viewerControlsPosition,
+                    items = ViewerControlsPosition.entries,
+                    getItemName = { it.getDisplayName() },
+                    onItemSelected = actions.onViewerControlsPositionChange,
+                    vibrate = vibrate
+                )
             }
         }
 
@@ -255,6 +265,6 @@ fun SettingsScreen(
                 )
             }
         }
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(100.dp))
     }
 }

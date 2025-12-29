@@ -9,6 +9,7 @@ import com.example.nkdsify.data.FabAction
 import com.example.nkdsify.data.Language
 import com.example.nkdsify.data.Theme
 import com.example.nkdsify.data.ZoomType
+import com.example.nkdsify.data.ViewerControlsPosition
 
 @Composable
 fun Theme.getDisplayName(): String {
@@ -60,5 +61,13 @@ fun Language.getDisplayName(): String {
         Language.ENGLISH -> stringResource(id = R.string.language_english)
         Language.RUSSIAN -> stringResource(id = R.string.language_russian)
         Language.SPECIAL -> stringResource(id = R.string.language_special)
+    }
+}
+
+@Composable
+fun ViewerControlsPosition.getDisplayName(): String {
+    return when (this) {
+        ViewerControlsPosition.TOP -> stringResource(id = R.string.viewer_controls_position_top)
+        ViewerControlsPosition.BOTTOM -> stringResource(id = R.string.viewer_controls_position_bottom)
     }
 }

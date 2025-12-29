@@ -3,6 +3,7 @@ package com.example.nkdsify.ui.components
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -31,7 +32,7 @@ import com.example.nkdsify.R
 import com.example.nkdsify.ui.utils.SettingsRepository.isVibrationEnabled
 import com.example.nkdsify.ui.utils.performVibration
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun TagEditDialog(
     initialTags: Set<String>,
@@ -42,7 +43,6 @@ fun TagEditDialog(
     val context = LocalContext.current
     var tagsText by remember { mutableStateOf(initialTags.joinToString(", ")) }
 
-    // This is now the single source of truth for the selected tags
     val selectedTags = remember(tagsText) {
         tagsText.split(',').map { it.trim() }.filter { it.isNotEmpty() }.toSet()
     }
@@ -55,7 +55,7 @@ fun TagEditDialog(
         text = {
             Column(
                 modifier = Modifier
-                    .heightIn(max = 300.dp) // Ограничиваем максимальную высоту, чтобы окно было компактнее
+                    .heightIn(max = 300.dp)
                     .verticalScroll(rememberScrollState())
                     .fillMaxWidth()
             ) {
@@ -63,7 +63,7 @@ fun TagEditDialog(
                 Spacer(Modifier.height(8.dp))
                 TextField(
                     value = tagsText,
-                    onValueChange = { tagsText = it }, // Allow free text editing
+                    onValueChange = { tagsText = it },
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(top = 8.dp)
@@ -93,7 +93,6 @@ fun TagEditDialog(
                                     } else {
                                         newTags.add(tag)
                                     }
-                                    // Reconstruct the string from the set to update the text field
                                     tagsText = newTags.joinToString(", ")
                                     if (isVibrationEnabled(context)) performVibration(context)
                                 },
@@ -106,7 +105,7 @@ fun TagEditDialog(
         },
         confirmButton = {
             Button(onClick = {
-                onSave(selectedTags) // selectedTags is derived from tagsText
+                onSave(selectedTags)
                 if (isVibrationEnabled(context)) performVibration(context)
             }) {
                 Text(stringResource(id = R.string.save_button))

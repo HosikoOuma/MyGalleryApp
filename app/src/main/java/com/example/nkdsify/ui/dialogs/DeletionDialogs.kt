@@ -77,8 +77,8 @@ fun DeletionDialogs(
                             }
                         }
                     },
-                    onError = { _, _ -> /* Do nothing on error */ },
-                    onFailed = { /* Do nothing on failure */ }
+                    onError = { _, _ -> /* Do nothing */ },
+                    onFailed = { /* Do nothing */ }
                 )
             },
             onDismiss = { myAppState.showConfirmDeleteFromSecretDialog = false }
@@ -98,9 +98,7 @@ fun DeletionDialogs(
                                 if (context.contentResolver.delete(uri, null, null) > 0) {
                                     itemsDeleted = true
                                 }
-                            } catch (e: Exception) {
-                                // Handle error
-                            }
+                            } catch (e: Exception) {}
                         }
                         if (itemsDeleted) {
                             withContext(Dispatchers.Main) {
@@ -130,13 +128,9 @@ private fun updateViewerStateAfterDeletion(
     urisToDelete: List<Uri>,
     setViewerState: (MediaViewerState?) -> Unit
 ) {
-    if (viewerState == null || viewerState.items.none { it.uri in urisToDelete }) {
-        return
-    }
-
+    if (viewerState == null || viewerState.items.none { it.uri in urisToDelete }) return
     val originalIndex = viewerState.items.indexOfFirst { it.uri in urisToDelete }
     val newItems = viewerState.items.filterNot { it.uri in urisToDelete }
-
     if (newItems.isEmpty()) {
         setViewerState(null)
     } else {

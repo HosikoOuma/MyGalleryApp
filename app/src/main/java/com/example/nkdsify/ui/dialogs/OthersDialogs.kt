@@ -9,7 +9,9 @@ import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
@@ -76,12 +78,12 @@ fun OthersDialogs(myAppState: MyAppState) {
         }
     }
 
-    // NEW: Secret help attention dialog
     if (myAppState.showHelpAttentionDialog) {
         val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
         ModalBottomSheet(
             onDismissRequest = { myAppState.showHelpAttentionDialog = false },
-            sheetState = sheetState
+            sheetState = sheetState,
+            windowInsets = WindowInsets(0)
         ) {
             Column(
                 modifier = Modifier
@@ -91,7 +93,7 @@ fun OthersDialogs(myAppState: MyAppState) {
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
-                    text = "Attention!", // Будет заменено на ресурс в след. шаге
+                    text = stringResource(id = R.string.attention_title),
                     style = MaterialTheme.typography.headlineSmall,
                     modifier = Modifier.padding(bottom = 12.dp)
                 )
@@ -114,8 +116,8 @@ fun OthersDialogs(myAppState: MyAppState) {
 private fun downloadAndUpdate(context: Context, url: String, version: String) {
     try {
         val request = DownloadManager.Request(Uri.parse(url))
-            .setTitle("MyGalleryApp Update")
-            .setDescription("Downloading version $version")
+            .setTitle(context.getString(R.string.downloading_update_title))
+            .setDescription(context.getString(R.string.downloading_update_description, version))
             .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
             .setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, "MyGalleryApp-$version.apk")
             .setMimeType("application/vnd.android.package-archive")
@@ -123,8 +125,8 @@ private fun downloadAndUpdate(context: Context, url: String, version: String) {
         val downloadManager = context.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
         downloadManager.enqueue(request)
 
-        Toast.makeText(context, "Download started...", Toast.LENGTH_SHORT).show()
+        Toast.makeText(context, context.getString(R.string.download_started_toast), Toast.LENGTH_SHORT).show()
     } catch (e: Exception) {
-        Toast.makeText(context, "Download failed: ${e.message}", Toast.LENGTH_LONG).show()
+        Toast.makeText(context, context.getString(R.string.download_failed_toast, e.message), Toast.LENGTH_LONG).show()
     }
 }

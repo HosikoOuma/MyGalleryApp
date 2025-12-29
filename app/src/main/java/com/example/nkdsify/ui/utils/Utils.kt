@@ -200,11 +200,12 @@ private fun BaseConfirmDialog(
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
+        windowInsets = WindowInsets(0) // ИСПРАВЛЕНО
     ) {
         Column(
             modifier = Modifier
                 .padding(horizontal = 24.dp)
-                .navigationBarsPadding()
+                .navigationBarsPadding() // ИСПРАВЛЕНО
                 .padding(bottom = 16.dp)
         ) {
             Text(
@@ -341,12 +342,13 @@ fun ExternalMediaErrorDialog(onDismiss: () -> Unit) {
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
-        sheetState = sheetState
+        sheetState = sheetState,
+        windowInsets = WindowInsets(0) // ИСПРАВЛЕНО
     ) {
         Column(
             modifier = Modifier
                 .padding(horizontal = 24.dp)
-                .navigationBarsPadding()
+                .navigationBarsPadding() // ИСПРАВЛЕНО
                 .padding(bottom = 16.dp)
         ) {
             Text(
@@ -400,11 +402,12 @@ fun MediaDetailsDialog(
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
+        windowInsets = WindowInsets(0) // ИСПРАВЛЕНО
     ) {
         Column(
             modifier = Modifier
                 .padding(horizontal = 24.dp)
-                .navigationBarsPadding()
+                .navigationBarsPadding() // ИСПРАВЛЕНО
         ) {
             Text(
                 text = stringResource(id = R.string.details_title),
@@ -597,11 +600,12 @@ fun SelectionDetailsDialog(
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
+        windowInsets = WindowInsets(0) // ИСПРАВЛЕНО
     ) {
         Column(
             modifier = Modifier
                 .padding(horizontal = 24.dp)
-                .navigationBarsPadding()
+                .navigationBarsPadding() // ИСПРАВЛЕНО
                 .padding(bottom = 16.dp),
         ) {
             Text(

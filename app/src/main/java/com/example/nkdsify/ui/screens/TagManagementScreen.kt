@@ -9,7 +9,9 @@ import androidx.compose.foundation.gestures.ScrollScope
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
@@ -177,7 +179,8 @@ fun TagManagementScreen(
 
         ModalBottomSheet(
             onDismissRequest = { tagToDelete = null },
-            sheetState = sheetState
+            sheetState = sheetState,
+            windowInsets = WindowInsets(0)
         ) {
             Column(
                 modifier = Modifier
@@ -224,7 +227,7 @@ fun TagManagementScreen(
         }
     }
 
-    // --- MAIN UI --- (No changes below)
+    // --- MAIN UI ---
     Box(modifier = Modifier.fillMaxSize()) {
         if (allTags.isEmpty()) {
             Text(stringResource(id = R.string.no_tags_found), modifier = Modifier.align(Alignment.Center))
@@ -265,8 +268,8 @@ fun TagManagementScreen(
 
             LazyColumn(
                 state = lazyListState,
-                modifier = Modifier
-                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 100.dp),
                 flingBehavior = slowerFlingBehavior
             ) {
                 items(allTags, key = { it }) { tag ->

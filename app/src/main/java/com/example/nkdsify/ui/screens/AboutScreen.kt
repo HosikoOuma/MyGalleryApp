@@ -11,11 +11,14 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -38,10 +41,12 @@ fun AboutScreen() {
     val uriHandler = LocalUriHandler.current
     val versionName = context.packageManager.getPackageInfo(context.packageName, 0).versionName ?: "Unknown"
     val telegramUrl = "https://t.me/NekoDosi"
+    val scrollState = rememberScrollState()
 
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .verticalScroll(scrollState)
             .padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
@@ -118,17 +123,21 @@ fun AboutScreen() {
             )
         }
 
-        // --- Вот здесь мы расталкиваем контент ---
-        Spacer(modifier = Modifier.weight(1f))
+        Spacer(modifier = Modifier.height(32.dp))
 
-        // Текст в самом низу
+        // Текст благодарности
         Text(
             text = stringResource(id = R.string.thanks),
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.outline,
             modifier = Modifier.padding(bottom = 8.dp)
         )
+        
+        // Отступ для плавающего NavBar
+        Spacer(
+            modifier = Modifier
+                .navigationBarsPadding()
+                .height(120.dp)
+        )
     }
 }
-
-//ИИ настолько невероятная вещь, что сделал всё как надо, но не то что нужно ())()()()()()

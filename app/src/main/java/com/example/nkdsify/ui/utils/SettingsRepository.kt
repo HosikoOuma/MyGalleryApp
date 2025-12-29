@@ -8,6 +8,7 @@ import com.example.nkdsify.data.FabAction
 import com.example.nkdsify.data.Language
 import com.example.nkdsify.data.Theme
 import com.example.nkdsify.data.ZoomType
+import com.example.nkdsify.data.ViewerControlsPosition
 
 object SettingsRepository {
     private const val PREFS_NAME = "app_settings"
@@ -36,6 +37,7 @@ object SettingsRepository {
     private const val FIRST_LAUNCH_KEY = "first_launch"
     private const val KEEP_CONTROLS_VISIBLE_KEY = "keep_controls_visible"
     private const val BLURRED_URIS_KEY = "blurred_uris"
+    private const val VIEWER_CONTROLS_POSITION_KEY = "viewer_controls_position"
 
 
     fun setFontFamily(context: Context, fontFamily: AppFontFamily) {context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit().putString("font_family", fontFamily.name).apply()
@@ -349,6 +351,19 @@ object SettingsRepository {
     fun getBlurredUris(context: Context): Set<String> {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         return prefs.getStringSet(BLURRED_URIS_KEY, emptySet()) ?: emptySet()
+    }
+
+    fun setViewerControlsPosition(context: Context, position: ViewerControlsPosition) {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit {
+            putString(VIEWER_CONTROLS_POSITION_KEY, position.name)
+        }
+    }
+
+    fun getViewerControlsPosition(context: Context): ViewerControlsPosition {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val positionName = prefs.getString(VIEWER_CONTROLS_POSITION_KEY, ViewerControlsPosition.TOP.name) ?: ViewerControlsPosition.TOP.name
+        return ViewerControlsPosition.valueOf(positionName)
     }
 
 }

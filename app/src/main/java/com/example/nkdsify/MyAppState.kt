@@ -27,6 +27,7 @@ import com.example.nkdsify.data.MediaItem
 import com.example.nkdsify.data.MediaViewerState
 import com.example.nkdsify.data.Screen
 import com.example.nkdsify.data.SortType
+import com.example.nkdsify.data.ViewerControlsPosition
 import com.example.nkdsify.ui.utils.GithubUpdateChecker
 import com.example.nkdsify.ui.utils.SettingsRepository
 import com.example.nkdsify.ui.utils.TagsRepository
@@ -55,6 +56,7 @@ class MyAppState(
     var isShuffleButtonVisible by mutableStateOf(SettingsRepository.isShuffleButtonVisible(context))
     var selectedLanguage by mutableStateOf(SettingsRepository.getLanguage(context))
     var selectedFabAction by mutableStateOf(SettingsRepository.getFabAction(context))
+    var viewerControlsPosition by mutableStateOf(SettingsRepository.getViewerControlsPosition(context))
 
     // Properties moved from MainActivity
     var isShakeToBlurEnabled by mutableStateOf(SettingsRepository.isShakeToBlurEnabled(context))

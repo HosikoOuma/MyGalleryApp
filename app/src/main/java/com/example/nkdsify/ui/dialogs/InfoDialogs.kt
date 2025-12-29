@@ -2,6 +2,7 @@ package com.example.nkdsify.ui.dialogs
 
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
 import com.canhub.cropper.CropImageContract
 import com.canhub.cropper.CropImageContractOptions
@@ -27,7 +28,6 @@ fun InfoDialogs(myAppState: MyAppState, screenWidth: Int, screenHeight: Int, onF
     val cropImageLauncher = rememberLauncherForActivityResult(contract = CropImageContract()) { result ->
         if (result.isSuccessful) {
             val croppedImageUri = result.uriContent
-
             if (croppedImageUri != null) {
                 if (myAppState.isSettingWallpaper) {
                     try {
@@ -46,6 +46,7 @@ fun InfoDialogs(myAppState: MyAppState, screenWidth: Int, screenHeight: Int, onF
         }
         myAppState.showDetailsDialog = null
     }
+
     if (myAppState.showSelectionDetailsDialog) {
         SelectionDetailsDialog(
             details = myAppState.selectionDetails,
@@ -125,16 +126,39 @@ fun InfoDialogs(myAppState: MyAppState, screenWidth: Int, screenHeight: Int, onF
                 details = AlbumDetails(path, folder.totalSize, folder.dateRange, folder.itemCount),
                 onDismiss = { myAppState.showAlbumDetailsDialog = false })
         } else if (screen is Screen.Favorites && screen.openAlbumName != null) {
-            val taggedAlbums = myAppState.favoriteItems
-                .flatMap { item -> (myAppState.tags[item.uri.toString()] ?: emptySet()).map { tag -> tag to item } }
-                .groupBy({ it.first }, { it.second })
-            val albumItems = if (screen.openAlbumName == stringResource(id = R.string.album_name_all_favorites)) myAppState.favoriteItems else taggedAlbums[screen.openAlbumName] ?: emptySet()
+            val albumNameAllFavorites = stringResource(id = R.string.album_name_all_favorites)
+            
+            // Получаем список элементов для текущего "альбома" (тега или всех избранных)
+            val albumItems = remember(myAppState.favoriteItems, screen.openAlbumName, myAppState.tags) {
+                if (screen.openAlbumName == albumNameAllFavorites) {
+                    myAppState.favoriteItems
+                } else {
+                    myAppState.favoriteItems.filter { item ->
+                        // Важно: используем absolutePath для сопоставления с тегами
+                        val itemTags = myAppState.tags[item.absolutePath] ?: emptySet()
+                        itemTags.contains(screen.openAlbumName)
+                    }
+                }
+            }
 
             if (albumItems.isNotEmpty()) {
                 val totalSize = albumItems.sumOf { it.size }
+                val dateRange = if (albumItems.isNotEmpty()) {
+                    val dates = albumItems.map { it.dateModified }
+                    Pair(dates.minOrNull() ?: 0L, dates.maxOrNull() ?: 0L)
+                } else null
+
                 AlbumDetailsDialog(
-                    details = AlbumDetails(totalSize = totalSize, itemCount = albumItems.size),
-                    onDismiss = { myAppState.showAlbumDetailsDialog = false })
+                    details = AlbumDetails(
+                        totalSize = totalSize, 
+                        itemCount = albumItems.size,
+                        dateRange = dateRange
+                    ),
+                    onDismiss = { myAppState.showAlbumDetailsDialog = false }
+                )
+            } else {
+                // Если альбом пуст (что странно для избранного), просто закрываем диалог
+                myAppState.showAlbumDetailsDialog = false
             }
         }
     }

@@ -11,7 +11,7 @@ object ViewHistoryRepository {
 
     private const val PREFS_NAME = "ViewHistoryPrefs"
     private const val HISTORY_KEY = "view_history"
-    private const val MAX_HISTORY_SIZE = 200 // To prevent the history from growing indefinitely
+    private const val MAX_HISTORY_SIZE = 500 // Increased from 200
 
     private val gson = Gson()
 

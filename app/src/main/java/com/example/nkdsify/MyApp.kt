@@ -25,33 +25,27 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.OptIn
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
+import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshContainer
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
-import androidx.compose.material3.rememberModalBottomSheetState
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.*
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
@@ -61,6 +55,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
@@ -133,6 +128,26 @@ fun MyApp(myAppState: MyAppState, initialUri: Uri? = null, screenWidth: Int, scr
         val allMediaGridState = rememberLazyGridState()
         val secretGridState = rememberLazyGridState()
         val viewHistoryGridState = rememberLazyGridState()
+        
+        val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
+
+        val isNavBarVisible by remember {
+            derivedStateOf {
+                val currentGridState = when (val screen = myAppState.currentScreen) {
+                    is Screen.Folders -> foldersGridState
+                    is Screen.FolderContent -> folderContentGridState
+                    is Screen.Favorites -> if (screen.openAlbumName != null) favoritesContentGridState else favoritesGridState
+                    is Screen.Trash -> trashGridState
+                    is Screen.AllMedia -> allMediaGridState
+                    is Screen.SecretStorage -> secretGridState
+                    is Screen.ViewHistory -> viewHistoryGridState
+                    else -> null
+                }
+                val isScrolling = currentGridState?.isScrollInProgress ?: false
+                !isScrolling || myAppState.isSelectionMode
+            }
+        }
+
         val manageStorageLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
                 myAppState.hasManageStoragePermission = Environment.isExternalStorageManager()
@@ -143,7 +158,6 @@ fun MyApp(myAppState: MyAppState, initialUri: Uri? = null, screenWidth: Int, scr
             val initialFavorites = FavoritesRepository.getFavorites(context)
             mutableStateListOf(*initialFavorites.toTypedArray())
         }
-        // Assign favorites into centralized state
         myAppState.favoritesList.clear()
         myAppState.favoritesList.addAll(favorites)
 
@@ -164,7 +178,6 @@ fun MyApp(myAppState: MyAppState, initialUri: Uri? = null, screenWidth: Int, scr
         }
         val imageLoader = rememberCoilImageLoader(context)
 
-        // Assign composition-scoped controllers/objects into MyAppState for centralized access
         myAppState.imageLoader = imageLoader
         myAppState.coroutineScope = coroutineScope
         myAppState.keyboardController = keyboardController
@@ -177,7 +190,6 @@ fun MyApp(myAppState: MyAppState, initialUri: Uri? = null, screenWidth: Int, scr
         myAppState.secretGridState = secretGridState
         myAppState.viewHistoryGridState = viewHistoryGridState
 
-        // Assign callbacks into state
         myAppState.onAddNewTag = onAddNewTag
         myAppState.onMoveTag = onMoveTag
         myAppState.onFontFamilyChange = {
@@ -194,14 +206,21 @@ fun MyApp(myAppState: MyAppState, initialUri: Uri? = null, screenWidth: Int, scr
         }
 
         val pullToRefreshEnabled = myAppState.currentScreen !is Screen.Settings && myAppState.currentScreen !is Screen.TagManagement
-        val pullRefreshState = rememberPullToRefreshState()
-        if (pullToRefreshEnabled && pullRefreshState.isRefreshing) {
-            LaunchedEffect(true) {
-                delay(1000)
-                myAppState.refreshTrigger++
+        
+        val pullRefreshState = key(myAppState.currentScreen) {
+            rememberPullToRefreshState()
+        }
+        
+        LaunchedEffect(pullRefreshState.isRefreshing) {
+            if (pullRefreshState.isRefreshing) {
+                if (pullToRefreshEnabled) {
+                    delay(1000)
+                    myAppState.refreshTrigger++
+                }
                 pullRefreshState.endRefresh()
             }
         }
+
         LaunchedEffect(myAppState.allFolders) {
             myAppState.sanitizedFoldersState.value = sanitizeFolders(myAppState.allFolders, context).toImmutableList()
         }
@@ -219,11 +238,8 @@ fun MyApp(myAppState: MyAppState, initialUri: Uri? = null, screenWidth: Int, scr
                 myAppState.secretItems = SecretRepository.getSecretMediaItems(context).toImmutableList()
             }
             if (myAppState.currentScreen is Screen.ViewHistory) {
-                // Get history, which is already sorted by timestamp descending
                 val historyWithTimestamps = ViewHistoryRepository.getHistory(context)
                 val allMediaMap by lazy { myAppState.allMedia.associateBy { it.uri.toString() } }
-
-                // Map the sorted history URIs to MediaItem objects, preserving the chronological order
                 myAppState.viewHistory = historyWithTimestamps.mapNotNull { historyItem ->
                     allMediaMap[historyItem.uri]
                 }.toImmutableList()
@@ -238,48 +254,41 @@ fun MyApp(myAppState: MyAppState, initialUri: Uri? = null, screenWidth: Int, scr
                 }
             }
         }
-        // Keep centralized state in sync so other components (MyAppNavigation etc.) can read the filtered history
         LaunchedEffect(filteredViewHistory) {
             myAppState.filteredViewHistory = filteredViewHistory.toImmutableList()
         }
         LaunchedEffect(initialUri, myAppState.hasPermissions) {
-    if (initialUri != null && myAppState.hasPermissions) {
-        // Wait until all media is loaded
-        snapshotFlow { myAppState.allMedia }
-            .filter { it.isNotEmpty() }
-            .first()
+            if (initialUri != null && myAppState.hasPermissions) {
+                snapshotFlow { myAppState.allMedia }
+                    .filter { it.isNotEmpty() }
+                    .first()
 
-        withContext(Dispatchers.IO) {
-            val details = getMediaDetails(context, initialUri)
-            val externalPath = details?.path
+                withContext(Dispatchers.IO) {
+                    val details = getMediaDetails(context, initialUri)
+                    val externalPath = details?.path
+                    val foundItem = myAppState.allMedia.find { it.absolutePath == externalPath }
 
-            // Try to find the item in our loaded media by absolute path
-            val foundItem = myAppState.allMedia.find { it.absolutePath == externalPath }
-
-            if (foundItem != null) {
-                // Found it! Now find which folder it belongs to for context.
-                val folder = myAppState.allFolders.find { it.items.contains(foundItem) }
-                if (folder != null) {
-                    val indexInFolder = folder.items.indexOf(foundItem)
-                    myAppState.viewerState = MediaViewerState(folder.items, indexInFolder)
-                } else {
-                     // Should not happen if allMedia is derived from allFolders, but handle as a fallback
-                    myAppState.viewerState = MediaViewerState(persistentListOf(foundItem), 0)
+                    if (foundItem != null) {
+                        val folder = myAppState.allFolders.find { it.items.contains(foundItem) }
+                        if (folder != null) {
+                            val indexInFolder = folder.items.indexOf(foundItem)
+                            myAppState.viewerState = MediaViewerState(folder.items, indexInFolder)
+                        } else {
+                            myAppState.viewerState = MediaViewerState(persistentListOf(foundItem), 0)
+                        }
+                    } else {
+                        val name = details?.name ?: ""
+                        val path = details?.path ?: ""
+                        val isVideo = context.contentResolver.getType(initialUri)?.startsWith("video/") == true
+                        myAppState.viewerState = MediaViewerState(
+                            persistentListOf(MediaItem(initialUri, name, path, isVideo, 0, 0, 0)),
+                            0,
+                            isExternal = true
+                        )
+                    }
                 }
-            } else {
-                 // File not in our media library, open it as a single external item
-                val name = details?.name ?: ""
-                val path = details?.path ?: ""
-                val isVideo = context.contentResolver.getType(initialUri)?.startsWith("video/") == true
-                myAppState.viewerState = MediaViewerState(
-                    persistentListOf(MediaItem(initialUri, name, path, isVideo, 0, 0, 0)),
-                    0,
-                    isExternal = true
-                )
             }
         }
-    }
-}
         LaunchedEffect(favorites.toList()) {
             FavoritesRepository.saveFavorites(context, favorites.toSet())
         }
@@ -398,12 +407,13 @@ fun MyApp(myAppState: MyAppState, initialUri: Uri? = null, screenWidth: Int, scr
             val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
             ModalBottomSheet(
                 onDismissRequest = { myAppState.showClearHistoryDialog = false },
-                sheetState = sheetState
+                sheetState = sheetState,
+                windowInsets = WindowInsets(0) // Убираем отступ, чтобы BS был во весь экран
             ) {
                 Column(
                     modifier = Modifier
                         .padding(horizontal = 24.dp)
-                        .navigationBarsPadding()
+                        .navigationBarsPadding() // Паддинг для системного бара
                         .padding(bottom = 16.dp)
                 ) {
                     Text(
@@ -471,27 +481,20 @@ fun MyApp(myAppState: MyAppState, initialUri: Uri? = null, screenWidth: Int, scr
 
             MyAppBackHandler(myAppState = myAppState)
             Scaffold(
+                modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
                 topBar = {
                     MyAppTopBar(
                         myAppState = myAppState,
                         title = title,
                         favorites = favorites,
                         context = context,
-                        isVibrationEnabled = myAppState.isVibrationEnabled
+                        isVibrationEnabled = myAppState.isVibrationEnabled,
+                        scrollBehavior = scrollBehavior
                     )
                 },
-                bottomBar = {
-                    MyAppBottomBar(
-                        myAppState = myAppState,
-                        context = context,
-                        isVibrationEnabled = myAppState.isVibrationEnabled
-                    )
-                },
-                floatingActionButton = {
-                    MyAppFAB(
-                        myAppState = myAppState
-                    )
-                }
+                bottomBar = { },
+                floatingActionButton = { },
+                contentWindowInsets = WindowInsets(0, 0, 0, 0)
             ) { innerPadding ->
                 val boxModifier = if (pullToRefreshEnabled) {
                     Modifier
@@ -503,7 +506,8 @@ fun MyApp(myAppState: MyAppState, initialUri: Uri? = null, screenWidth: Int, scr
                 Box(modifier = boxModifier) {
                     if (myAppState.hasPermissions) {
                         MyAppNavigation(
-                            myAppState = myAppState
+                            myAppState = myAppState,
+                            isNavBarVisible = isNavBarVisible 
                         )
 
                     } else {
@@ -520,13 +524,46 @@ fun MyApp(myAppState: MyAppState, initialUri: Uri? = null, screenWidth: Int, scr
                             }
                         }
                     }
+                    
                     if (pullToRefreshEnabled) {
                         PullToRefreshContainer(
-                            modifier = Modifier.align(Alignment.TopCenter),
+                            modifier = Modifier
+                                .align(Alignment.TopCenter)
+                                .graphicsLayer {
+                                    val isCollapsed = scrollBehavior.state.collapsedFraction > 0.1f
+                                    val isActivelyRefreshing = pullRefreshState.isRefreshing || pullRefreshState.verticalOffset > 0.5f
+                                    this.alpha = if (isCollapsed || !isActivelyRefreshing) 0f else 1f
+                                },
                             state = pullRefreshState,
                         )
                     }
                 }
+            }
+            
+            MyAppBottomBar(
+                myAppState = myAppState,
+                context = context,
+                isVibrationEnabled = myAppState.isVibrationEnabled,
+                isVisible = isNavBarVisible,
+                modifier = Modifier.align(Alignment.BottomCenter)
+            )
+
+            val fabBottomPadding by animateDpAsState(
+                targetValue = if (isNavBarVisible) 104.dp else 16.dp, 
+                animationSpec = spring(dampingRatio = 0.8f, stiffness = 400f),
+                label = "FabBottomPadding"
+            )
+            val safePadding = if (fabBottomPadding < 0.dp) 0.dp else fabBottomPadding
+
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .navigationBarsPadding()
+                    .padding(end = 16.dp, bottom = safePadding)
+            ) {
+                MyAppFAB(
+                    myAppState = myAppState
+                )
             }
 
             if (myAppState.isProcessing) {
@@ -559,7 +596,7 @@ fun MyApp(myAppState: MyAppState, initialUri: Uri? = null, screenWidth: Int, scr
                     myAppState = myAppState,
                     items = myAppState.secretViewerState!!.items,
                     startIndex = myAppState.secretViewerState!!.startIndex,
-                    favorites = mutableListOf(), // No favorites in secret mode
+                    favorites = mutableListOf(), 
                     imageLoader = imageLoader,
                     isSecretMode = true
                 )
@@ -567,5 +604,3 @@ fun MyApp(myAppState: MyAppState, initialUri: Uri? = null, screenWidth: Int, scr
          }
      }
  }
-
-//Лёся почему же ты ушёл...

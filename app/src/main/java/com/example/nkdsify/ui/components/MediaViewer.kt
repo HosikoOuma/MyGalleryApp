@@ -11,15 +11,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
@@ -33,19 +25,8 @@ import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Restore
 import androidx.compose.material.icons.filled.RestoreFromTrash
 import androidx.compose.material.icons.filled.Share
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.derivedStateOf
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
@@ -57,6 +38,7 @@ import coil.ImageLoader
 import com.example.nkdsify.R
 import com.example.nkdsify.MyAppState
 import com.example.nkdsify.data.MediaItem
+import com.example.nkdsify.data.ViewerControlsPosition
 import com.example.nkdsify.ui.components.utils.rememberCoilImageLoader
 import com.example.nkdsify.ui.utils.CryptoUtils
 import com.example.nkdsify.ui.utils.ExternalMediaErrorDialog
@@ -98,7 +80,7 @@ fun MediaViewer(
 
     DisposableEffect(view) {
         val originalLightStatusBars = WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars
-        WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = false // Dark icons for light theme
+        WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = false
 
         onDispose {
             WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = originalLightStatusBars
@@ -108,25 +90,18 @@ fun MediaViewer(
     if (isSecretMode) {
         LaunchedEffect(pagerState.currentPage) {
             val item = items[pagerState.currentPage]
-            
-            // Skip full decryption for videos - they will be streamed
             if (item.isVideo) {
                 isDecrypting = false
                 decryptedUri = null
                 return@LaunchedEffect
             }
-
             isDecrypting = true
             decryptedUri = null
-
             val decryptedFile = withContext(Dispatchers.IO) {
                 val cacheDir = context.cacheDir.resolve("decrypted_media")
-                if (!cacheDir.exists()) {
-                    cacheDir.mkdirs()
-                }
+                if (!cacheDir.exists()) cacheDir.mkdirs()
                 val originalFile = File(item.uri.path!!)
                 val cachedFile = File(cacheDir, originalFile.name)
-
                 if (cachedFile.exists() && cachedFile.length() > 0) {
                     cachedFile
                 } else {
@@ -138,12 +113,11 @@ fun MediaViewer(
                         }
                         cachedFile
                     } catch (e: Exception) {
-                        cachedFile.delete() // Clean up on error
+                        cachedFile.delete()
                         null
                     }
                 }
             }
-
             decryptedUri = decryptedFile?.let { Uri.fromFile(it) }
             isDecrypting = false
         }
@@ -159,35 +133,24 @@ fun MediaViewer(
         }
     }
 
-    // --- Unified Controls Visibility State ---
     var controlsVisible by remember { mutableStateOf(true) }
     
     LaunchedEffect(pagerState.currentPage, myAppState.isKeepControlsVisible) {
         val currentItem = items.getOrNull(pagerState.currentPage)
         val isVideoItem = currentItem?.isVideo == true
-        
-        // Force show controls if it's a photo and "keep controls visible" is enabled
         if (!isVideoItem && myAppState.isKeepControlsVisible) {
             controlsVisible = true
         }
-
         if (!isExternal && !isTrashMode && !isSecretMode) {
             currentItem?.let { item ->
                 ViewHistoryRepository.addToHistory(context, item.uri)
-                // Also update in-memory history so UI reflects changes immediately
                 try {
                     val mutable = myAppState.viewHistory.toMutableList()
-                    // remove existing entry for this uri
                     mutable.removeAll { it.uri == item.uri }
-                    // add to front
                     mutable.add(0, item)
-                    // limit size to repository limit
                     val maxSize = 200
-                    val trimmed = if (mutable.size > maxSize) mutable.subList(0, maxSize) else mutable
-                    myAppState.viewHistory = trimmed.toImmutableList()
-                } catch (_: Exception) {
-                    // ignore any concurrency issues
-                }
+                    myAppState.viewHistory = (if (mutable.size > maxSize) mutable.subList(0, maxSize) else mutable).toImmutableList()
+                } catch (_: Exception) {}
             }
         }
     }
@@ -199,7 +162,6 @@ fun MediaViewer(
         }
     }
 
-    // Auto-hide controls
     LaunchedEffect(controlsVisible, myAppState.isKeepControlsVisible, pagerState.currentPage) {
         if (controlsVisible && (isVideo || !myAppState.isKeepControlsVisible)) {
             delay(4000)
@@ -233,14 +195,16 @@ fun MediaViewer(
                 if (isSecretMode) {
                     if (item.isVideo) {
                         VideoPlayerPage(
-                            uri = item.uri, // Original encrypted URI
+                            uri = item.uri,
                             isFullyVisible = isFullyVisible,
                             isMuted = isMuted,
                             controlsVisible = controlsVisible,
                             onToggleControls = toggleControls,
                             onMuteClick = { isMuted = !isMuted },
                             isLoopVideoEnabled = myAppState.isLoopVideoEnabled,
-                            isSecretMode = true // Use streaming decryption
+                            isSecretMode = true,
+                            // Приподнимаем плеер, если панель внизу
+                            bottomPadding = if (myAppState.viewerControlsPosition == ViewerControlsPosition.BOTTOM) 80.dp else 0.dp
                         )
                     } else {
                         if (isDecrypting) {
@@ -261,7 +225,7 @@ fun MediaViewer(
                             )
                         }
                     }
-                } else { // Original logic for non-secret items
+                } else {
                     if (item.isVideo) {
                         VideoPlayerPage(
                             uri = item.uri,
@@ -271,7 +235,9 @@ fun MediaViewer(
                             onToggleControls = toggleControls,
                             onMuteClick = { isMuted = !isMuted },
                             isLoopVideoEnabled = myAppState.isLoopVideoEnabled,
-                            isSecretMode = false
+                            isSecretMode = false,
+                            // Приподнимаем плеер, если панель внизу
+                            bottomPadding = if (myAppState.viewerControlsPosition == ViewerControlsPosition.BOTTOM) 80.dp else 0.dp
                         )
                     } else {
                         ZoomableImage(
@@ -286,36 +252,29 @@ fun MediaViewer(
                 }
 
                 if (isIndividualBlurred && myAppState.selectedBlurType == BlurType.PLACEHOLDER && !item.isVideo) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .background(Color.Black),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.FrontHand,
-                            contentDescription = null,
-                            tint = Color.Gray,
-                            modifier = Modifier.size(64.dp)
-                        )
+                    Box(modifier = Modifier.fillMaxSize().background(Color.Black), contentAlignment = Alignment.Center) {
+                        Icon(imageVector = Icons.Default.FrontHand, contentDescription = null, tint = Color.Gray, modifier = Modifier.size(64.dp))
                     }
                 }
             }
         }
 
-        // --- Unified Top Control Bar ---
+        // --- Панель управления (теперь в самом низу, если выбрано) ---
+        val controlsPosition = myAppState.viewerControlsPosition
+        val alignment = if (controlsPosition == ViewerControlsPosition.TOP) Alignment.TopCenter else Alignment.BottomCenter
+
         AnimatedVisibility(
             visible = controlsVisible,
             enter = fadeIn(),
             exit = fadeOut(),
-            modifier = Modifier.align(Alignment.TopCenter)
+            modifier = Modifier.align(alignment)
         ) {
             Row(
                 modifier = Modifier
-                    .statusBarsPadding()
-                    .padding(vertical = 8.dp, horizontal = 16.dp)
-                    .background(Color.Black.copy(alpha = 0.5f), shape = CircleShape)
-                    .border(1.dp, Color.White.copy(alpha = 0.1f), shape = CircleShape)
+                    .then(if (controlsPosition == ViewerControlsPosition.TOP) Modifier.statusBarsPadding() else Modifier.navigationBarsPadding())
+                    .padding(vertical = 12.dp, horizontal = 16.dp)
+                    .background(Color.Black.copy(alpha = 0.6f), shape = CircleShape)
+                    .border(1.dp, Color.White.copy(alpha = 0.15f), shape = CircleShape)
                     .padding(horizontal = 8.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
@@ -331,14 +290,13 @@ fun MediaViewer(
                     Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
                 }
 
-                Spacer(Modifier.weight(1f))
+                Spacer(Modifier.width(8.dp))
 
                 if (currentItem != null) {
                     when {
                         isSecretMode -> {
                             IconButton(onClick = {
                                 if (isVibrationEnabled) performVibration(context)
-                                // Restore in secret mode
                                 myAppState.itemsToRestoreFromSecret = listOf(currentItem.uri).toImmutableList()
                                 myAppState.showConfirmRestoreFromSecretDialog = true
                             }) {
@@ -368,14 +326,10 @@ fun MediaViewer(
                                 Icon(Icons.Filled.Delete, contentDescription = "Delete", tint = Color.White)
                             }
                         }
-                        else -> { // Normal mode
+                        else -> {
                             IconButton(onClick = {
                                 if (isVibrationEnabled) performVibration(context)
-                                if (isExternal) {
-                                    showExternalMediaError = true
-                                } else {
-                                    myAppState.showTagDialog = currentItem.uri
-                                }
+                                if (isExternal) showExternalMediaError = true else myAppState.showTagDialog = currentItem.uri
                             }) {
                                 Icon(Icons.AutoMirrored.Filled.Label, contentDescription = "Tags", tint = Color.White)
                             }
@@ -395,10 +349,7 @@ fun MediaViewer(
                             }
                             IconButton(onClick = {
                                 if (isVibrationEnabled) performVibration(context)
-                                if (isExternal) {
-                                    showExternalMediaError = true
-                                } else {
-                                    // Delete -> move to trash
+                                if (isExternal) showExternalMediaError = true else {
                                     myAppState.itemsToTrash = listOf(currentItem.uri).toImmutableList()
                                     myAppState.showConfirmTrashDialog = true
                                 }
@@ -407,28 +358,13 @@ fun MediaViewer(
                             }
                             val coroutineScope = rememberCoroutineScope()
                             val scale = remember { Animatable(1f) }
-
                             IconButton(onClick = {
                                 if (isVibrationEnabled) performVibration(context)
-                                if (isExternal) {
-                                    showExternalMediaError = true
-                                } else {
-                                    // Toggle favorite state first
-                                    if (favoritesListMutable.contains(currentItem.absolutePath)) {
-                                        favoritesListMutable.remove(currentItem.absolutePath)
-                                    } else {
-                                        favoritesListMutable.add(currentItem.absolutePath)
-                                    }
-                                    // Then run the animation
+                                if (isExternal) showExternalMediaError = true else {
+                                    if (favoritesListMutable.contains(currentItem.absolutePath)) favoritesListMutable.remove(currentItem.absolutePath) else favoritesListMutable.add(currentItem.absolutePath)
                                     coroutineScope.launch {
-                                        scale.animateTo(
-                                            targetValue = 1.3f,
-                                            animationSpec = spring(dampingRatio = 0.5f, stiffness = 400f)
-                                        )
-                                        scale.animateTo(
-                                            targetValue = 1f,
-                                            animationSpec = spring()
-                                        )
+                                        scale.animateTo(1.3f, spring(dampingRatio = 0.5f, stiffness = 400f))
+                                        scale.animateTo(1f, spring())
                                     }
                                 }
                             }) {

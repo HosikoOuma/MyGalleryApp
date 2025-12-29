@@ -2,6 +2,8 @@ package com.example.nkdsify.ui.screens
 
 import android.net.Uri
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
@@ -10,16 +12,18 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.grid.LazyGridState
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -42,6 +46,7 @@ fun TrashScreen(
     onClearSelection: () -> Unit,
     blurType: BlurType,
     gridState: LazyGridState,
+    isNavBarVisible: Boolean, // Добавляем параметр
     blurredUris: Set<String> = emptySet()
 ) {
     if (items.isEmpty()) {
@@ -64,6 +69,14 @@ fun TrashScreen(
         }
         return
     }
+
+    // Анимируем отступ кнопки так же, как для FAB
+    val buttonBottomPadding by animateDpAsState(
+        targetValue = if (isNavBarVisible) 100.dp else 16.dp,
+        animationSpec = spring(dampingRatio = 0.8f, stiffness = 400f),
+        label = "TrashButtonPadding"
+    )
+    val safePadding = if (buttonBottomPadding < 0.dp) 0.dp else buttonBottomPadding
 
     Box(modifier = Modifier.fillMaxSize()) {
         MediaGrid(
@@ -89,7 +102,9 @@ fun TrashScreen(
             Button(
                 onClick = onClearTrash,
                 modifier = Modifier
-                    .padding(16.dp)
+                    .navigationBarsPadding()
+                    .padding(bottom = safePadding)
+                    .padding(horizontal = 16.dp)
             ) {
                 Text(stringResource(id = R.string.clear_trash_button))
             }

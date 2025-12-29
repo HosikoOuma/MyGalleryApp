@@ -133,3 +133,7 @@ enum class FabAction {
     SHUFFLE,
     CAMERA
 }
+
+enum class ViewerControlsPosition {
+    TOP, BOTTOM
+}

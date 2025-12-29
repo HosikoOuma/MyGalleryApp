@@ -16,7 +16,8 @@ fun TrashScreenImpl(
     imageLoader: ImageLoader,
     gridState: LazyGridState,
     keyboardController: SoftwareKeyboardController?,
-    context: android.content.Context
+    context: android.content.Context,
+    isNavBarVisible: Boolean // Добавляем параметр
 ) {
     TrashScreen(
         items = myAppState.trashedItems,
@@ -43,6 +44,7 @@ fun TrashScreenImpl(
         onClearSelection = { myAppState.selectedItems.clear() },
         blurType = myAppState.selectedBlurType,
         gridState = gridState,
+        isNavBarVisible = isNavBarVisible, // Передаем состояние
         blurredUris = myAppState.blurredUris
     )
 }

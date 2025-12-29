@@ -30,12 +30,12 @@ import com.example.nkdsify.ui.impl.*
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
 fun MyAppNavigation(
-    myAppState: MyAppState
+    myAppState: MyAppState,
+    isNavBarVisible: Boolean // Добавляем параметр
 ) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
 
-    // Read centralized resources from state with safe fallbacks
     val imageLoader: ImageLoader = myAppState.imageLoader ?: rememberCoilImageLoader(context)
     val foldersGridState: LazyGridState = myAppState.foldersGridState ?: rememberLazyGridState()
     val folderContentGridState: LazyGridState = myAppState.folderContentGridState ?: rememberLazyGridState()
@@ -49,7 +49,6 @@ fun MyAppNavigation(
     val favorites: MutableList<String> = myAppState.favoritesList
     val keyboardController: SoftwareKeyboardController? = myAppState.keyboardController
 
-    // Callbacks (provide no-op fallbacks)
     val onMoveTag = myAppState.onMoveTag ?: { _, _ -> }
     val onAddNewTag = myAppState.onAddNewTag ?: {}
     val onFontFamilyChange = myAppState.onFontFamilyChange ?: {}
@@ -75,19 +74,14 @@ fun MyAppNavigation(
             if (myAppState.isSearchActive && myAppState.searchQuery.isNotEmpty()) {
                 val parsed = parseQueryString(myAppState.searchQuery)
                 base.filter { folder ->
-                    // match folder name first
                     val nameMatch = if (parsed.searchTerms.isNotEmpty()) parsed.searchTerms.all { term -> folder.name.contains(term, ignoreCase = true) } else false
-
-                    // or any item in folder matches parsed query (tags/text)
                     val anyItemMatches = folder.items.any { item ->
                         val itemTags = myAppState.tags[item.absolutePath] ?: emptySet()
                         val textMatch = parsed.searchTerms.all { term -> item.name.contains(term, ignoreCase = true) }
                         val tagMatch = parsed.includedTagGroups.all { group -> group.any { tag -> itemTags.contains(tag) } } &&
                                 (parsed.excludedTags.isEmpty() || !itemTags.any { it in parsed.excludedTags })
-
                         textMatch && tagMatch
                     }
-
                     nameMatch || anyItemMatches
                 }.toImmutableList()
             } else {
@@ -99,7 +93,6 @@ fun MyAppNavigation(
     val filteredFavoriteItems by remember(myAppState.favoriteItems, myAppState.searchQuery, myAppState.isSearchActive, sortComparator, myAppState.selectedDate, myAppState.tags) {
         derivedStateOf {
             val parsedQuery = parseQueryString(myAppState.searchQuery)
-
             myAppState.favoriteItems
                 .filter { item ->
                     myAppState.selectedDate?.let {
@@ -115,7 +108,6 @@ fun MyAppNavigation(
                         val textMatch = parsedQuery.searchTerms.all { term -> item.name.contains(term, ignoreCase = true) }
                         val tagMatch = parsedQuery.includedTagGroups.all { group -> group.any { tag -> itemTags.contains(tag) } } &&
                                 (parsedQuery.excludedTags.isEmpty() || !itemTags.any { it in parsedQuery.excludedTags })
-
                         textMatch && tagMatch
                     } else {
                         true
@@ -151,7 +143,6 @@ fun MyAppNavigation(
                         val textMatch = parsedQuery.searchTerms.all { term -> item.name.contains(term, ignoreCase = true) }
                         val tagMatch = parsedQuery.includedTagGroups.all { group -> group.any { tag -> itemTags.contains(tag) } } &&
                                 (parsedQuery.excludedTags.isEmpty() || !itemTags.any { it in parsedQuery.excludedTags })
-
                         textMatch && tagMatch
                      } else {
                          true
@@ -199,13 +190,8 @@ fun MyAppNavigation(
                 gridState = foldersGridState
             )
 
-            is Screen.About -> {
-                AboutScreen()
-            }
-
-            is Screen.Help -> {
-                HelpScreen()
-            }
+            is Screen.About -> AboutScreen()
+            is Screen.Help -> HelpScreen()
 
             is Screen.FolderContent -> FolderContentScreen(
                 screen = screen,
@@ -248,7 +234,8 @@ fun MyAppNavigation(
                 imageLoader = imageLoader,
                 gridState = trashGridState,
                 keyboardController = keyboardController,
-                context = context
+                context = context,
+                isNavBarVisible = isNavBarVisible // Передаем состояние
             )
 
             is Screen.AllMedia -> AllMediaScreenImpl(

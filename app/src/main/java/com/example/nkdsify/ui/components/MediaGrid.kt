@@ -55,6 +55,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import coil.ImageLoader
 import coil.compose.AsyncImage
@@ -68,6 +69,7 @@ import kotlinx.coroutines.launch
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import com.example.nkdsify.R
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -87,7 +89,7 @@ fun MediaGrid(
 ) {
     if (items.isEmpty()) {
         Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Text("No media files found")
+            Text( text = stringResource(id = R.string.no_media))
         }
         return
     }
@@ -104,7 +106,8 @@ fun MediaGrid(
         LazyVerticalGrid(
             state = gridState,
             columns = GridCells.Fixed(3),
-            contentPadding = PaddingValues(4.dp),
+            // Добавляем 80.dp снизу для компенсации плавающего NavBar
+            contentPadding = PaddingValues(start = 4.dp, top = 4.dp, end = 4.dp, bottom = 80.dp),
             modifier = Modifier.fillMaxSize()
         ) {
             items(items, key = { it.uri }, contentType = { "media" }) { item ->

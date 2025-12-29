@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
@@ -37,11 +38,13 @@ fun AlbumDetailsDialog(details: AlbumDetails, onDismiss: () -> Unit) {
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
+        windowInsets = WindowInsets(0)
     ) {
         Column(
             modifier = Modifier
                 .padding(horizontal = 24.dp)
                 .navigationBarsPadding()
+                .padding(bottom = 16.dp)
         ) {
             Text(
                 text = stringResource(id = R.string.album_details_dialog_title),
@@ -65,8 +68,7 @@ fun AlbumDetailsDialog(details: AlbumDetails, onDismiss: () -> Unit) {
 
             Row(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 16.dp),
+                    .fillMaxWidth(),
                 horizontalArrangement = Arrangement.End
             ) {
                 Button(onClick = {
