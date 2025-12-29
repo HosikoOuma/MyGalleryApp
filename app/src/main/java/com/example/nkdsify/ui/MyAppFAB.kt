@@ -50,6 +50,7 @@ fun MyAppFAB(
         && screen !is Screen.SecretStorage
         && screen !is Screen.ViewHistory
         && screen !is Screen.About
+        && screen !is Screen.Help
     ) {
         val interactionSource = remember { MutableInteractionSource() }
         val isPressed by interactionSource.collectIsPressedAsState()

@@ -111,6 +111,7 @@ fun TopBar(
                 filtered.map { it.uri }
             }
             is Screen.Trash -> myAppState.trashedItems.map { it.uri }
+            is Screen.ViewHistory -> myAppState.filteredViewHistory.map { it.uri }
             else -> emptyList()
         }.distinct()
 
@@ -445,6 +446,14 @@ fun TopBar(
                                         Icon(Icons.Filled.Search, contentDescription = stringResource(id = R.string.search_content_description))
                                     }
                                     if (currentScreen !is Screen.ViewHistory) {
+                                        if (selectedDate != null) {
+                                            IconButton(onClick = {
+                                                if (myAppState.isVibrationEnabled) performVibration(context)
+                                                myAppState.selectedDate = null
+                                            }) {
+                                                Icon(Icons.Default.EventBusy, contentDescription = stringResource(id = R.string.reset_date_filter))
+                                            }
+                                        }
                                         IconButton(onClick = {
                                             if (myAppState.isVibrationEnabled) performVibration(context)
                                             myAppState.showDatePicker = true
@@ -492,12 +501,6 @@ fun TopBar(
                                                 trailingIcon = { Icon(Icons.Filled.SwapVert, contentDescription = stringResource(id = R.string.reverse_sort_content_description)) },
                                                 onClick = { if (myAppState.isVibrationEnabled) performVibration(context); myAppState.sortAscending = !myAppState.sortAscending; menuExpanded = false }
                                             )
-                                            if (selectedDate != null && currentScreen !is Screen.Trash) {
-                                                DropdownMenuItem(
-                                                    text = { Text(stringResource(id = R.string.reset_date_filter)) },
-                                                    onClick = { if (myAppState.isVibrationEnabled) performVibration(context); myAppState.selectedDate = null; menuExpanded = false }
-                                                )
-                                            }
                                         }
                                     }
                                 }

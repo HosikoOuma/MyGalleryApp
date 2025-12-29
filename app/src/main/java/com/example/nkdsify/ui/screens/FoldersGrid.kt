@@ -32,6 +32,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.ImageLoader
 import coil.compose.rememberAsyncImagePainter
@@ -109,11 +110,12 @@ fun FoldersGrid(
                                 )
                             }
                         }
-                        if (isShowFileCountEnabled) {
-                            Text(text = "${folder.name} (${folder.items.size})", modifier = Modifier.padding(8.dp))
-                        } else {
-                            Text(text = folder.name, modifier = Modifier.padding(8.dp))
-                        }
+                        Text(
+                            text = if (isShowFileCountEnabled) "${folder.name} (${folder.items.size})" else folder.name,
+                            modifier = Modifier.padding(8.dp),
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis
+                        )
                     }
                 }
             }
