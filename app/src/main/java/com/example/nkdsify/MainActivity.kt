@@ -16,20 +16,28 @@ import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.annotation.OptIn
 import androidx.appcompat.app.AppCompatActivity
-import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import com.example.nkdsify.ui.dialogs.PermissionPermanentlyDeniedDialog
 import com.example.nkdsify.ui.screens.WelcomeScreen
 import com.example.nkdsify.ui.theme.NkdsifyAppTheme
 import com.example.nkdsify.ui.utils.*
 import androidx.media3.common.util.UnstableApi
+import kotlinx.coroutines.delay
 
 enum class FileOperation {
     COPY, MOVE
@@ -59,8 +67,9 @@ class MainActivity : AppCompatActivity() {
     //GEMINI НЕ ТРОГАЙ ЭТУ АНОТАЦИЮ
     @OptIn(ExperimentalMaterial3Api::class)
     override fun onCreate(savedInstanceState: Bundle?) {
-        installSplashScreen()
+        val splashScreen = installSplashScreen()
         super.onCreate(savedInstanceState)
+        
         sensorManager = getSystemService(SENSOR_SERVICE) as SensorManager
         accelerometer = sensorManager?.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
         shakeDetector = ShakeDetector()
@@ -74,9 +83,17 @@ class MainActivity : AppCompatActivity() {
 
             var isFirstLaunch by remember { mutableStateOf(SettingsRepository.isFirstLaunch(context)) }
             val selectedTheme by remember { mutableStateOf(SettingsRepository.getTheme(context)) }
+            val selectedFontFamily by remember { mutableStateOf(SettingsRepository.getFontFamily(context)) }
             var showPermanentlyDeniedDialog by remember { mutableStateOf(false) }
 
             val myAppState = rememberMyAppState()
+            
+            var isAppReady by remember { mutableStateOf(false) }
+            
+            LaunchedEffect(Unit) {
+                delay(1000) 
+                isAppReady = true
+            }
 
             LaunchedEffect(shakeDetector) {
                 shakeDetector?.setOnShakeListener {
@@ -120,34 +137,60 @@ class MainActivity : AppCompatActivity() {
                 }
             }
             
-            NkdsifyAppTheme(theme = selectedTheme) {
-                if (showPermanentlyDeniedDialog) {
-                    PermissionPermanentlyDeniedDialog(
-                        onDismiss = { showPermanentlyDeniedDialog = false },
-                        onConfirm = {
-                            val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
-                            val uri = Uri.fromParts("package", context.packageName, null)
-                            intent.data = uri
-                            context.startActivity(intent)
-                            showPermanentlyDeniedDialog = false
+            NkdsifyAppTheme(theme = selectedTheme, appFontFamily = selectedFontFamily) {
+                Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+                    Box(modifier = Modifier.fillMaxSize()) {
+                        if (myAppState.hasPermissions) {
+                            MyApp(
+                                myAppState = myAppState,
+                                initialUri = initialUri,
+                                screenWidth = screenWidth,
+                                screenHeight = screenHeight,
+                            )
+                        } else {
+                            WelcomeScreen(
+                                onGrantPermissionClick = {
+                                    permissionLauncher.launch(myAppState.permissionsToRequest)
+                                },
+                                theme = selectedTheme
+                            )
                         }
-                    )
-                }
 
-                if (!myAppState.hasPermissions) {
-                    WelcomeScreen(
-                        onGrantPermissionClick = {
-                            permissionLauncher.launch(myAppState.permissionsToRequest)
-                        },
-                        theme = selectedTheme
-                    )
-                } else {
-                     MyApp(
-                        myAppState = myAppState,
-                        initialUri = initialUri,
-                        screenWidth = screenWidth,
-                        screenHeight = screenHeight,
-                    )
+                        if (showPermanentlyDeniedDialog) {
+                            PermissionPermanentlyDeniedDialog(
+                                onDismiss = { showPermanentlyDeniedDialog = false },
+                                onConfirm = {
+                                    val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
+                                    val uri = Uri.fromParts("package", context.packageName, null)
+                                    intent.data = uri
+                                    context.startActivity(intent)
+                                    showPermanentlyDeniedDialog = false
+                                }
+                            )
+                        }
+
+                        // Убираем enter-анимацию, чтобы текст появлялся мгновенно после черного экрана
+                        AnimatedVisibility(
+                            visible = !isAppReady,
+                            enter = EnterTransition.None,
+                            exit = fadeOut(animationSpec = tween(600))
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .background(MaterialTheme.colorScheme.background),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = stringResource(id = R.string.app_name),
+                                    style = MaterialTheme.typography.displayMedium.copy(
+                                        fontWeight = FontWeight.Bold
+                                    ),
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                        }
+                    }
                 }
             }
         }

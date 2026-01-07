@@ -2,7 +2,8 @@ package com.example.nkdsify.ui.components
 
 import android.media.MediaPlayer
 import android.net.Uri
-import androidx.compose.animation.core.animate
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.VectorConverter
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.calculatePan
@@ -13,13 +14,11 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -37,7 +36,9 @@ import coil.size.Size
 import com.example.nkdsify.R
 import com.example.nkdsify.data.ZoomType
 import com.example.nkdsify.ui.utils.performVibration
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
+import kotlin.math.abs
 
 @Composable
 fun ZoomableImage(
@@ -48,80 +49,71 @@ fun ZoomableImage(
     onToggleControls: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    var scale by rememberSaveable { mutableFloatStateOf(1f) }
-    var offsetX by rememberSaveable { mutableFloatStateOf(0f) }
-    var offsetY by rememberSaveable { mutableFloatStateOf(0f) }
+    val scale = remember { Animatable(1f) }
+    val offset = remember { Animatable(Offset.Zero, Offset.VectorConverter) }
+    
     var viewSize by remember { mutableStateOf(IntSize.Zero) }
-    val coroutineScope = rememberCoroutineScope()
+    val scope = rememberCoroutineScope()
     val context = LocalContext.current
 
     var tapCount by remember { mutableIntStateOf(0) }
     var lastTap by remember { mutableLongStateOf(0L) }
 
-    LaunchedEffect(key1 = uri) {
-        scale = 1f
-        offsetX = 0f
-        offsetY = 0f
+    LaunchedEffect(uri) {
+        scale.snapTo(1f)
+        offset.snapTo(Offset.Zero)
     }
 
-    val gestureModifier = if (zoomType == ZoomType.DOUBLE_TAP) {
-        Modifier.pointerInput(Unit) {
-            detectTapGestures(
-                onTap = { onToggleControls() },
-                onDoubleTap = { tapOffset ->
-                    if (isVibrationEnabled) performVibration(context)
-                    coroutineScope.launch {
-                        val startScale = scale
-                        val startOffsetX = offsetX
-                        val startOffsetY = offsetY
-
-                        val (targetScale, targetOffsetX, targetOffsetY) = if (startScale > 1f) {
-                            Triple(1f, 0f, 0f)
-                        } else {
-                            val targetS = 3f
-                            val center = Offset(viewSize.width / 2f, viewSize.height / 2f)
-                            val targetX = (tapOffset.x - center.x) * (1 - targetS)
-                            val targetY = (tapOffset.y - center.y) * (1 - targetS)
-                            Triple(targetS, targetX, targetY)
-                        }
-
-                        animate(0f, 1f) { fraction, _ ->
-                            scale = startScale + (targetScale - startScale) * fraction
-                            offsetX = startOffsetX + (targetOffsetX - startOffsetX) * fraction
-                            offsetY = startOffsetY + (targetOffsetY - startOffsetY) * fraction
-                        }
-                    }
-                }
-            )
-        }
-    } else {
-        Modifier.pointerInput(Unit) {
-            detectTapGestures(onTap = {
-                val now = System.currentTimeMillis()
-                if (now - lastTap > 500) { // More than 500ms passed, it's a single tap
-                    onToggleControls()
-                    tapCount = 1
-                } else { // Less than 500ms, it's a multi-tap sequence
-                    tapCount++
-                }
-                lastTap = now
-
-                if (tapCount == 5) {
-                    tapCount = 0
-                    if (isVibrationEnabled) performVibration(context)
-                    val mediaPlayer = MediaPlayer.create(context, R.raw.pii)
-                    mediaPlayer.setOnCompletionListener { it.release() }
-                    mediaPlayer.start()
-                }
-            })
+    // Вспомогательная функция для инкремента счетчика тапов (для пасхалки)
+    val updateTapCount: (Int) -> Unit = { count ->
+        val now = System.currentTimeMillis()
+        if (now - lastTap > 500) tapCount = count else tapCount += count
+        lastTap = now
+        if (tapCount >= 5) {
+            tapCount = 0
+            if (isVibrationEnabled) performVibration(context)
+            val mediaPlayer = MediaPlayer.create(context, R.raw.pii)
+            mediaPlayer.setOnCompletionListener { it.release() }
+            mediaPlayer.start()
         }
     }
 
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .then(gestureModifier)
-            .pointerInput(Unit) {
+            // БЛОК 1: ТАПЫ (Одиночный и Двойной)
+            .pointerInput(uri, zoomType) {
+                detectTapGestures(
+                    onTap = {
+                        onToggleControls()
+                        updateTapCount(1)
+                    },
+                    onDoubleTap = { tapOffset ->
+                        updateTapCount(2)
+                        if (zoomType == ZoomType.DOUBLE_TAP) {
+                            if (isVibrationEnabled) performVibration(context)
+                            
+                            val isZoomed = scale.value > 1.05f
+                            val targetScale = if (isZoomed) 1f else 3f
+                            val targetOffset = if (targetScale == 1f) {
+                                Offset.Zero
+                            } else {
+                                val center = Offset(size.width / 2f, size.height / 2f)
+                                (center - tapOffset) * (targetScale - 1f)
+                            }
+
+                            scope.launch {
+                                coroutineScope {
+                                    launch { scale.animateTo(targetScale) }
+                                    launch { offset.animateTo(targetOffset) }
+                                }
+                            }
+                        }
+                    }
+                )
+            }
+            // БЛОК 2: ТРАНСФОРМАЦИИ (Зум щипком и Панорамирование)
+            .pointerInput(uri) {
                 awaitEachGesture {
                     do {
                         val event = awaitPointerEvent()
@@ -129,28 +121,29 @@ fun ZoomableImage(
                         val pan = event.calculatePan()
                         val centroid = event.calculateCentroid(useCurrentPosition = true)
 
-                        val newScale = (scale * zoom).coerceIn(1f, 5f)
-
-                        if (newScale <= 1f) {
-                            offsetX = 0f
-                            offsetY = 0f
-                            scale = 1f
-                        } else {
-                            val newOffsetX =
-                                offsetX + pan.x + (centroid.x - viewSize.width / 2) * (1 - zoom)
-                            val newOffsetY =
-                                offsetY + pan.y + (centroid.y - viewSize.height / 2) * (1 - zoom)
-
-                            val maxOffsetX = (viewSize.width * (newScale - 1)) / 2f
-                            val maxOffsetY = (viewSize.height * (newScale - 1)) / 2f
-
-                            if (zoom != 1f || pan != Offset.Zero) {
+                        if (zoom != 1f || pan != Offset.Zero) {
+                            val newScale = (scale.value * zoom).coerceIn(1f, 5f)
+                            val newOffset = if (newScale > 1f) {
+                                val oldOffset = offset.value
+                                val extraOffset = pan + (centroid - Offset(size.width / 2f, size.height / 2f)) * (1 - zoom)
+                                val maxOffsetX = (size.width * (newScale - 1)) / 2f
+                                val maxOffsetY = (size.height * (newScale - 1)) / 2f
+                                
+                                // Поглощаем события только если реально зумируем
                                 event.changes.forEach { it.consume() }
+
+                                Offset(
+                                    (oldOffset.x + extraOffset.x).coerceIn(-maxOffsetX, maxOffsetX),
+                                    (oldOffset.y + extraOffset.y).coerceIn(-maxOffsetY, maxOffsetY)
+                                )
+                            } else {
+                                Offset.Zero
                             }
 
-                            scale = newScale
-                            offsetX = newOffsetX.coerceIn(-maxOffsetX, maxOffsetX)
-                            offsetY = newOffsetY.coerceIn(-maxOffsetY, maxOffsetY)
+                            scope.launch {
+                                scale.snapTo(newScale)
+                                offset.snapTo(newOffset)
+                            }
                         }
                     } while (event.changes.any { it.pressed })
                 }
@@ -168,10 +161,10 @@ fun ZoomableImage(
                 .fillMaxSize()
                 .onSizeChanged { viewSize = it }
                 .graphicsLayer {
-                    scaleX = scale
-                    scaleY = scale
-                    translationX = offsetX
-                    translationY = offsetY
+                    scaleX = scale.value
+                    scaleY = scale.value
+                    translationX = offset.value.x
+                    translationY = offset.value.y
                 }
         )
     }

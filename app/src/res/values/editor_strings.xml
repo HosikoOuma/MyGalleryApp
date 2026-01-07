@@ -1,0 +1,8 @@
+<resources>
+    <string name="editor_title">Photo Editor</string>
+    <string name="save_action">Save</string>
+    <string name="saved_successfully">Image saved successfully</string>
+    <string name="save_failed">Failed to save image</string>
+    <string name="tab_draw">Draw</string>
+    <string name="tab_transform">Transform</string>
+</resources>

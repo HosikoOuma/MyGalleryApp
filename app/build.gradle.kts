@@ -91,12 +91,16 @@ dependencies {
     implementation(libs.coil.compose)
     implementation(libs.coil.gif)
     implementation(libs.coil.video)
+    
+    // ВЕРНУЛ ИМЕННО ЭТУ БИБЛИОТЕКУ
     implementation("com.vanniktech:android-image-cropper:4.5.0")
 
-    // Media3 for video playback (versions are not in Compose BOM)
-    implementation("androidx.media3:media3-exoplayer:1.8.0")
-    implementation("androidx.media3:media3-ui:1.8.0")
-    implementation("androidx.media3:media3-transformer:1.8.0")
+    // Media3 for video playback
+    implementation("androidx.media3:media3-exoplayer:1.3.1")
+    implementation("androidx.media3:media3-ui:1.3.1")
+    implementation("androidx.media3:media3-transformer:1.3.1")
+    implementation("androidx.media3:media3-effect:1.3.1")
+    implementation("androidx.media3:media3-common:1.3.1")
     implementation("androidx.biometric:biometric:1.1.0")
 
     implementation("com.google.code.gson:gson:2.10.1")

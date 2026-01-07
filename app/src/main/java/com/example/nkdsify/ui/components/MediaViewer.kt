@@ -21,6 +21,7 @@ import androidx.compose.material.icons.automirrored.filled.Label
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
+import androidx.compose.material.icons.filled.FrontHand
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Restore
 import androidx.compose.material.icons.filled.RestoreFromTrash
@@ -29,14 +30,18 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import androidx.core.view.WindowCompat
 import coil.ImageLoader
-import com.example.nkdsify.R
 import com.example.nkdsify.MyAppState
+import com.example.nkdsify.R
+import com.example.nkdsify.data.BlurType
 import com.example.nkdsify.data.MediaItem
 import com.example.nkdsify.data.ViewerControlsPosition
 import com.example.nkdsify.ui.components.utils.rememberCoilImageLoader
@@ -51,12 +56,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
-import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.draw.blur
-import com.example.nkdsify.data.BlurType
-import androidx.compose.foundation.layout.size
-import androidx.compose.material.icons.filled.FrontHand
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -203,7 +202,6 @@ fun MediaViewer(
                             onMuteClick = { isMuted = !isMuted },
                             isLoopVideoEnabled = myAppState.isLoopVideoEnabled,
                             isSecretMode = true,
-                            // Приподнимаем плеер, если панель внизу
                             bottomPadding = if (myAppState.viewerControlsPosition == ViewerControlsPosition.BOTTOM) 80.dp else 0.dp
                         )
                     } else {
@@ -236,7 +234,6 @@ fun MediaViewer(
                             onMuteClick = { isMuted = !isMuted },
                             isLoopVideoEnabled = myAppState.isLoopVideoEnabled,
                             isSecretMode = false,
-                            // Приподнимаем плеер, если панель внизу
                             bottomPadding = if (myAppState.viewerControlsPosition == ViewerControlsPosition.BOTTOM) 80.dp else 0.dp
                         )
                     } else {
@@ -259,7 +256,6 @@ fun MediaViewer(
             }
         }
 
-        // --- Панель управления (теперь в самом низу, если выбрано) ---
         val controlsPosition = myAppState.viewerControlsPosition
         val alignment = if (controlsPosition == ViewerControlsPosition.TOP) Alignment.TopCenter else Alignment.BottomCenter
 

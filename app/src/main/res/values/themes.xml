@@ -5,10 +5,10 @@
 
     <!-- Тема для всплывающего экрана (Splash Screen) -->
     <style name="Theme.App.Starting" parent="Theme.SplashScreen">
-        <!-- Цвет фона экрана -->
-        <item name="windowSplashScreenBackground">#CBB8F8</item>
-        <!-- Иконка в центре -->
-        <item name="windowSplashScreenAnimatedIcon">@mipmap/ic_launcher</item>
+        <!-- Цвет фона экрана (черный для AMOLED стиля) -->
+        <item name="windowSplashScreenBackground">#000000</item>
+        <!-- Скрываем иконку, используя прозрачный цвет -->
+        <item name="windowSplashScreenAnimatedIcon">@android:color/transparent</item>
         <!-- Тема, которая будет применена после всплывающего экрана -->
         <item name="postSplashScreenTheme">@style/Theme.Mygalleryapp</item>
     </style>

@@ -128,13 +128,11 @@ fun InfoDialogs(myAppState: MyAppState, screenWidth: Int, screenHeight: Int, onF
         } else if (screen is Screen.Favorites && screen.openAlbumName != null) {
             val albumNameAllFavorites = stringResource(id = R.string.album_name_all_favorites)
             
-            // Получаем список элементов для текущего "альбома" (тега или всех избранных)
             val albumItems = remember(myAppState.favoriteItems, screen.openAlbumName, myAppState.tags) {
                 if (screen.openAlbumName == albumNameAllFavorites) {
                     myAppState.favoriteItems
                 } else {
                     myAppState.favoriteItems.filter { item ->
-                        // Важно: используем absolutePath для сопоставления с тегами
                         val itemTags = myAppState.tags[item.absolutePath] ?: emptySet()
                         itemTags.contains(screen.openAlbumName)
                     }
@@ -157,7 +155,6 @@ fun InfoDialogs(myAppState: MyAppState, screenWidth: Int, screenHeight: Int, onF
                     onDismiss = { myAppState.showAlbumDetailsDialog = false }
                 )
             } else {
-                // Если альбом пуст (что странно для избранного), просто закрываем диалог
                 myAppState.showAlbumDetailsDialog = false
             }
         }

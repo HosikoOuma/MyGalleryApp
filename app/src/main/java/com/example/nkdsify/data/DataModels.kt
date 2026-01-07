@@ -85,7 +85,8 @@ data class MediaDetails(
     val path: String,
     val resolution: String,
     val isVideo: Boolean,
-    val exif: ExifInterface? = null
+    val exif: ExifInterface? = null,
+    val duration: Long = 0L
 )
 
 

@@ -2,6 +2,7 @@ package com.example.nkdsify.ui.utils
 
 import android.content.ContentValues
 import android.content.Context
+import android.content.Intent
 import android.net.Uri
 import android.os.VibrationEffect
 import android.os.Vibrator
@@ -48,6 +49,7 @@ import kotlin.math.pow
 import kotlin.math.roundToInt
 import android.graphics.BitmapFactory
 import android.media.MediaMetadataRetriever
+import android.widget.Toast
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.DriveFileMove
@@ -55,12 +57,15 @@ import androidx.compose.material.icons.filled.BlurOff
 import androidx.compose.material.icons.filled.BlurOn
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.EditNote
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Wallpaper
 import androidx.compose.material.icons.outlined.FindInPage
 import androidx.compose.material3.Icon
 import androidx.compose.ui.graphics.Color
 import androidx.exifinterface.media.ExifInterface
+import com.example.nkdsify.ui.editor.EditActivity
+import com.example.nkdsify.ui.editor.video.VideoEditActivity
 
 fun getMediaDetails(context: Context, uri: Uri): MediaDetails? {
     val projection = if (uri.scheme == "content") {
@@ -70,7 +75,8 @@ fun getMediaDetails(context: Context, uri: Uri): MediaDetails? {
             MediaStore.Files.FileColumns.DATE_ADDED,
             MediaStore.Files.FileColumns.DATE_MODIFIED,
             MediaStore.Files.FileColumns.DATA,
-            MediaStore.Files.FileColumns.MIME_TYPE
+            MediaStore.Files.FileColumns.MIME_TYPE,
+            MediaStore.Video.Media.DURATION
         )
     } else {
         arrayOf(
@@ -89,9 +95,11 @@ fun getMediaDetails(context: Context, uri: Uri): MediaDetails? {
                 val dateModifiedColumn = if (uri.scheme == "content") cursor.getColumnIndex(MediaStore.Files.FileColumns.DATE_MODIFIED) else -1
                 val dataColumn = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.DATA)
                 val mimeTypeColumn = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.MIME_TYPE)
+                val durationColumn = cursor.getColumnIndex(MediaStore.Video.Media.DURATION)
 
                 val mimeType = cursor.getString(mimeTypeColumn)
                 val isVideo = mimeType?.startsWith("video/") ?: false
+                val duration = if (durationColumn != -1) cursor.getLong(durationColumn) else 0L
 
                 var resolution = context.getString(R.string.unknown_resolution)
                 try {
@@ -144,7 +152,8 @@ fun getMediaDetails(context: Context, uri: Uri): MediaDetails? {
                     path = cursor.getString(dataColumn),
                     resolution = resolution,
                     isVideo = isVideo,
-                    exif = exif
+                    exif = exif,
+                    duration = duration
                 )
             } else {
                 null
@@ -200,12 +209,12 @@ private fun BaseConfirmDialog(
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
-        windowInsets = WindowInsets(0) // ИСПРАВЛЕНО
+        windowInsets = WindowInsets(0)
     ) {
         Column(
             modifier = Modifier
                 .padding(horizontal = 24.dp)
-                .navigationBarsPadding() // ИСПРАВЛЕНО
+                .navigationBarsPadding()
                 .padding(bottom = 16.dp)
         ) {
             Text(
@@ -343,12 +352,12 @@ fun ExternalMediaErrorDialog(onDismiss: () -> Unit) {
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
-        windowInsets = WindowInsets(0) // ИСПРАВЛЕНО
+        windowInsets = WindowInsets(0)
     ) {
         Column(
             modifier = Modifier
                 .padding(horizontal = 24.dp)
-                .navigationBarsPadding() // ИСПРАВЛЕНО
+                .navigationBarsPadding()
                 .padding(bottom = 16.dp)
         ) {
             Text(
@@ -402,12 +411,12 @@ fun MediaDetailsDialog(
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
-        windowInsets = WindowInsets(0) // ИСПРАВЛЕНО
+        windowInsets = WindowInsets(0)
     ) {
         Column(
             modifier = Modifier
                 .padding(horizontal = 24.dp)
-                .navigationBarsPadding() // ИСПРАВЛЕНО
+                .navigationBarsPadding()
         ) {
             Text(
                 text = stringResource(id = R.string.details_title),
@@ -438,12 +447,34 @@ fun MediaDetailsDialog(
             LazyRow(
                 horizontalArrangement = Arrangement.spacedBy(4.dp)
             ) {
-                item { TextButton(onClick = { vibrate(); onSetAsWallpaper() }) { 
-                    Icon(Icons.Default.Wallpaper, contentDescription = stringResource(id = R.string.set_as_wallpaper_content_description))
-                } }
+                if (!details.isVideo) {
+                    item { TextButton(onClick = { vibrate(); onSetAsWallpaper() }) { 
+                        Icon(Icons.Default.Wallpaper, contentDescription = stringResource(id = R.string.set_as_wallpaper_content_description))
+                    } }
+                }
                 item { TextButton(onClick = { vibrate(); onBlur() }) { 
                     Icon(if (isBlurred) Icons.Default.BlurOff else Icons.Default.BlurOn, contentDescription = null)
                 } }
+                
+                item { TextButton(onClick = { 
+                    vibrate()
+                    if (details.isVideo) {
+                        val intent = Intent(context, VideoEditActivity::class.java).apply {
+                            data = uri
+                            putExtra("EXTRA_DURATION", details.duration)
+                        }
+                        context.startActivity(intent)
+                    } else {
+                        val intent = Intent(context, EditActivity::class.java).apply {
+                            data = uri
+                        }
+                        context.startActivity(intent)
+                    }
+                    onDismiss()
+                }) { 
+                    Icon(Icons.Default.EditNote, contentDescription = stringResource(id = R.string.edit_tags_content_description))
+                } }
+
                 item { TextButton(onClick = { vibrate(); onCopy() }) { 
                     Icon(Icons.Default.ContentCopy, contentDescription = stringResource(id = R.string.copy_content_description))
                 } }
@@ -495,7 +526,6 @@ private fun DetailItem(label: String, value: String) {
 fun ExifData(exif: ExifInterface) {
     val cameraModel = exif.getAttribute(ExifInterface.TAG_MODEL)
 
-    // Use getAttributeDouble which can handle rational values.
     val aperture = exif.getAttributeDouble(ExifInterface.TAG_APERTURE_VALUE, 0.0)
     val shutterSpeed = exif.getAttributeDouble(ExifInterface.TAG_SHUTTER_SPEED_VALUE, 0.0)
     val iso = exif.getAttribute(ExifInterface.TAG_ISO_SPEED)
@@ -505,17 +535,15 @@ fun ExifData(exif: ExifInterface) {
         Text("Camera: $cameraModel")
     }
 
-    // The value is an APEX value. F-number = 2^(aperture_apex / 2)
     if (aperture > 0.0) {
-        val fStop = 2.0.pow(aperture / 2.0)
+        val fStop = Math.pow(2.0, aperture / 2.0)
         Text("Aperture: f/${String.format("%.1f", fStop)}")
     }
 
-    // The value is an APEX value. Exposure time = 1 / (2^shutter_speed_apex)
     if (shutterSpeed > 0.0) {
-        val exposureTime = 1.0 / 2.0.pow(shutterSpeed)
+        val exposureTime = 1.0 / Math.pow(2.0, shutterSpeed)
         if (exposureTime < 1.0) {
-            Text("Shutter speed: 1/${(1.0 / exposureTime).roundToInt()}s")
+            Text("Shutter speed: 1/${Math.round(1.0 / exposureTime)}s")
         } else {
             Text("Shutter speed: ${String.format("%.1f", exposureTime)}s")
         }
@@ -526,7 +554,7 @@ fun ExifData(exif: ExifInterface) {
     }
 
     if (focalLength > 0.0) {
-        Text("Focal length: ${focalLength.roundToInt()} mm")
+        Text("Focal length: ${Math.round(focalLength)} mm")
     }
 }
 
@@ -600,12 +628,12 @@ fun SelectionDetailsDialog(
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
-        windowInsets = WindowInsets(0) // ИСПРАВЛЕНО
+        windowInsets = WindowInsets(0)
     ) {
         Column(
             modifier = Modifier
                 .padding(horizontal = 24.dp)
-                .navigationBarsPadding() // ИСПРАВЛЕНО
+                .navigationBarsPadding()
                 .padding(bottom = 16.dp),
         ) {
             Text(

@@ -376,4 +376,31 @@
     <string name="download_failed_toast">Не удалось скачать: %1$s</string>
     <string name="attention_title">Внимание!</string>
     <string name="no_media">Медиафайлы не найдены</string>
+
+    <string name="editor_title">Фоторедактор</string>
+    <string name="video_editor_title">Видеоредактор</string>
+    <string name="save_action">Сохранить</string>
+    <string name="saved_successfully">Изображение сохранено</string>
+    <string name="save_failed">Ошибка сохранения</string>
+    <string name="tab_draw">Рисование</string>
+    <string name="tab_transform">Трансформация</string>
+    <string name="tab_filters">Фильтры</string>
+    <string name="eraser_on">Ластик ВКЛ</string>
+    <string name="brush_label">Кисть</string>
+    <string name="editor_undo">Отменить</string>
+    <string name="editor_redo">Вернуть</string>
+    <string name="editor_rotate_left">Повернуть влево</string>
+    <string name="editor_rotate_right">Повернуть вправо</string>
+    <string name="editor_flip">Отразить</string>
+    <string name="editor_crop">Обрезать</string>
+    <string name="filter_none">Оригинал</string>
+    <string name="filter_bw">Ч/Б</string>
+    <string name="filter_sepia">Сепия</string>
+    <string name="filter_invert">Инверсия</string>
+    <string name="filter_vintage">Винтаж</string>
+    <string name="filter_cool">Холодный</string>
+    <string name="filter_warm">Теплый</string>
+    <string name="fab_action_camera_label">Камера</string>
+    <string name="editor_processing">Обработка...</string>
+    <string name="editor_saving_video">Сохранение видео...</string>
 </resources>

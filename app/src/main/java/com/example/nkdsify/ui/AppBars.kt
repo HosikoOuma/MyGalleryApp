@@ -255,6 +255,16 @@ fun TopBar(
                                     onClick = { showSelectionDetails(); menuExpanded = false }, 
                                     leadingIcon = { Icon(Icons.Default.Info, null) }
                                 )
+                                // ВОССТАНОВЛЕННЫЙ ПУНКТ БЛЮРА
+                                val areAllBlurred = myAppState.selectedItems.all { it.toString() in myAppState.blurredUris }
+                                DropdownMenuItem(
+                                    text = { Text(if (areAllBlurred) stringResource(R.string.unblur_action) else stringResource(R.string.blur_action)) },
+                                    onClick = { 
+                                        myAppState.toggleBlurForUris(myAppState.selectedItems)
+                                        menuExpanded = false 
+                                    },
+                                    leadingIcon = { Icon(if (areAllBlurred) Icons.Default.BlurOff else Icons.Default.BlurOn, null) }
+                                )
                                 DropdownMenuItem(text = { Text(stringResource(R.string.copy_button)) }, onClick = { performCopy(); menuExpanded = false }, leadingIcon = { Icon(Icons.Default.ContentCopy, null) })
                                 DropdownMenuItem(text = { Text(stringResource(R.string.move_button)) }, onClick = { performMove(); menuExpanded = false }, leadingIcon = { Icon(Icons.AutoMirrored.Filled.DriveFileMove, null) })
                                 DropdownMenuItem(text = { Text(stringResource(R.string.move_to_secret_storage_button)) }, onClick = { performMoveToSecret(); menuExpanded = false }, leadingIcon = { Icon(Icons.Default.Lock, null) })
