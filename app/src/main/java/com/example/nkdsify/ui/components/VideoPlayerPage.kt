@@ -41,6 +41,7 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.exoplayer.DefaultLoadControl
 import androidx.media3.ui.PlayerView
 import com.example.nkdsify.ui.components.utils.calculateCentroid
 import java.util.concurrent.TimeUnit
@@ -88,6 +89,7 @@ fun AnimatedPlayPauseIcon(
 fun VideoPlayerPage(
     uri: Uri,
     isFullyVisible: Boolean,
+    isCurrentPage: Boolean,
     isMuted: Boolean,
     controlsVisible: Boolean,
     onToggleControls: () -> Unit,
@@ -98,25 +100,65 @@ fun VideoPlayerPage(
 ) {
     val context = LocalContext.current
     
+    // Агрессивный LoadControl для минимизации памяти
+    val loadControl = remember {
+        DefaultLoadControl.Builder()
+            .setBufferDurationsMs(
+                5000,  // minBufferMs: только 5 секунд
+                10000, // maxBufferMs
+                500,   // bufferForPlaybackMs
+                1000   // bufferForPlaybackAfterRebufferMs
+            )
+            .setPrioritizeTimeOverSizeThresholds(true)
+            .build()
+    }
+
     val exoPlayer = remember {
-        ExoPlayer.Builder(context).build().apply {
-            if (isSecretMode) {
-                val dataSourceFactory = AesDataSourceFactory()
-                val mediaSource = ProgressiveMediaSource.Factory(dataSourceFactory)
-                    .createMediaSource(androidx.media3.common.MediaItem.fromUri(uri))
-                setMediaSource(mediaSource)
+        ExoPlayer.Builder(context)
+            .setLoadControl(loadControl)
+            .build().apply {
+                if (isSecretMode) {
+                    val dataSourceFactory = AesDataSourceFactory()
+                    val mediaSource = ProgressiveMediaSource.Factory(dataSourceFactory)
+                        .createMediaSource(androidx.media3.common.MediaItem.fromUri(uri))
+                    setMediaSource(mediaSource)
+                } else {
+                    setMediaItem(androidx.media3.common.MediaItem.fromUri(uri))
+                }
+                prepare()
+            }
+    }
+
+    LaunchedEffect(isFullyVisible) {
+        exoPlayer.playWhenReady = isFullyVisible
+    }
+
+    var seekDirection by remember { mutableStateOf<SeekDirection?>(null) }
+
+    LaunchedEffect(isCurrentPage) {
+        if (!isCurrentPage) {
+            exoPlayer.stop() // Агрессивно останавливаем и очищаем буферы
+            exoPlayer.seekTo(0)
+        } else {
+            if (exoPlayer.playbackState == Player.STATE_IDLE) {
+                exoPlayer.prepare() // Переподготавливаем если было остановлено
             }
         }
     }
 
-    var isPlaying by remember { mutableStateOf(exoPlayer.isPlaying) }
-    var playbackState by remember { mutableIntStateOf(exoPlayer.playbackState) }
+    DisposableEffect(Unit) {
+        onDispose {
+            exoPlayer.release()
+        }
+    }
+
+    var isPlaying by remember { mutableStateOf(false) }
+    var playbackState by remember { mutableIntStateOf(Player.STATE_IDLE) }
     var playbackPosition by remember { mutableLongStateOf(0L) }
     var totalDuration by remember { mutableLongStateOf(0L) }
 
     var speed by rememberSaveable { mutableFloatStateOf(1f) }
     var showSpeedMenu by remember { mutableStateOf(false) }
-    var seekDirection by remember { mutableStateOf<SeekDirection?>(null) }
     var isSeeking by remember { mutableStateOf(false) }
 
     var scale by rememberSaveable { mutableFloatStateOf(1f) }
@@ -126,6 +168,24 @@ fun VideoPlayerPage(
 
     val lifecycleOwner = LocalLifecycleOwner.current
     var wasPlayingBeforePause by rememberSaveable { mutableStateOf(false) }
+
+    DisposableEffect(exoPlayer) {
+        val listener = object : Player.Listener {
+            override fun onIsPlayingChanged(playing: Boolean) {
+                isPlaying = playing
+            }
+            override fun onPlaybackStateChanged(state: Int) {
+                playbackState = state
+                if (state == Player.STATE_READY) {
+                    totalDuration = exoPlayer.duration.coerceAtLeast(0)
+                }
+            }
+        }
+        exoPlayer.addListener(listener)
+        onDispose {
+            exoPlayer.removeListener(listener)
+        }
+    }
 
     LaunchedEffect(key1 = uri) {
         scale = 1f
@@ -140,17 +200,6 @@ fun VideoPlayerPage(
             delay(800L)
             seekDirection = null
         }
-    }
-
-    LaunchedEffect(uri) {
-        if (!isSecretMode) {
-            exoPlayer.setMediaItem(androidx.media3.common.MediaItem.fromUri(uri))
-        }
-        exoPlayer.prepare()
-    }
-
-    LaunchedEffect(isFullyVisible) {
-        exoPlayer.playWhenReady = isFullyVisible
     }
 
     DisposableEffect(lifecycleOwner) {
@@ -183,26 +232,6 @@ fun VideoPlayerPage(
 
     LaunchedEffect(isMuted) {
         exoPlayer.volume = if (isMuted) 0f else 1f
-    }
-
-    DisposableEffect(exoPlayer) {
-        val listener = object : Player.Listener {
-            override fun onIsPlayingChanged(playing: Boolean) {
-                isPlaying = playing
-            }
-            override fun onPlaybackStateChanged(state: Int) {
-                playbackState = state
-            }
-            override fun onEvents(player: Player, events: Player.Events) {
-                super.onEvents(player, events)
-                totalDuration = player.duration.coerceAtLeast(0)
-            }
-        }
-        exoPlayer.addListener(listener)
-        onDispose {
-            exoPlayer.removeListener(listener)
-            exoPlayer.release()
-        }
     }
 
     LaunchedEffect(isPlaying, isSeeking) {

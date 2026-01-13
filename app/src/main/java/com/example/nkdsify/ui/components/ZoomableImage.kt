@@ -32,13 +32,13 @@ import androidx.compose.ui.unit.IntSize
 import coil.ImageLoader
 import coil.compose.rememberAsyncImagePainter
 import coil.request.ImageRequest
+import coil.size.Precision
 import coil.size.Size
 import com.example.nkdsify.R
 import com.example.nkdsify.data.ZoomType
 import com.example.nkdsify.ui.utils.performVibration
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
-import kotlin.math.abs
 
 @Composable
 fun ZoomableImage(
@@ -64,7 +64,6 @@ fun ZoomableImage(
         offset.snapTo(Offset.Zero)
     }
 
-    // Вспомогательная функция для инкремента счетчика тапов (для пасхалки)
     val updateTapCount: (Int) -> Unit = { count ->
         val now = System.currentTimeMillis()
         if (now - lastTap > 500) tapCount = count else tapCount += count
@@ -81,7 +80,6 @@ fun ZoomableImage(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            // БЛОК 1: ТАПЫ (Одиночный и Двойной)
             .pointerInput(uri, zoomType) {
                 detectTapGestures(
                     onTap = {
@@ -112,7 +110,6 @@ fun ZoomableImage(
                     }
                 )
             }
-            // БЛОК 2: ТРАНСФОРМАЦИИ (Зум щипком и Панорамирование)
             .pointerInput(uri) {
                 awaitEachGesture {
                     do {
@@ -129,7 +126,6 @@ fun ZoomableImage(
                                 val maxOffsetX = (size.width * (newScale - 1)) / 2f
                                 val maxOffsetY = (size.height * (newScale - 1)) / 2f
                                 
-                                // Поглощаем события только если реально зумируем
                                 event.changes.forEach { it.consume() }
 
                                 Offset(
@@ -151,11 +147,19 @@ fun ZoomableImage(
             .then(modifier),
         contentAlignment = Alignment.Center
     ) {
+        val painter = rememberAsyncImagePainter(
+            model = ImageRequest.Builder(LocalContext.current)
+                .data(uri)
+                .size(Size.ORIGINAL) // Возвращаем оригинал для качества
+                .precision(Precision.EXACT) // Возвращаем точность
+                .allowHardware(true) // Включаем Hardware Bitmaps (разгружаем Java Heap)
+                .crossfade(true)
+                .build(),
+            imageLoader = imageLoader
+        )
+
         Image(
-            painter = rememberAsyncImagePainter(
-                model = ImageRequest.Builder(LocalContext.current).data(uri).size(Size.ORIGINAL).build(),
-                imageLoader = imageLoader
-            ),
+            painter = painter,
             contentDescription = "Full screen image",
             modifier = Modifier
                 .fillMaxSize()

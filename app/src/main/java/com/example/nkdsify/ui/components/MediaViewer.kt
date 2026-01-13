@@ -184,10 +184,12 @@ fun MediaViewer(
             state = pagerState,
             modifier = Modifier.fillMaxSize(),
             key = { items[it].uri },
-            userScrollEnabled = myAppState.isSwipeToDismissEnabled
+            userScrollEnabled = myAppState.isSwipeToDismissEnabled,
+            beyondViewportPageCount = 0 // МАКСИМАЛЬНАЯ ЭКОНОМИЯ ПАМЯТИ: только текущая страница
         ) { page ->
             val item = items[page]
-            val isFullyVisible by remember { derivedStateOf { !pagerState.isScrollInProgress && pagerState.currentPage == page } }
+            val isFullyVisible = !pagerState.isScrollInProgress && pagerState.currentPage == page
+            val isCurrentPage = pagerState.currentPage == page
             val isIndividualBlurred = item.uri.toString() in myAppState.blurredUris
 
             Box(modifier = Modifier.fillMaxSize()) {
@@ -196,6 +198,7 @@ fun MediaViewer(
                         VideoPlayerPage(
                             uri = item.uri,
                             isFullyVisible = isFullyVisible,
+                            isCurrentPage = isCurrentPage,
                             isMuted = isMuted,
                             controlsVisible = controlsVisible,
                             onToggleControls = toggleControls,
@@ -228,6 +231,7 @@ fun MediaViewer(
                         VideoPlayerPage(
                             uri = item.uri,
                             isFullyVisible = isFullyVisible,
+                            isCurrentPage = isCurrentPage,
                             isMuted = isMuted,
                             controlsVisible = controlsVisible,
                             onToggleControls = toggleControls,
