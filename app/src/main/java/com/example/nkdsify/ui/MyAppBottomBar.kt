@@ -3,6 +3,7 @@ package com.example.nkdsify.ui
 import android.content.Context
 import android.media.MediaPlayer
 import android.widget.Toast
+import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
@@ -49,6 +50,7 @@ import androidx.compose.ui.unit.dp
 import com.example.nkdsify.MyAppState
 import com.example.nkdsify.R
 import com.example.nkdsify.data.Screen
+import com.example.nkdsify.ui.utils.BiometricUtils
 import com.example.nkdsify.ui.utils.performVibration
 
 @Composable
@@ -115,6 +117,23 @@ fun MyAppBottomBar(
                     onClick = {
                         if (isVibrationEnabled) performVibration(context)
                         myAppState.currentScreen = Screen.Folders
+                        val now = System.currentTimeMillis()
+                        if (now - myAppState.lastFoldersTapTime < 500) {
+                            myAppState.foldersTapCount++
+                        } else {
+                            myAppState.foldersTapCount = 1
+                        }
+                        myAppState.lastFoldersTapTime = now
+
+                        if (myAppState.foldersTapCount == 10) {
+                            myAppState.foldersTapCount = 0
+                            BiometricUtils.authenticate(
+                                activity = context as AppCompatActivity,
+                                onSuccess = { myAppState.revelationModeEnabled = true },
+                                onError = { _, _ -> /* Do nothing */ },
+                                onFailed = { /* Do nothing */ }
+                            )
+                        }
                     },
                     icon = Icons.Filled.PhotoLibrary,
                     contentDescription = stringResource(id = R.string.folders_content_description)

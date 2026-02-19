@@ -50,6 +50,10 @@ fun rememberMyAppState(
 class MyAppState(
     private val context: Context
 ) {
+    var revelationModeEnabled by mutableStateOf(false)
+    var foldersTapCount by mutableIntStateOf(0)
+    var lastFoldersTapTime by mutableStateOf(0L)
+
     var selectedFontFamily by mutableStateOf(SettingsRepository.getFontFamily(context))
     var selectedZoomType by mutableStateOf(SettingsRepository.getZoomType(context))
     var selectedBlurType by mutableStateOf(SettingsRepository.getBlurType(context))

@@ -340,11 +340,12 @@ fun MyApp(myAppState: MyAppState, initialUri: Uri? = null, screenWidth: Int, scr
                 }
             }
         }
-        LaunchedEffect(myAppState.hasPermissions, myAppState.sortType, myAppState.sortAscending, myAppState.selectedDate, myAppState.hiddenFolders, myAppState.refreshTrigger) {
+        LaunchedEffect(myAppState.hasPermissions, myAppState.sortType, myAppState.sortAscending, myAppState.selectedDate, myAppState.hiddenFolders, myAppState.refreshTrigger, myAppState.revelationModeEnabled) {
             if (myAppState.hasPermissions) {
+                val hiddenFolders = if (myAppState.revelationModeEnabled) emptySet() else myAppState.hiddenFolders
                 myAppState.allFolders = withContext(Dispatchers.IO) { loadMediaFolders(context, myAppState.sortType, myAppState.sortAscending, myAppState.selectedDate) }
                 myAppState.trashedItems = withContext(Dispatchers.IO) { loadTrashedMediaItems(context, myAppState.sortType, myAppState.sortAscending) }
-                myAppState.allMedia = withContext(Dispatchers.IO) { loadAllMedia(context, myAppState.sortType, myAppState.sortAscending, myAppState.hiddenFolders, myAppState.selectedDate) }
+                myAppState.allMedia = withContext(Dispatchers.IO) { loadAllMedia(context, myAppState.sortType, myAppState.sortAscending, hiddenFolders, myAppState.selectedDate) }
             }
         }
         LaunchedEffect(myAppState.allFolders) {
@@ -360,9 +361,10 @@ fun MyApp(myAppState: MyAppState, initialUri: Uri? = null, screenWidth: Int, scr
                 }
             }
         }
-        LaunchedEffect(myAppState.hasPermissions, myAppState.sortType, myAppState.sortAscending, myAppState.selectedDate, favorites.size, myAppState.refreshTrigger, myAppState.hiddenFolders) {
+        LaunchedEffect(myAppState.hasPermissions, myAppState.sortType, myAppState.sortAscending, myAppState.selectedDate, favorites.size, myAppState.refreshTrigger, myAppState.hiddenFolders, myAppState.revelationModeEnabled) {
             if (myAppState.hasPermissions) {
-                myAppState.favoriteItems = withContext(Dispatchers.IO) { loadFavoriteMediaItems(context, favorites.toSet(), myAppState.sortType, myAppState.sortAscending, myAppState.hiddenFolders, myAppState.selectedDate) }
+                val hiddenFolders = if (myAppState.revelationModeEnabled) emptySet() else myAppState.hiddenFolders
+                myAppState.favoriteItems = withContext(Dispatchers.IO) { loadFavoriteMediaItems(context, favorites.toSet(), myAppState.sortType, myAppState.sortAscending, hiddenFolders, myAppState.selectedDate) }
             }
         }
         DisposableEffect(Unit) {

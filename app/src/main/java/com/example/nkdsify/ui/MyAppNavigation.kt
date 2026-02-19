@@ -69,10 +69,13 @@ fun MyAppNavigation(
         }
     }
 
-    val visibleFolders by remember(myAppState.allFolders, myAppState.hiddenFolders, myAppState.searchQuery, myAppState.isSearchActive, myAppState.tags) {
+    val visibleFolders by remember(myAppState.allFolders, myAppState.hiddenFolders, myAppState.searchQuery, myAppState.isSearchActive, myAppState.tags, myAppState.revelationModeEnabled) {
         derivedStateOf {
-            val base = myAppState.allFolders
-                .filterNot { myAppState.hiddenFolders.contains(it.id.toString()) }
+            val base = if (myAppState.revelationModeEnabled) {
+                myAppState.allFolders
+            } else {
+                myAppState.allFolders.filterNot { myAppState.hiddenFolders.contains(it.id.toString()) }
+            }
 
             if (myAppState.isSearchActive && myAppState.searchQuery.isNotEmpty()) {
                 val parsed = parseQueryString(myAppState.searchQuery)
