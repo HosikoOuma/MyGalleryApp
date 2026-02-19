@@ -55,7 +55,6 @@ fun MyAppNavigation(
     val onMoveTag = myAppState.onMoveTag ?: { _, _ -> }
     val onAddNewTag = myAppState.onAddNewTag ?: {}
     val onFontFamilyChange = myAppState.onFontFamilyChange ?: {}
-    val onFabActionChange = myAppState.onFabActionChange ?: {}
 
     val sortComparator by remember(myAppState.sortType, myAppState.sortAscending) {
         derivedStateOf {
@@ -230,8 +229,7 @@ fun MyAppNavigation(
                 myAppState = myAppState,
                 coroutineScope = coroutineScope,
                 context = context,
-                onFontFamilyChange = onFontFamilyChange,
-                onFabActionChange = onFabActionChange
+                onFontFamilyChange = onFontFamilyChange
             )
 
             is Screen.TagManagement -> TagManagementScreenImpl(

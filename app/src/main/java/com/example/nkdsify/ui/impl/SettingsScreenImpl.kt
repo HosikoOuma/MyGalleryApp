@@ -26,8 +26,7 @@ fun SettingsScreenImpl(
     myAppState: MyAppState,
     coroutineScope: CoroutineScope,
     context: android.content.Context,
-    onFontFamilyChange: (com.example.nkdsify.data.AppFontFamily) -> Unit,
-    onFabActionChange: (com.example.nkdsify.data.FabAction) -> Unit
+    onFontFamilyChange: (com.example.nkdsify.data.AppFontFamily) -> Unit
 ) {
     val settingsState = SettingsState(
         isBlurEnabled = myAppState.isBlurEnabled,
@@ -49,7 +48,6 @@ fun SettingsScreenImpl(
         autoDeleteTrashDays = myAppState.autoDeleteTrashDays,
         selectedLanguage = myAppState.selectedLanguage,
         currentVersion = myAppState.currentVersion,
-        selectedFabAction = myAppState.selectedFabAction,
         selectedFontFamily = myAppState.selectedFontFamily,
         isKeepControlsVisible = myAppState.isKeepControlsVisible,
         viewerControlsPosition = myAppState.viewerControlsPosition
@@ -161,7 +159,6 @@ fun SettingsScreenImpl(
         },
         onAboutClick = { myAppState.currentScreen = Screen.About },
         onFontFamilyChange = onFontFamilyChange,
-        onFabActionChange = onFabActionChange,
         onKeepControlsVisibleChange = {
             myAppState.isKeepControlsVisible = it
             SettingsRepository.setKeepControlsVisible(context, it)

@@ -111,14 +111,6 @@ fun SettingsScreen(
                     vibrate = vibrate
                 )
                 SettingsDropdown(
-                    title = stringResource(id = R.string.fab_action_title),
-                    selectedValue = state.selectedFabAction,
-                    items = com.example.nkdsify.data.FabAction.entries,
-                    getItemName = { it.getDisplayName() },
-                    onItemSelected = actions.onFabActionChange,
-                    vibrate = vibrate
-                )
-                SettingsDropdown(
                     title = stringResource(id = R.string.settings_item_font_family),
                     selectedValue = state.selectedFontFamily,
                     items = com.example.nkdsify.data.AppFontFamily.entries,

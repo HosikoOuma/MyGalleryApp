@@ -21,7 +21,6 @@ import androidx.compose.ui.platform.SoftwareKeyboardController
 import androidx.core.content.ContextCompat
 import coil.ImageLoader
 import com.example.nkdsify.data.AppFontFamily
-import com.example.nkdsify.data.FabAction
 import com.example.nkdsify.data.MediaTypeFilter
 import com.example.nkdsify.data.MediaFolder
 import com.example.nkdsify.data.MediaItem
@@ -60,7 +59,6 @@ class MyAppState(
     var isShowFileCountEnabled by mutableStateOf(SettingsRepository.isShowFileCountEnabled(context))
     var isShuffleButtonVisible by mutableStateOf(SettingsRepository.isShuffleButtonVisible(context))
     var selectedLanguage by mutableStateOf(SettingsRepository.getLanguage(context))
-    var selectedFabAction by mutableStateOf(SettingsRepository.getFabAction(context))
     var viewerControlsPosition by mutableStateOf(SettingsRepository.getViewerControlsPosition(context))
 
     // Properties moved from MainActivity
@@ -115,7 +113,6 @@ class MyAppState(
     var onAddNewTag: ((String) -> Unit)? = null
     var onMoveTag: ((Int, Int) -> Unit)? = null
     var onFontFamilyChange: ((AppFontFamily) -> Unit)? = null
-    var onFabActionChange: ((FabAction) -> Unit)? = null
 
     var showUpdateDialog by mutableStateOf(false)
     var latestVersion by mutableStateOf<String?>(null)

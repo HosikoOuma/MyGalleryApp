@@ -2,7 +2,6 @@ package com.example.nkdsify.ui.screens
 
 import com.example.nkdsify.data.AppFontFamily
 import com.example.nkdsify.data.BlurType
-import com.example.nkdsify.data.FabAction
 import com.example.nkdsify.data.Language
 import com.example.nkdsify.data.Theme
 import com.example.nkdsify.data.ZoomType
@@ -28,7 +27,6 @@ data class SettingsState(
     val autoDeleteTrashDays: Int,
     val selectedLanguage: Language,
     val currentVersion: String,
-    val selectedFabAction: FabAction,
     val selectedFontFamily: AppFontFamily,
     val isKeepControlsVisible: Boolean,
     val viewerControlsPosition: ViewerControlsPosition
@@ -59,7 +57,6 @@ data class SettingsActions(
     val onAutoDeleteTrashDaysChange: (Int) -> Unit,
     val onLanguageChange: (Language) -> Unit,
     val onCheckForUpdates: () -> Unit,
-    val onFabActionChange: (FabAction) -> Unit,
     val onViewHistoryClick: () -> Unit,
     val onAboutClick: () -> Unit,
     val onFontFamilyChange: (AppFontFamily) -> Unit,

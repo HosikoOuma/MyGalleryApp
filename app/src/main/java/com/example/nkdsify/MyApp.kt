@@ -200,10 +200,6 @@ fun MyApp(myAppState: MyAppState, initialUri: Uri? = null, screenWidth: Int, scr
             myAppState.selectedFontFamily = it
             SettingsRepository.setFontFamily(context, it)
         }
-        myAppState.onFabActionChange = {
-            myAppState.selectedFabAction = it
-            SettingsRepository.setFabAction(context, it)
-        }
 
         val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { permissions ->
             myAppState.hasPermissions = permissions.values.all { it }

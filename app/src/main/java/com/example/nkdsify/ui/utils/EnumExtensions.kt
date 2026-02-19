@@ -5,7 +5,6 @@ import androidx.compose.ui.res.stringResource
 import com.example.nkdsify.R
 import com.example.nkdsify.data.AppFontFamily
 import com.example.nkdsify.data.BlurType
-import com.example.nkdsify.data.FabAction
 import com.example.nkdsify.data.Language
 import com.example.nkdsify.data.Theme
 import com.example.nkdsify.data.ZoomType
@@ -18,14 +17,6 @@ fun Theme.getDisplayName(): String {
         Theme.LIGHT -> stringResource(id = R.string.theme_light)
         Theme.DARK -> stringResource(id = R.string.theme_dark)
         Theme.AMOLED -> stringResource(id = R.string.theme_amoled)
-    }
-}
-
-@Composable
-fun FabAction.getDisplayName(): String {
-    return when (this) {
-        FabAction.SHUFFLE -> stringResource(id = R.string.fab_action_shuffle)
-        FabAction.CAMERA -> stringResource(id = R.string.fab_action_camera)
     }
 }
 
