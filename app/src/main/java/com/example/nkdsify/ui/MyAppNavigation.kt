@@ -6,8 +6,10 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
@@ -45,6 +47,7 @@ fun MyAppNavigation(
     val allMediaGridState: LazyGridState = myAppState.allMediaGridState ?: rememberLazyGridState()
     val secretGridState: LazyGridState = myAppState.secretGridState ?: rememberLazyGridState()
     val viewHistoryGridState: LazyGridState = myAppState.viewHistoryGridState ?: rememberLazyGridState()
+    val hiddenFoldersListState: LazyListState = myAppState.hiddenFoldersListState ?: rememberLazyListState()
     val filteredViewHistory: ImmutableList<MediaItem> = myAppState.filteredViewHistory
     val favorites: MutableList<String> = myAppState.favoritesList
     val keyboardController: SoftwareKeyboardController? = myAppState.keyboardController
@@ -161,8 +164,9 @@ fun MyAppNavigation(
             is Screen.Favorites -> if (screen.openAlbumName == null) 2 else 12
             is Screen.Trash -> 3
             is Screen.Settings -> 4
-            is Screen.SecretStorage -> 5
-            is Screen.ViewHistory -> 6
+            is Screen.HiddenFolders -> 5
+            is Screen.SecretStorage -> 6
+            is Screen.ViewHistory -> 7
             is Screen.FolderContent -> 10
             is Screen.TagManagement -> 14
             is Screen.MediaByTag -> 15
@@ -192,6 +196,11 @@ fun MyAppNavigation(
 
             is Screen.About -> AboutScreen()
             is Screen.Help -> HelpScreen()
+
+            is Screen.HiddenFolders -> HiddenFoldersScreen(
+                myAppState = myAppState,
+                listState = hiddenFoldersListState
+            )
 
             is Screen.FolderContent -> FolderContentScreen(
                 screen = screen,

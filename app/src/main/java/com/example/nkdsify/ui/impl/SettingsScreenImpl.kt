@@ -92,7 +92,7 @@ fun SettingsScreenImpl(
             SettingsRepository.setTheme(context, theme)
         },
         onManageHiddenFoldersClick = {
-            myAppState.showHiddenFoldersDialog = true
+            myAppState.currentScreen = Screen.HiddenFolders
         },
         onZoomTypeChange = {
             myAppState.selectedZoomType = it

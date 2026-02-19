@@ -46,6 +46,7 @@ fun MyAppBackHandler(myAppState: MyAppState) {
         is Screen.TagManagement,
         is Screen.SecretStorage,
         is Screen.ViewHistory,
+        is Screen.HiddenFolders,
         is Screen.Help,
         is Screen.About -> {
             BackHandler(enabled = canNavigateBack) {

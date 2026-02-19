@@ -38,6 +38,7 @@ import com.example.nkdsify.ui.utils.getMediaDetails
 import com.example.nkdsify.ui.utils.performVibration
 import kotlinx.coroutines.launch
 import kotlinx.collections.immutable.toImmutableList
+import com.example.nkdsify.ui.utils.SettingsRepository
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -311,13 +312,13 @@ fun TopBar(
                 colors = appBarColors,
                 navigationIcon = {
                     val currentScreen = myAppState.currentScreen
-                    val showBack = currentScreen is Screen.FolderContent || (currentScreen is Screen.Favorites && currentScreen.openAlbumName != null) || currentScreen is Screen.ViewHistory || currentScreen is Screen.TagManagement || currentScreen is Screen.SecretStorage || currentScreen is Screen.About || currentScreen is Screen.Help || currentScreen is Screen.MediaByTag
+                    val showBack = currentScreen is Screen.FolderContent || (currentScreen is Screen.Favorites && currentScreen.openAlbumName != null) || currentScreen is Screen.ViewHistory || currentScreen is Screen.TagManagement || currentScreen is Screen.SecretStorage || currentScreen is Screen.About || currentScreen is Screen.Help || currentScreen is Screen.MediaByTag || currentScreen is Screen.HiddenFolders
                     if (showBack) {
                         IconButton(onClick = {
                             if (myAppState.isVibrationEnabled) performVibration(context)
                             when (currentScreen) {
                                 is Screen.FolderContent, is Screen.ViewHistory -> myAppState.currentScreen = Screen.Folders
-                                is Screen.TagManagement, is Screen.SecretStorage, is Screen.About, is Screen.Help -> myAppState.currentScreen = Screen.Settings
+                                is Screen.TagManagement, is Screen.SecretStorage, is Screen.About, is Screen.Help, is Screen.HiddenFolders -> myAppState.currentScreen = Screen.Settings
                                 is Screen.MediaByTag -> myAppState.currentScreen = Screen.TagManagement
                                 is Screen.Favorites -> if (currentScreen.openAlbumName != null) myAppState.currentScreen = Screen.Favorites() else myAppState.currentScreen = Screen.Folders
                                 else -> {}
@@ -327,41 +328,56 @@ fun TopBar(
                 },
                 actions = {
                     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(end = 8.dp)) {
-                        if (currentScreen is Screen.AllMedia) {
-                            TopBarBubbleAction(icon = if (myAppState.mediaTypeFilter == MediaTypeFilter.PHOTOS) Icons.Default.PhotoLibrary else if (myAppState.mediaTypeFilter == MediaTypeFilter.VIDEOS) Icons.Default.VideoLibrary else Icons.Default.FilterList, 
-                                onClick = { 
-                                    myAppState.mediaTypeFilter = when (myAppState.mediaTypeFilter) { 
-                                        MediaTypeFilter.ALL -> MediaTypeFilter.PHOTOS
-                                        MediaTypeFilter.PHOTOS -> MediaTypeFilter.VIDEOS
-                                        else -> MediaTypeFilter.ALL 
-                                    } 
-                                })
-                        }
-                        if (currentScreen is Screen.TagManagement) TopBarBubbleAction(icon = Icons.Default.Add, onClick = { myAppState.showAddDialog = true })
-                        
-                        val canSearch = currentScreen !is Screen.Settings && currentScreen !is Screen.TagManagement && currentScreen !is Screen.SecretStorage && currentScreen !is Screen.About && currentScreen !is Screen.Help && currentScreen !is Screen.Trash
-                        if (canSearch) {
-                            TopBarBubbleAction(icon = Icons.Filled.Search, onClick = { myAppState.isSearchActive = true })
-                            if (currentScreen !is Screen.ViewHistory) {
-                                if (myAppState.selectedDate != null) TopBarBubbleAction(icon = Icons.Default.EventBusy, onClick = { myAppState.selectedDate = null })
-                                TopBarBubbleAction(icon = Icons.Filled.DateRange, onClick = { myAppState.showDatePicker = true })
+                        if (currentScreen is Screen.HiddenFolders) {
+                            IconButton(onClick = { 
+                                val allFolderIds = myAppState.allFolders.map { it.id.toString() }.toSet()
+                                val currentlyHidden = myAppState.hiddenFolders
+                                val newHiddenFolders = allFolderIds - currentlyHidden
+                                myAppState.hiddenFolders = newHiddenFolders
+                                SettingsRepository.setHiddenFolders(context, newHiddenFolders)
+                            }) {
+                                Icon(Icons.Default.PublishedWithChanges, contentDescription = "Invert Selection")
                             }
-                        }
-                        if (currentScreen is Screen.ViewHistory) TopBarBubbleAction(icon = Icons.Default.Delete, onClick = { myAppState.showClearHistoryDialog = true })
-                        else if (canSearch) {
-                            var menuExpanded by remember { mutableStateOf(false) }
-                            Box {
-                                TopBarBubbleAction(icon = Icons.AutoMirrored.Filled.Sort, onClick = { menuExpanded = true })
-                                DropdownMenu(expanded = menuExpanded, onDismissRequest = { menuExpanded = false }) {
-                                    DropdownMenuItem(text = { Text(stringResource(id = R.string.sort_by_date_modified)) }, onClick = { myAppState.sortType = SortType.DATE_MODIFIED; menuExpanded = false }, leadingIcon = { Icon(Icons.Default.DateRange, null) })
-                                    DropdownMenuItem(text = { Text(stringResource(id = R.string.sort_by_date_added)) }, onClick = { myAppState.sortType = SortType.DATE_ADDED; menuExpanded = false }, leadingIcon = { Icon(Icons.Default.AddCircleOutline, null) })
-                                    DropdownMenuItem(text = { Text(stringResource(id = R.string.sort_by_alphabet)) }, onClick = { myAppState.sortType = SortType.ALPHABET; menuExpanded = false }, leadingIcon = { Icon(Icons.Default.SortByAlpha, null) })
-                                    DropdownMenuItem(text = { Text(stringResource(id = R.string.sort_by_size)) }, onClick = { myAppState.sortType = SortType.SIZE; menuExpanded = false }, leadingIcon = { Icon(Icons.Default.Storage, null) })
-                                    DropdownMenuItem(text = { Text(stringResource(id = R.string.reverse_sort)) }, onClick = { myAppState.sortAscending = !myAppState.sortAscending; menuExpanded = false }, leadingIcon = { Icon(Icons.Default.SwapVert, null) })
+                            IconButton(onClick = { myAppState.currentScreen = Screen.Settings }) {
+                                Icon(Icons.Default.Done, contentDescription = "Done")
+                            }
+                        } else {
+                            if (currentScreen is Screen.AllMedia) {
+                                TopBarBubbleAction(icon = if (myAppState.mediaTypeFilter == MediaTypeFilter.PHOTOS) Icons.Default.PhotoLibrary else if (myAppState.mediaTypeFilter == MediaTypeFilter.VIDEOS) Icons.Default.VideoLibrary else Icons.Default.FilterList, 
+                                    onClick = { 
+                                        myAppState.mediaTypeFilter = when (myAppState.mediaTypeFilter) { 
+                                            MediaTypeFilter.ALL -> MediaTypeFilter.PHOTOS
+                                            MediaTypeFilter.PHOTOS -> MediaTypeFilter.VIDEOS
+                                            else -> MediaTypeFilter.ALL 
+                                        } 
+                                    })
+                            }
+                            if (currentScreen is Screen.TagManagement) TopBarBubbleAction(icon = Icons.Default.Add, onClick = { myAppState.showAddDialog = true })
+                            
+                            val canSearch = currentScreen !is Screen.Settings && currentScreen !is Screen.TagManagement && currentScreen !is Screen.SecretStorage && currentScreen !is Screen.About && currentScreen !is Screen.Help && currentScreen !is Screen.Trash && currentScreen !is Screen.HiddenFolders
+                            if (canSearch) {
+                                TopBarBubbleAction(icon = Icons.Filled.Search, onClick = { myAppState.isSearchActive = true })
+                                if (currentScreen !is Screen.ViewHistory) {
+                                    if (myAppState.selectedDate != null) TopBarBubbleAction(icon = Icons.Default.EventBusy, onClick = { myAppState.selectedDate = null })
+                                    TopBarBubbleAction(icon = Icons.Filled.DateRange, onClick = { myAppState.showDatePicker = true })
                                 }
                             }
+                            if (currentScreen is Screen.ViewHistory) TopBarBubbleAction(icon = Icons.Default.Delete, onClick = { myAppState.showClearHistoryDialog = true })
+                            else if (canSearch) {
+                                var menuExpanded by remember { mutableStateOf(false) }
+                                Box {
+                                    TopBarBubbleAction(icon = Icons.AutoMirrored.Filled.Sort, onClick = { menuExpanded = true })
+                                    DropdownMenu(expanded = menuExpanded, onDismissRequest = { menuExpanded = false }) {
+                                        DropdownMenuItem(text = { Text(stringResource(id = R.string.sort_by_date_modified)) }, onClick = { myAppState.sortType = SortType.DATE_MODIFIED; menuExpanded = false }, leadingIcon = { Icon(Icons.Default.DateRange, null) })
+                                        DropdownMenuItem(text = { Text(stringResource(id = R.string.sort_by_date_added)) }, onClick = { myAppState.sortType = SortType.DATE_ADDED; menuExpanded = false }, leadingIcon = { Icon(Icons.Default.AddCircleOutline, null) })
+                                        DropdownMenuItem(text = { Text(stringResource(id = R.string.sort_by_alphabet)) }, onClick = { myAppState.sortType = SortType.ALPHABET; menuExpanded = false }, leadingIcon = { Icon(Icons.Default.SortByAlpha, null) })
+                                        DropdownMenuItem(text = { Text(stringResource(id = R.string.sort_by_size)) }, onClick = { myAppState.sortType = SortType.SIZE; menuExpanded = false }, leadingIcon = { Icon(Icons.Default.Storage, null) })
+                                        DropdownMenuItem(text = { Text(stringResource(id = R.string.reverse_sort)) }, onClick = { myAppState.sortAscending = !myAppState.sortAscending; menuExpanded = false }, leadingIcon = { Icon(Icons.Default.SwapVert, null) })
+                                    }
+                                }
+                            }
+                            if (currentScreen is Screen.FolderContent || (currentScreen is Screen.Favorites && currentScreen.openAlbumName != null)) TopBarBubbleAction(icon = Icons.Filled.Info, onClick = { myAppState.showAlbumDetailsDialog = true })
                         }
-                        if (currentScreen is Screen.FolderContent || (currentScreen is Screen.Favorites && currentScreen.openAlbumName != null)) TopBarBubbleAction(icon = Icons.Filled.Info, onClick = { myAppState.showAlbumDetailsDialog = true })
                     }
                 },
                 scrollBehavior = scrollBehavior

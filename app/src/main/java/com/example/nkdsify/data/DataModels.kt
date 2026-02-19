@@ -21,6 +21,7 @@ sealed class Screen {
     data object ViewHistory : Screen()
     data object About : Screen()
     data object Help : Screen()
+    data object HiddenFolders : Screen()
 }
 
 enum class AppFontFamily {

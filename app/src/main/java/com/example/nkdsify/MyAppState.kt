@@ -7,6 +7,7 @@ import android.net.Uri
 import android.os.Build
 import android.os.Environment
 import android.widget.Toast
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -98,6 +99,7 @@ class MyAppState(
     var allMediaGridState: LazyGridState? = null
     var secretGridState: LazyGridState? = null
     var viewHistoryGridState: LazyGridState? = null
+    var hiddenFoldersListState: LazyListState? = null
 
     // New: favorites list (UI stateful list of favorite paths)
     val favoritesList = mutableStateListOf<String>()
@@ -146,7 +148,6 @@ class MyAppState(
     var showConfirmTrashDialog by mutableStateOf(false)
     var showConfirmRestoreDialog by mutableStateOf(false)
     var showEasterEggDialog by mutableStateOf(false)
-    var showHiddenFoldersDialog by mutableStateOf(false)
     var showBackupAndRestoreDialog by mutableStateOf(false)
     var showFolderSelectionDialog by mutableStateOf(false)
     var showRenameDialog by mutableStateOf<Uri?>(null)

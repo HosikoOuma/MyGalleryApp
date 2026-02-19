@@ -70,6 +70,7 @@ import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import com.example.nkdsify.R
+import coil.size.Size
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -152,6 +153,8 @@ fun MediaGrid(
                             AsyncImage(
                                 model = ImageRequest.Builder(context)
                                     .data(item.uri)
+                                    .size(Size(150, 150)) // Загружаем изображение меньшего размера
+                                    .crossfade(true)
                                     .bitmapConfig(Bitmap.Config.RGB_565)
                                     .allowHardware(false)
                                     .build(),

@@ -10,7 +10,6 @@ import com.example.nkdsify.MyAppState
 import com.example.nkdsify.R
 import com.example.nkdsify.data.MediaFolder
 import com.example.nkdsify.ui.components.FolderSelectionDialog
-import com.example.nkdsify.ui.components.HiddenFoldersDialog
 import com.example.nkdsify.ui.utils.BiometricUtils
 import com.example.nkdsify.ui.utils.ConfirmMoveToSecretDialog
 import com.example.nkdsify.ui.utils.SecretRepository
@@ -65,23 +64,6 @@ fun FolderDialogs(myAppState: MyAppState) {
                     myAppState.currentFileOperation = null
                     myAppState.isProcessing = false
                 }
-            }
-        )
-    }
-
-    if (myAppState.showHiddenFoldersDialog) {
-        HiddenFoldersDialog(
-            allFolders = myAppState.allFolders,
-            hiddenFolders = myAppState.hiddenFolders,
-            onDismiss = { myAppState.showHiddenFoldersDialog = false },
-            onFolderHiddenChange = { folderId, isHidden ->
-                val newHiddenFolders = if (isHidden) {
-                    myAppState.hiddenFolders + folderId
-                } else {
-                    myAppState.hiddenFolders - folderId
-                }
-                myAppState.hiddenFolders = newHiddenFolders
-                SettingsRepository.setHiddenFolders(context, newHiddenFolders)
             }
         )
     }

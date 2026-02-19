@@ -42,6 +42,7 @@ import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshContainer
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
@@ -128,6 +129,7 @@ fun MyApp(myAppState: MyAppState, initialUri: Uri? = null, screenWidth: Int, scr
         val allMediaGridState = rememberLazyGridState()
         val secretGridState = rememberLazyGridState()
         val viewHistoryGridState = rememberLazyGridState()
+        val hiddenFoldersListState = rememberLazyListState()
         
         val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
 
@@ -141,6 +143,7 @@ fun MyApp(myAppState: MyAppState, initialUri: Uri? = null, screenWidth: Int, scr
                     is Screen.AllMedia -> allMediaGridState
                     is Screen.SecretStorage -> secretGridState
                     is Screen.ViewHistory -> viewHistoryGridState
+                    is Screen.HiddenFolders -> hiddenFoldersListState
                     else -> null
                 }
                 val isScrolling = currentGridState?.isScrollInProgress ?: false
@@ -189,6 +192,7 @@ fun MyApp(myAppState: MyAppState, initialUri: Uri? = null, screenWidth: Int, scr
         myAppState.allMediaGridState = allMediaGridState
         myAppState.secretGridState = secretGridState
         myAppState.viewHistoryGridState = viewHistoryGridState
+        myAppState.hiddenFoldersListState = hiddenFoldersListState
 
         myAppState.onAddNewTag = onAddNewTag
         myAppState.onMoveTag = onMoveTag
@@ -400,6 +404,7 @@ fun MyApp(myAppState: MyAppState, initialUri: Uri? = null, screenWidth: Int, scr
             is Screen.ViewHistory -> stringResource(id = R.string.view_history_title)
             is Screen.About -> stringResource(id = R.string.about_button)
             is Screen.Help -> stringResource(id = R.string.help_button)
+            is Screen.HiddenFolders -> stringResource(id = R.string.manage_hidden_folders_button)
         }
 
         OthersDialogs(myAppState = myAppState)

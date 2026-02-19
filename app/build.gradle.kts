@@ -12,8 +12,8 @@ android {
         applicationId = "com.nkds.hosikoouma.nekolery"
         minSdk = 30
         targetSdk = 36
-        versionCode = 39
-        versionName = "2.0.19"
+        versionCode = 41
+        versionName = "2.0.21"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
