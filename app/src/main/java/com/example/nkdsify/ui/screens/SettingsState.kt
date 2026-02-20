@@ -29,7 +29,10 @@ data class SettingsState(
     val currentVersion: String,
     val selectedFontFamily: AppFontFamily,
     val isKeepControlsVisible: Boolean,
-    val viewerControlsPosition: ViewerControlsPosition
+    val viewerControlsPosition: ViewerControlsPosition,
+    val isVideoPreviewSlideshowEnabled: Boolean,
+    val videoSlideshowIntervalMs: Long,
+    val useLowQualityVideoPreview: Boolean
 )
 
 data class SettingsActions(
@@ -62,5 +65,8 @@ data class SettingsActions(
     val onFontFamilyChange: (AppFontFamily) -> Unit,
     val onKeepControlsVisibleChange: (Boolean) -> Unit,
     val onHelpClick: () -> Unit,
-    val onViewerControlsPositionChange: (ViewerControlsPosition) -> Unit
+    val onViewerControlsPositionChange: (ViewerControlsPosition) -> Unit,
+    val onVideoPreviewSlideshowChange: (Boolean) -> Unit,
+    val onVideoSlideshowIntervalChange: (Long) -> Unit,
+    val onUseLowQualityVideoPreviewChange: (Boolean) -> Unit
 )

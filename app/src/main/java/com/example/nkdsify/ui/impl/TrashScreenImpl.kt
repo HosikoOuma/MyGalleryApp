@@ -44,7 +44,9 @@ fun TrashScreenImpl(
         onClearSelection = { myAppState.selectedItems.clear() },
         blurType = myAppState.selectedBlurType,
         gridState = gridState,
-        isNavBarVisible = isNavBarVisible, // Передаем состояние
-        blurredUris = myAppState.blurredUris
+        isNavBarVisible = isNavBarVisible,
+        blurredUris = myAppState.blurredUris,
+        isVideoPreviewSlideshowEnabled = myAppState.isVideoPreviewSlideshowEnabled,
+        videoSlideshowIntervalMs = myAppState.videoSlideshowIntervalMs
     )
 }

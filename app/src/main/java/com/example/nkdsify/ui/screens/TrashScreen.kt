@@ -46,8 +46,10 @@ fun TrashScreen(
     onClearSelection: () -> Unit,
     blurType: BlurType,
     gridState: LazyGridState,
-    isNavBarVisible: Boolean, // Добавляем параметр
-    blurredUris: Set<String> = emptySet()
+    isNavBarVisible: Boolean,
+    blurredUris: Set<String> = emptySet(),
+    isVideoPreviewSlideshowEnabled: Boolean = false,
+    videoSlideshowIntervalMs: Long = 800L
 ) {
     if (items.isEmpty()) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -90,7 +92,9 @@ fun TrashScreen(
             onClearSelection = onClearSelection,
             blurType = blurType,
             gridState = gridState,
-            blurredUris = blurredUris
+            blurredUris = blurredUris,
+            isVideoPreviewSlideshowEnabled = isVideoPreviewSlideshowEnabled,
+            videoSlideshowIntervalMs = videoSlideshowIntervalMs
         )
 
         AnimatedVisibility(

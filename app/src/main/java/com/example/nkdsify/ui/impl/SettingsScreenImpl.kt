@@ -1,15 +1,10 @@
 package com.example.nkdsify.ui.impl
 
-import android.content.Context
-import android.media.AudioManager
-import android.net.Uri
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.runtime.Composable
 import com.example.nkdsify.MyAppState
 import com.example.nkdsify.R
 import com.example.nkdsify.data.Language
-import com.example.nkdsify.data.MediaItem
-import com.example.nkdsify.data.MediaViewerState
 import com.example.nkdsify.data.Screen
 import com.example.nkdsify.ui.screens.SettingsActions
 import com.example.nkdsify.ui.screens.SettingsScreen
@@ -17,7 +12,6 @@ import com.example.nkdsify.ui.screens.SettingsState
 import com.example.nkdsify.ui.utils.BiometricUtils
 import com.example.nkdsify.ui.utils.SettingsRepository
 import com.example.nkdsify.ui.utils.performVibration
-import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
@@ -50,7 +44,10 @@ fun SettingsScreenImpl(
         currentVersion = myAppState.currentVersion,
         selectedFontFamily = myAppState.selectedFontFamily,
         isKeepControlsVisible = myAppState.isKeepControlsVisible,
-        viewerControlsPosition = myAppState.viewerControlsPosition
+        viewerControlsPosition = myAppState.viewerControlsPosition,
+        isVideoPreviewSlideshowEnabled = myAppState.isVideoPreviewSlideshowEnabled,
+        videoSlideshowIntervalMs = myAppState.videoSlideshowIntervalMs,
+        useLowQualityVideoPreview = myAppState.useLowQualityVideoPreview
     )
 
     val settingsActions = SettingsActions(
@@ -173,6 +170,18 @@ fun SettingsScreenImpl(
         onViewerControlsPositionChange = {
             myAppState.viewerControlsPosition = it
             SettingsRepository.setViewerControlsPosition(context, it)
+        },
+        onVideoPreviewSlideshowChange = {
+            myAppState.isVideoPreviewSlideshowEnabled = it
+            SettingsRepository.setVideoPreviewSlideshow(context, it)
+        },
+        onVideoSlideshowIntervalChange = {
+            myAppState.videoSlideshowIntervalMs = it
+            SettingsRepository.setVideoSlideshowInterval(context, it)
+        },
+        onUseLowQualityVideoPreviewChange = {
+            myAppState.useLowQualityVideoPreview = it
+            SettingsRepository.setUseLowQualityVideoPreview(context, it)
         }
     )
 

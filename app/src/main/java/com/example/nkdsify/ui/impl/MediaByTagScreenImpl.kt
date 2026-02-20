@@ -43,6 +43,8 @@ fun MediaByTagScreenImpl(
         onClearSelection = { myAppState.selectedItems.clear() },
         blurType = myAppState.selectedBlurType,
         gridState = gridState,
-        blurredUris = myAppState.blurredUris
+        blurredUris = myAppState.blurredUris,
+        isVideoPreviewSlideshowEnabled = myAppState.isVideoPreviewSlideshowEnabled,
+        videoSlideshowIntervalMs = myAppState.videoSlideshowIntervalMs
     )
 }

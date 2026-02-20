@@ -1,12 +1,8 @@
 package com.example.nkdsify.ui.screens
 
-import android.content.Context
 import android.content.Intent
-import android.media.AudioManager
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -186,6 +182,35 @@ fun SettingsScreen(
                 SettingsSwitch(title = stringResource(id = R.string.loop_video_label), isChecked = state.isLoopVideoEnabled, onCheckedChange = actions.onLoopVideoEnabledChange, vibrate = vibrate)
                 SettingsSwitch(title = stringResource(id = R.string.keep_controls_visible_label), isChecked = state.isKeepControlsVisible, onCheckedChange = actions.onKeepControlsVisibleChange, vibrate = vibrate)
                 SettingsSwitch(title = stringResource(id = R.string.swipe_to_dismiss_label), isChecked = state.isSwipeToDismissEnabled, onCheckedChange = actions.onSwipeToDismissEnabledChange, vibrate = vibrate)
+                // Видео слайд-шоу настройки
+                SettingsSwitch(
+                    title = stringResource(id = R.string.video_preview_slideshow_label),
+                    isChecked = state.isVideoPreviewSlideshowEnabled,
+                    onCheckedChange = actions.onVideoPreviewSlideshowChange,
+                    vibrate = vibrate
+                )
+                AnimatedVisibility(visible = state.isVideoPreviewSlideshowEnabled) {
+                    Column {
+                        SettingsRow(title = { Text(text = stringResource(id = R.string.video_slideshow_interval_label)) }) {
+                            OutlinedTextField(
+                                value = (state.videoSlideshowIntervalMs / 100).toString(),
+                                onValueChange = { value ->
+                                    val numValue = value.filter { it.isDigit() }.toIntOrNull() ?: 8
+                                    actions.onVideoSlideshowIntervalChange((numValue * 100).toLong())
+                                },
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                modifier = Modifier.width(80.dp),
+                                suffix = { Text("x100ms") }
+                            )
+                        }
+                        SettingsSwitch(
+                            title = stringResource(id = R.string.use_low_quality_video_preview_label),
+                            isChecked = state.useLowQualityVideoPreview,
+                            onCheckedChange = actions.onUseLowQualityVideoPreviewChange,
+                            vibrate = vibrate
+                        )
+                    }
+                }
                 SettingsDropdown(
                     title = stringResource(id = R.string.zoom_gesture_label),
                     selectedValue = state.selectedZoomType,
@@ -194,7 +219,7 @@ fun SettingsScreen(
                     onItemSelected = actions.onZoomTypeChange,
                     vibrate = vibrate
                 )
-                // Добавляем новый пункт в раздел Media
+                // ...existing code...
                 SettingsDropdown(
                     title = stringResource(id = R.string.viewer_controls_position_label),
                     selectedValue = state.viewerControlsPosition,

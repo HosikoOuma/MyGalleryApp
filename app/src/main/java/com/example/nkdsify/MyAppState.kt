@@ -73,6 +73,9 @@ class MyAppState(
     var useLargeFab by mutableStateOf(SettingsRepository.isUseLargeFab(context))
     var autoDeleteTrashEnabled by mutableStateOf(SettingsRepository.isAutoDeleteTrashEnabled(context))
     var autoDeleteTrashDays by mutableIntStateOf(SettingsRepository.getAutoDeleteTrashDays(context))
+    var isVideoPreviewSlideshowEnabled by mutableStateOf(SettingsRepository.isVideoPreviewSlideshowEnabled(context))
+    var videoSlideshowIntervalMs by mutableStateOf(SettingsRepository.getVideoSlideshowInterval(context))
+    var useLowQualityVideoPreview by mutableStateOf(SettingsRepository.isUseLowQualityVideoPreviewEnabled(context))
 
     var mediaTypeFilter by mutableStateOf(MediaTypeFilter.ALL)
     var selectedTheme by mutableStateOf(SettingsRepository.getTheme(context))

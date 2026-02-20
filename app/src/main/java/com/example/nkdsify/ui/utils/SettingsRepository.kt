@@ -36,6 +36,9 @@ object SettingsRepository {
     private const val KEEP_CONTROLS_VISIBLE_KEY = "keep_controls_visible"
     private const val BLURRED_URIS_KEY = "blurred_uris"
     private const val VIEWER_CONTROLS_POSITION_KEY = "viewer_controls_position"
+    private const val VIDEO_PREVIEW_SLIDESHOW_KEY = "video_preview_slideshow"
+    private const val VIDEO_SLIDESHOW_INTERVAL_KEY = "video_slideshow_interval"
+    private const val USE_LOW_QUALITY_VIDEO_PREVIEW_KEY = "use_low_quality_video_preview"
 
 
     fun setFontFamily(context: Context, fontFamily: AppFontFamily) {context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit().putString("font_family", fontFamily.name).apply()
@@ -349,6 +352,42 @@ object SettingsRepository {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         val positionName = prefs.getString(VIEWER_CONTROLS_POSITION_KEY, ViewerControlsPosition.TOP.name) ?: ViewerControlsPosition.TOP.name
         return ViewerControlsPosition.valueOf(positionName)
+    }
+
+    fun setVideoPreviewSlideshow(context: Context, enabled: Boolean) {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit {
+            putBoolean(VIDEO_PREVIEW_SLIDESHOW_KEY, enabled)
+        }
+    }
+
+    fun isVideoPreviewSlideshowEnabled(context: Context): Boolean {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        return prefs.getBoolean(VIDEO_PREVIEW_SLIDESHOW_KEY, false)
+    }
+
+    fun setVideoSlideshowInterval(context: Context, intervalMs: Long) {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit {
+            putLong(VIDEO_SLIDESHOW_INTERVAL_KEY, intervalMs)
+        }
+    }
+
+    fun getVideoSlideshowInterval(context: Context): Long {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        return prefs.getLong(VIDEO_SLIDESHOW_INTERVAL_KEY, 800L) // 800ms по умолчанию
+    }
+
+    fun setUseLowQualityVideoPreview(context: Context, enabled: Boolean) {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit {
+            putBoolean(USE_LOW_QUALITY_VIDEO_PREVIEW_KEY, enabled)
+        }
+    }
+
+    fun isUseLowQualityVideoPreviewEnabled(context: Context): Boolean {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        return prefs.getBoolean(USE_LOW_QUALITY_VIDEO_PREVIEW_KEY, false)
     }
 
 }

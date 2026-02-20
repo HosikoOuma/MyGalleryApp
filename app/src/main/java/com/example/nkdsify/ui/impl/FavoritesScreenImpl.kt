@@ -54,6 +54,8 @@ fun FavoritesScreenImpl(
         isShowFileCountEnabled = myAppState.isShowFileCountEnabled,
         onClearSelection = { myAppState.selectedItems.clear() },
         blurType = myAppState.selectedBlurType,
-        blurredUris = myAppState.blurredUris
+        blurredUris = myAppState.blurredUris,
+        isVideoPreviewSlideshowEnabled = myAppState.isVideoPreviewSlideshowEnabled,
+        videoSlideshowIntervalMs = myAppState.videoSlideshowIntervalMs
     )
 }

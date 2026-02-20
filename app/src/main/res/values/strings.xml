@@ -404,4 +404,7 @@
     <string name="fab_action_camera_label">Camera</string>
     <string name="editor_processing">Processing...</string>
     <string name="editor_saving_video">Saving Video...</string>
+    <string name="video_preview_slideshow_label">Video Preview Slideshow</string>
+    <string name="video_slideshow_interval_label">Slideshow Speed</string>
+    <string name="use_low_quality_video_preview_label">Use low quality video preview</string>
 </resources>

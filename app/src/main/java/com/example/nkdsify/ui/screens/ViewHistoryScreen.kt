@@ -28,7 +28,9 @@ fun ViewHistoryScreen(
     gridState: LazyGridState,
     isBlurEnabled: Boolean,
     blurType: BlurType,
-    blurredUris: Set<String> = emptySet()
+    blurredUris: Set<String> = emptySet(),
+    isVideoPreviewSlideshowEnabled: Boolean = false,
+    videoSlideshowIntervalMs: Long = 800L
 ) {
     if (items.isEmpty()) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -47,7 +49,9 @@ fun ViewHistoryScreen(
                 gridState = gridState,
                 isBlurEnabled = isBlurEnabled,
                 blurType = blurType,
-                blurredUris = blurredUris
+                blurredUris = blurredUris,
+                isVideoPreviewSlideshowEnabled = isVideoPreviewSlideshowEnabled,
+                videoSlideshowIntervalMs = videoSlideshowIntervalMs
             )
         }
     }

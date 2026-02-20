@@ -86,7 +86,10 @@ fun MediaGrid(
     isBlurEnabled: Boolean = false,
     blurType: BlurType,
     gridState: LazyGridState,
-    blurredUris: Set<String> = emptySet()
+    blurredUris: Set<String> = emptySet(),
+    isVideoPreviewSlideshowEnabled: Boolean = false,
+    videoSlideshowIntervalMs: Long = 800L,
+    useLowQualityVideoPreview: Boolean = false
 ) {
     if (items.isEmpty()) {
         Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -150,12 +153,24 @@ fun MediaGrid(
                                 )
                             }
                         } else {
-                            AsyncImage(
-                                model = ImageRequest.Builder(context)
-                                    .data(item.uri)
-                                    .size(Size(150, 150)) // Загружаем изображение меньшего размера
-                                    .crossfade(true)
-                                    .bitmapConfig(Bitmap.Config.RGB_565)
+                            if (item.isVideo && isVideoPreviewSlideshowEnabled) {
+                                VideoPreviewWithSlideshow(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .then(if (isSelected) Modifier.alpha(0.5f) else Modifier)
+                                        .then(if (effectiveBlur && blurType == BlurType.BLUR) Modifier.blur(20.dp) else Modifier),
+                                    item = item,
+                                    imageLoader = imageLoader,
+                                    intervalMs = videoSlideshowIntervalMs,
+                                    useLowQuality = useLowQualityVideoPreview
+                                )
+                            } else {
+                                AsyncImage(
+                                    model = ImageRequest.Builder(context)
+                                        .data(item.uri)
+                                        .size(Size(150, 150)) // Загружаем изображение меньшего размера
+                                        .crossfade(true)
+                                        .bitmapConfig(Bitmap.Config.RGB_565)
                                     .allowHardware(false)
                                     .build(),
                                 imageLoader = imageLoader,
@@ -165,7 +180,8 @@ fun MediaGrid(
                                     .fillMaxSize()
                                     .then(if (isSelected) Modifier.alpha(0.5f) else Modifier)
                                     .then(if (effectiveBlur && blurType == BlurType.BLUR) Modifier.blur(20.dp) else Modifier)
-                            )
+                                )
+                            }
                         }
                     }
                     if (item.isVideo) {

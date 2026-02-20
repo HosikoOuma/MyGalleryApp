@@ -40,6 +40,8 @@ fun ViewHistoryScreenImpl(
         gridState = gridState,
         blurType = myAppState.selectedBlurType,
         isBlurEnabled = myAppState.isBlurEnabled,
-        blurredUris = myAppState.blurredUris
+        blurredUris = myAppState.blurredUris,
+        isVideoPreviewSlideshowEnabled = myAppState.isVideoPreviewSlideshowEnabled,
+        videoSlideshowIntervalMs = myAppState.videoSlideshowIntervalMs
     )
 }

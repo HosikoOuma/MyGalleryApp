@@ -25,7 +25,9 @@ fun SecretStorageScreen(
     onItemClick: (List<MediaItem>, MediaItem) -> Unit,
     isBlurEnabled: Boolean,
     blurType: BlurType,
-    gridState: LazyGridState
+    gridState: LazyGridState,
+    isVideoPreviewSlideshowEnabled: Boolean = false,
+    videoSlideshowIntervalMs: Long = 800L
 ) {
     if (items.isEmpty()) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -34,7 +36,7 @@ fun SecretStorageScreen(
     } else {
         MediaGrid(
             items = items,
-            favorites = emptyList(), // No favorites in secret storage
+            favorites = emptyList(),
             selectedItems = selectedItems,
             imageLoader = imageLoader,
             isBlurEnabled = isBlurEnabled,
@@ -42,7 +44,9 @@ fun SecretStorageScreen(
             onItemClick = { item -> onItemClick(items, item) },
             onToggleSelection = onToggleSelection,
             onClearSelection = onClearSelection,
-            gridState = gridState
+            gridState = gridState,
+            isVideoPreviewSlideshowEnabled = isVideoPreviewSlideshowEnabled,
+            videoSlideshowIntervalMs = videoSlideshowIntervalMs
         )
     }
 }

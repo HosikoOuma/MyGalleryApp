@@ -34,6 +34,8 @@ fun SecretStorageScreenImpl(
         },
         isBlurEnabled = myAppState.isBlurEnabled,
         blurType = myAppState.selectedBlurType,
-        gridState = gridState
+        gridState = gridState,
+        isVideoPreviewSlideshowEnabled = myAppState.isVideoPreviewSlideshowEnabled,
+        videoSlideshowIntervalMs = myAppState.videoSlideshowIntervalMs
     )
 }

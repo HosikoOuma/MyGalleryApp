@@ -403,4 +403,7 @@
     <string name="fab_action_camera_label">Камера</string>
     <string name="editor_processing">Обработка...</string>
     <string name="editor_saving_video">Сохранение видео...</string>
+    <string name="video_preview_slideshow_label">Слайд-шоу видео превью</string>
+    <string name="video_slideshow_interval_label">Скорость показа</string>
+    <string name="use_low_quality_video_preview_label">Использовать низкое качество превью видео</string>
 </resources>
