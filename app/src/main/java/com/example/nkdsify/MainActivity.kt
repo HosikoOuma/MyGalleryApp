@@ -36,6 +36,8 @@ import com.example.nkdsify.ui.dialogs.PermissionPermanentlyDeniedDialog
 import com.example.nkdsify.ui.screens.WelcomeScreen
 import com.example.nkdsify.ui.theme.NkdsifyAppTheme
 import com.example.nkdsify.ui.utils.*
+import com.example.nkdsify.data.MediaStoreObserver
+import android.provider.MediaStore
 import androidx.media3.common.util.UnstableApi
 import kotlinx.coroutines.delay
 
@@ -87,6 +89,26 @@ class MainActivity : AppCompatActivity() {
             var showPermanentlyDeniedDialog by remember { mutableStateOf(false) }
 
             val myAppState = rememberMyAppState()
+
+            DisposableEffect(Unit) {
+                val observer = MediaStoreObserver {
+                    // Очищаем кэш и триггерим обновление
+                    myAppState.refreshMedia()
+                }
+                context.contentResolver.registerContentObserver(
+                    MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+                    true,
+                    observer
+                )
+                context.contentResolver.registerContentObserver(
+                    MediaStore.Video.Media.EXTERNAL_CONTENT_URI,
+                    true,
+                    observer
+                )
+                onDispose {
+                    context.contentResolver.unregisterContentObserver(observer)
+                }
+            }
             
             var isAppReady by remember { mutableStateOf(false) }
             

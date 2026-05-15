@@ -308,17 +308,25 @@ fun VideoPlayerPage(
                         AnimatedPlayPauseIcon(isPlaying = isPlaying && playbackState != Player.STATE_ENDED, size = 40.dp, tint = Color.White)
                     }
 
-                    WaveProgressSlider(
-                        progress = if (totalDuration > 0) playbackPosition.toFloat() / totalDuration.toFloat() else 0f,
-                        isPlaying = isPlaying && playbackState != Player.STATE_ENDED,
+                    Slider(
+                        value = if (totalDuration > 0) playbackPosition.toFloat() / totalDuration.toFloat() else 0f,
                         onValueChange = { newProgress ->
                             isSeeking = true
                             val newPosition = (newProgress * totalDuration.toFloat()).toLong()
                             playbackPosition = newPosition
                             exoPlayer.seekTo(newPosition)
                         },
-                        onValueChangeFinished = { isSeeking = false },
-                        modifier = Modifier.fillMaxWidth().height(40.dp).padding(vertical = 8.dp)
+                        onValueChangeFinished = {
+                            isSeeking = false
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 8.dp),
+                        colors = SliderDefaults.colors(
+                            thumbColor = MaterialTheme.colorScheme.primary,
+                            activeTrackColor = MaterialTheme.colorScheme.primary,
+                            inactiveTrackColor = Color.White.copy(alpha = 0.3f)
+                        )
                     )
 
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
@@ -338,58 +346,6 @@ fun VideoPlayerPage(
                         }
                         Text(text = formatDuration(totalDuration), color = Color.White)
                     }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-fun WaveProgressSlider(
-    progress: Float,
-    isPlaying: Boolean,
-    onValueChange: (Float) -> Unit,
-    onValueChangeFinished: () -> Unit,
-    modifier: Modifier = Modifier,
-    color: Color = MaterialTheme.colorScheme.primary,
-    trackColor: Color = Color.White.copy(alpha = 0.3f)
-) {
-    val infiniteTransition = rememberInfiniteTransition(label = "wave")
-    val phase by infiniteTransition.animateFloat(
-        initialValue = 0f,
-        targetValue = 2f * Math.PI.toFloat(),
-        animationSpec = infiniteRepeatable(animation = tween(1500, easing = LinearEasing), repeatMode = RepeatMode.Restart),
-        label = "phase"
-    )
-    val amplitude by animateFloatAsState(targetValue = if (isPlaying) 12f else 0f, animationSpec = spring(dampingRatio = 0.7f, stiffness = 300f), label = "amplitude")
-
-    BoxWithConstraints(
-        modifier = modifier.fillMaxWidth()
-            .pointerInput(Unit) { detectTapGestures { offset -> onValueChange((offset.x / size.width).coerceIn(0f, 1f)); onValueChangeFinished() } }
-            .pointerInput(Unit) { detectDragGestures(onDragEnd = { onValueChangeFinished() }, onDragCancel = { onValueChangeFinished() }, onDrag = { change, _ -> change.consume(); onValueChange((change.position.x / size.width).coerceIn(0f, 1f)) }) }
-    ) {
-        val width = constraints.maxWidth.toFloat()
-        val height = constraints.maxHeight.toFloat()
-        val progressWidth = width * progress
-        Canvas(modifier = Modifier.fillMaxSize()) {
-            val points = 100
-            val frequency = 2f
-            drawLine(color = trackColor, start = Offset(progressWidth, height / 2), end = Offset(width, height / 2), strokeWidth = 10f, cap = StrokeCap.Round)
-            val activePath = Path()
-            val activePoints = (points * progress).toInt()
-            if (activePoints >= 0) {
-                for (i in 0..activePoints) {
-                    val x = (i.toFloat() / points) * width
-                    val y = height / 2 + (sin(i.toFloat() / frequency + phase) * amplitude)
-                    if (i == 0) activePath.moveTo(x, y) else activePath.lineTo(x, y)
-                }
-                val xEnd = progressWidth
-                val yEnd = height / 2 + (sin((progress * points) / frequency + phase) * amplitude)
-                activePath.lineTo(xEnd, yEnd)
-                drawPath(activePath, color, style = Stroke(width = 10f, cap = StrokeCap.Round))
-                if (progress > 0f) {
-                    drawCircle(color = color, radius = 8.dp.toPx(), center = Offset(xEnd, yEnd))
-                    drawCircle(color = Color.White.copy(alpha = 0.3f), radius = 3.dp.toPx(), center = Offset(xEnd, yEnd))
                 }
             }
         }

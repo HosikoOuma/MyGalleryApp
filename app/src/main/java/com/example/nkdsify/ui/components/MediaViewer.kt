@@ -406,10 +406,17 @@ fun MediaViewer(
                             IconButton(onClick = {
                                 if (isVibrationEnabled) performVibration(context)
                                 if (isExternal) showExternalMediaError = true else {
-                                    if (favoritesListMutable.contains(currentItem.absolutePath)) favoritesListMutable.remove(currentItem.absolutePath) else favoritesListMutable.add(currentItem.absolutePath)
-                                    coroutineScope.launch {
-                                        scale.animateTo(1.3f, spring(dampingRatio = 0.5f, stiffness = 400f))
-                                        scale.animateTo(1f, spring())
+                                    coroutineScope.launch(Dispatchers.IO) {
+                                        val path = currentItem.absolutePath
+                                        if (favoritesListMutable.contains(path)) {
+                                            favoritesListMutable.remove(path)
+                                        } else {
+                                            favoritesListMutable.add(path)
+                                        }
+                                        withContext(Dispatchers.Main) {
+                                            scale.animateTo(1.3f, spring(dampingRatio = 0.5f, stiffness = 400f))
+                                            scale.animateTo(1f, spring())
+                                        }
                                     }
                                 }
                             }) {

@@ -12,13 +12,41 @@ import kotlinx.collections.immutable.persistentListOf
 import java.io.File
 import java.util.Calendar
 
+object MediaCache {
+    var allMediaCache: ImmutableList<MediaItem>? = null
+    var foldersCache: ImmutableList<MediaFolder>? = null
+    var favoritesCache: ImmutableList<MediaItem>? = null
+    var lastSortType: SortType? = null
+    var lastSortAscending: Boolean? = null
+    var lastSelectedDate: Long? = null
+    var lastHiddenFolderIds: Set<String>? = null
+    var lastFavoritePaths: Set<String>? = null
+
+    fun clear() {
+        allMediaCache = null
+        foldersCache = null
+        favoritesCache = null
+    }
+}
+
 fun loadAllMedia(
     context: Context,
     sortType: SortType,
     sortAscending: Boolean,
     hiddenFolderIds: Set<String>,
-    selectedDate: Long? = null
+    selectedDate: Long? = null,
+    forceRefresh: Boolean = false
 ): ImmutableList<MediaItem> {
+    if (!forceRefresh && 
+        MediaCache.allMediaCache != null && 
+        MediaCache.lastSortType == sortType && 
+        MediaCache.lastSortAscending == sortAscending &&
+        MediaCache.lastSelectedDate == selectedDate &&
+        MediaCache.lastHiddenFolderIds == hiddenFolderIds
+    ) {
+        return MediaCache.allMediaCache!!
+    }
+
     val mediaItems = mutableListOf<MediaItem>()
 
     val collection = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
@@ -101,15 +129,32 @@ fun loadAllMedia(
         }
     }
 
-    return mediaItems.toImmutableList()
+    val result = mediaItems.toImmutableList()
+    MediaCache.allMediaCache = result
+    MediaCache.lastSortType = sortType
+    MediaCache.lastSortAscending = sortAscending
+    MediaCache.lastSelectedDate = selectedDate
+    MediaCache.lastHiddenFolderIds = hiddenFolderIds
+    
+    return result
 }
 
 fun loadMediaFolders(
     context: Context,
     sortType: SortType,
     sortAscending: Boolean,
-    selectedDate: Long? = null
+    selectedDate: Long? = null,
+    forceRefresh: Boolean = false
 ): ImmutableList<MediaFolder> {
+    if (!forceRefresh && 
+        MediaCache.foldersCache != null && 
+        MediaCache.lastSortType == sortType && 
+        MediaCache.lastSortAscending == sortAscending &&
+        MediaCache.lastSelectedDate == selectedDate
+    ) {
+        return MediaCache.foldersCache!!
+    }
+
     val foldersMap = mutableMapOf<Long, MutableList<MediaItem>>()
     val folderNames = mutableMapOf<Long, String>()
 
@@ -200,7 +245,7 @@ fun loadMediaFolders(
         }
     }
 
-    return foldersMap.mapNotNull { entry ->
+    val result = foldersMap.mapNotNull { entry ->
         val folderName = folderNames[entry.key]
         val itemsInFolder = entry.value
         val totalSize = itemsInFolder.sumOf { it.size }
@@ -217,9 +262,31 @@ fun loadMediaFolders(
             null
         }
     }.sortedBy { it.name }.toImmutableList()
+    
+    MediaCache.foldersCache = result
+    return result
 }
 
-fun loadFavoriteMediaItems(context: Context, favoritePaths: Set<String>, sortType: SortType, sortAscending: Boolean, hiddenFolderIds: Set<String>, selectedDate: Long? = null): ImmutableList<MediaItem> {
+fun loadFavoriteMediaItems(
+    context: Context,
+    favoritePaths: Set<String>,
+    sortType: SortType,
+    sortAscending: Boolean,
+    hiddenFolderIds: Set<String>,
+    selectedDate: Long? = null,
+    forceRefresh: Boolean = false
+): ImmutableList<MediaItem> {
+    if (!forceRefresh && 
+        MediaCache.favoritesCache != null && 
+        MediaCache.lastSortType == sortType && 
+        MediaCache.lastSortAscending == sortAscending &&
+        MediaCache.lastSelectedDate == selectedDate &&
+        MediaCache.lastHiddenFolderIds == hiddenFolderIds &&
+        MediaCache.lastFavoritePaths == favoritePaths
+    ) {
+        return MediaCache.favoritesCache!!
+    }
+
     if (favoritePaths.isEmpty()) {
         return persistentListOf()
     }
@@ -303,7 +370,10 @@ fun loadFavoriteMediaItems(context: Context, favoritePaths: Set<String>, sortTyp
             favoriteItems.add(MediaItem(uri, name, path, isVideo, size, dateAdded, dateModified))
         }
     }
-    return favoriteItems.toImmutableList()
+    val result = favoriteItems.toImmutableList()
+    MediaCache.favoritesCache = result
+    MediaCache.lastFavoritePaths = favoritePaths
+    return result
 }
 
 fun loadTrashedMediaItems(

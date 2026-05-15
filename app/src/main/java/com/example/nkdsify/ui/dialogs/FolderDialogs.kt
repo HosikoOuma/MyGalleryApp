@@ -19,6 +19,7 @@ import com.example.nkdsify.ui.utils.getFolderPathFromUri
 import com.example.nkdsify.ui.utils.moveMediaToFolder
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -32,37 +33,44 @@ fun FolderDialogs(myAppState: MyAppState) {
             folders = myAppState.allFolders,
             onDismiss = { myAppState.showFolderSelectionDialog = false },
             onFolderSelected = { destinationFolder: MediaFolder ->
-                coroutineScope.launch {
-                    myAppState.isProcessing = true
-                    val folderPath = destinationFolder.items.firstOrNull()?.let {
-                        getFolderPathFromUri(context, it.uri)
-                    } ?: destinationFolder.name
+                coroutineScope.launch(Dispatchers.IO) {
+                    try {
+                        myAppState.isProcessing = true
+                        val folderPath = destinationFolder.items.firstOrNull()?.let {
+                            getFolderPathFromUri(context, it.uri)
+                        } ?: destinationFolder.name
 
-                    when (myAppState.currentFileOperation) {
-                        FileOperation.COPY -> {
-                            myAppState.filesToProcess.forEach { uri ->
-                                copyMediaToFolder(context, uri, folderPath)
+                        when (myAppState.currentFileOperation) {
+                            FileOperation.COPY -> {
+                                myAppState.filesToProcess.forEach { uri ->
+                                    copyMediaToFolder(context, uri, folderPath)
+                                }
+                                withContext(Dispatchers.Main) {
+                                    Toast.makeText(context, context.getString(R.string.copied_to_folder, destinationFolder.name), Toast.LENGTH_SHORT).show()
+                                }
                             }
-                            withContext(Dispatchers.Main) {
-                                Toast.makeText(context, context.getString(R.string.copied_to_folder, destinationFolder.name), Toast.LENGTH_SHORT).show()
+                            FileOperation.MOVE -> {
+                                myAppState.filesToProcess.forEach { uri ->
+                                    moveMediaToFolder(context, uri, folderPath)
+                                }
+                                withContext(Dispatchers.Main) {
+                                    Toast.makeText(context, context.getString(R.string.moved_to_folder, destinationFolder.name), Toast.LENGTH_SHORT).show()
+                                    myAppState.viewerState = null
+                                }
                             }
+                            null -> {}
                         }
-                        FileOperation.MOVE -> {
-                            myAppState.filesToProcess.forEach { uri ->
-                                moveMediaToFolder(context, uri, folderPath)
-                            }
-                            withContext(Dispatchers.Main) {
-                                Toast.makeText(context, context.getString(R.string.moved_to_folder, destinationFolder.name), Toast.LENGTH_SHORT).show()
-                            }
-                            myAppState.viewerState = null
+                        withContext(Dispatchers.Main) {
+                            myAppState.refreshMedia()
+                            myAppState.showFolderSelectionDialog = false
+                            myAppState.filesToProcess = persistentListOf()
+                            myAppState.currentFileOperation = null
                         }
-                        null -> {}
+                    } finally {
+                        withContext(NonCancellable + Dispatchers.Main) {
+                            myAppState.isProcessing = false
+                        }
                     }
-                    myAppState.refreshTrigger++
-                    myAppState.showFolderSelectionDialog = false
-                    myAppState.filesToProcess = persistentListOf()
-                    myAppState.currentFileOperation = null
-                    myAppState.isProcessing = false
                 }
             }
         )
@@ -75,15 +83,22 @@ fun FolderDialogs(myAppState: MyAppState) {
                 BiometricUtils.authenticate(
                     activity = context as AppCompatActivity,
                     onSuccess = {
-                        coroutineScope.launch {
-                            myAppState.isProcessing = true
-                            val itemsToMove = if (myAppState.isSelectionMode) myAppState.selectedItems.toList() else listOfNotNull(myAppState.showDetailsDialog)
-                            SecretRepository.moveToSecret(context, itemsToMove)
-                            myAppState.showDetailsDialog = null
-                            myAppState.selectedItems.clear()
-                            myAppState.viewerState = null
-                            myAppState.refreshTrigger++
-                            myAppState.isProcessing = false
+                        coroutineScope.launch(Dispatchers.IO) {
+                            try {
+                                myAppState.isProcessing = true
+                                val itemsToMove = if (myAppState.isSelectionMode) myAppState.selectedItems.toList() else listOfNotNull(myAppState.showDetailsDialog)
+                                SecretRepository.moveToSecret(context, itemsToMove)
+                                withContext(Dispatchers.Main) {
+                                    myAppState.showDetailsDialog = null
+                                    myAppState.selectedItems.clear()
+                                    myAppState.viewerState = null
+                                    myAppState.refreshMedia()
+                                }
+                            } finally {
+                                withContext(NonCancellable + Dispatchers.Main) {
+                                    myAppState.isProcessing = false
+                                }
+                            }
                         }
                     },
                     onError = { _, _ -> /* Do nothing on error */ },

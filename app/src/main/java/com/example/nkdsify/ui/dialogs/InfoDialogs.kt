@@ -112,7 +112,7 @@ fun InfoDialogs(myAppState: MyAppState, screenWidth: Int, screenHeight: Int, onF
             onRename = { newName ->
                 renameMedia(context, uri, newName)
                 myAppState.showRenameDialog = null
-                myAppState.refreshTrigger++
+                myAppState.refreshMedia()
             }
         )
     }

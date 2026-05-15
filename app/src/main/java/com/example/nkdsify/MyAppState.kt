@@ -21,6 +21,7 @@ import androidx.compose.ui.platform.SoftwareKeyboardController
 import androidx.core.content.ContextCompat
 import coil.ImageLoader
 import com.example.nkdsify.data.AppFontFamily
+import com.example.nkdsify.data.MediaCache
 import com.example.nkdsify.data.MediaTypeFilter
 import com.example.nkdsify.data.MediaFolder
 import com.example.nkdsify.data.MediaItem
@@ -140,6 +141,11 @@ class MyAppState(
     var sortAscending by mutableStateOf(false)
     var selectedDate by mutableStateOf<Long?>(null)
     var refreshTrigger by mutableIntStateOf(0)
+    
+    fun refreshMedia() {
+        MediaCache.clear()
+        refreshTrigger++
+    }
     var isMuteVideoByDefault by mutableStateOf(SettingsRepository.isMuteVideoByDefault(context))
     var hiddenFolders by mutableStateOf(SettingsRepository.getHiddenFolders(context))
     var showTagDialog by mutableStateOf<Uri?>(null)

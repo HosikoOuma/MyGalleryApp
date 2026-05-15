@@ -16,6 +16,7 @@ import com.example.nkdsify.ui.utils.TrashRepository
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -29,25 +30,38 @@ fun DeletionDialogs(
 
     if (myAppState.showConfirmDeleteDialog) {
         ConfirmDeleteDialog(onConfirm = {
-            val urisToDelete = myAppState.itemsToDelete
-            if (myAppState.isClearingTrash) {
-                TrashRepository.clearTrash(context)
-                myAppState.isClearingTrash = false
-            } else {
-                TrashRepository.removeFromTrash(context, urisToDelete)
+            coroutineScope.launch(Dispatchers.IO) {
+                try {
+                    myAppState.isProcessing = true
+                    val urisToDelete = myAppState.itemsToDelete
+                    if (myAppState.isClearingTrash) {
+                        TrashRepository.clearTrash(context)
+                        withContext(Dispatchers.Main) {
+                            myAppState.isClearingTrash = false
+                        }
+                    } else {
+                        TrashRepository.removeFromTrash(context, urisToDelete)
+                    }
+
+                    withContext(Dispatchers.Main) {
+                        if (isVibrationEnabled) com.example.nkdsify.ui.utils.performVibration(context)
+                        myAppState.refreshMedia()
+                        myAppState.selectedItems.clear()
+                        myAppState.showConfirmDeleteDialog = false
+
+                        updateViewerStateAfterDeletion(
+                            viewerState = myAppState.viewerState,
+                            urisToDelete = urisToDelete,
+                            setViewerState = { myAppState.viewerState = it }
+                        )
+                        myAppState.itemsToDelete = persistentListOf()
+                    }
+                } finally {
+                    withContext(NonCancellable + Dispatchers.Main) {
+                        myAppState.isProcessing = false
+                    }
+                }
             }
-
-            if (isVibrationEnabled) com.example.nkdsify.ui.utils.performVibration(context)
-            myAppState.refreshTrigger++
-            myAppState.selectedItems.clear()
-            myAppState.showConfirmDeleteDialog = false
-
-            updateViewerStateAfterDeletion(
-                viewerState = myAppState.viewerState,
-                urisToDelete = urisToDelete,
-                setViewerState = { myAppState.viewerState = it }
-            )
-            myAppState.itemsToDelete = persistentListOf()
         }, onDismiss = { myAppState.showConfirmDeleteDialog = false })
     }
 
@@ -57,23 +71,31 @@ fun DeletionDialogs(
                 BiometricUtils.authenticate(
                     activity = context as AppCompatActivity,
                     onSuccess = {
-                        coroutineScope.launch {
-                            val urisToDelete = myAppState.itemsToDeleteFromSecret
-                            val currentViewerState = myAppState.secretViewerState
+                        coroutineScope.launch(Dispatchers.IO) {
+                            try {
+                                myAppState.isProcessing = true
+                                val urisToDelete = myAppState.itemsToDeleteFromSecret
+                                val currentViewerState = myAppState.secretViewerState
 
-                            SecretRepository.deleteFromSecret(context, urisToDelete)
-                            myAppState.secretItems = withContext(Dispatchers.IO) { SecretRepository.getSecretMediaItems(context).toImmutableList() }
+                                SecretRepository.deleteFromSecret(context, urisToDelete)
+                                val updatedSecretItems = SecretRepository.getSecretMediaItems(context).toImmutableList()
 
-                            withContext(Dispatchers.Main) {
-                                myAppState.showConfirmDeleteFromSecretDialog = false
-                                myAppState.itemsToDeleteFromSecret = persistentListOf()
-                                myAppState.selectedItems.clear()
+                                withContext(Dispatchers.Main) {
+                                    myAppState.secretItems = updatedSecretItems
+                                    myAppState.showConfirmDeleteFromSecretDialog = false
+                                    myAppState.itemsToDeleteFromSecret = persistentListOf()
+                                    myAppState.selectedItems.clear()
 
-                                updateViewerStateAfterDeletion(
-                                    viewerState = currentViewerState,
-                                    urisToDelete = urisToDelete,
-                                    setViewerState = { myAppState.secretViewerState = it }
-                                )
+                                    updateViewerStateAfterDeletion(
+                                        viewerState = currentViewerState,
+                                        urisToDelete = urisToDelete,
+                                        setViewerState = { myAppState.secretViewerState = it }
+                                    )
+                                }
+                            } finally {
+                                withContext(NonCancellable + Dispatchers.Main) {
+                                    myAppState.isProcessing = false
+                                }
                             }
                         }
                     },
@@ -88,35 +110,44 @@ fun DeletionDialogs(
     if (myAppState.showConfirmTrashDialog) {
         ConfirmTrashDialog(
             onConfirm = {
-                val urisToTrash = myAppState.itemsToTrash
                 coroutineScope.launch(Dispatchers.IO) {
-                    val copiedUris = TrashRepository.copyToTrash(context, urisToTrash)
-                    if (copiedUris.isNotEmpty()) {
-                        var itemsDeleted = false
-                        copiedUris.forEach { uri ->
-                            try {
-                                if (context.contentResolver.delete(uri, null, null) > 0) {
-                                    itemsDeleted = true
-                                }
-                            } catch (e: Exception) {}
-                        }
-                        if (itemsDeleted) {
-                            withContext(Dispatchers.Main) {
-                                myAppState.refreshTrigger++
+                    try {
+                        myAppState.isProcessing = true
+                        val urisToTrash = myAppState.itemsToTrash
+                        val copiedUris = TrashRepository.copyToTrash(context, urisToTrash)
+                        if (copiedUris.isNotEmpty()) {
+                            var itemsDeleted = false
+                            copiedUris.forEach { uri ->
+                                try {
+                                    if (context.contentResolver.delete(uri, null, null) > 0) {
+                                        itemsDeleted = true
+                                    }
+                                } catch (e: Exception) {}
                             }
+                            if (itemsDeleted) {
+                                withContext(Dispatchers.Main) {
+                                    myAppState.refreshMedia()
+                                }
+                            }
+                        }
+                        withContext(Dispatchers.Main) {
+                            if (isVibrationEnabled) com.example.nkdsify.ui.utils.performVibration(context)
+                            myAppState.selectedItems.clear()
+                            myAppState.itemsToTrash = persistentListOf()
+                            myAppState.showConfirmTrashDialog = false
+
+                            updateViewerStateAfterDeletion(
+                                viewerState = myAppState.viewerState,
+                                urisToDelete = urisToTrash,
+                                setViewerState = { myAppState.viewerState = it }
+                            )
+                        }
+                    } finally {
+                        withContext(NonCancellable + Dispatchers.Main) {
+                            myAppState.isProcessing = false
                         }
                     }
                 }
-                if (isVibrationEnabled) com.example.nkdsify.ui.utils.performVibration(context)
-                myAppState.selectedItems.clear()
-                myAppState.itemsToTrash = persistentListOf()
-                myAppState.showConfirmTrashDialog = false
-
-                updateViewerStateAfterDeletion(
-                    viewerState = myAppState.viewerState,
-                    urisToDelete = urisToTrash,
-                    setViewerState = { myAppState.viewerState = it }
-                )
             },
             onDismiss = { myAppState.showConfirmTrashDialog = false }
         )

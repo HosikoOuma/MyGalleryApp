@@ -2,6 +2,7 @@
 
 package com.example.nkdsify
 
+import androidx.compose.ui.input.pointer.pointerInput
 import com.example.nkdsify.ui.MyAppTopBar
 import com.example.nkdsify.ui.MyAppBottomBar
 import com.example.nkdsify.ui.MyAppBackHandler
@@ -89,6 +90,7 @@ import com.example.nkdsify.ui.utils.sanitizeFolders
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -104,9 +106,14 @@ fun MyApp(myAppState: MyAppState, initialUri: Uri? = null, screenWidth: Int, scr
     val coroutineScope = rememberCoroutineScope()
     val keyboardController = LocalSoftwareKeyboardController.current
     LaunchedEffect(Unit) {
-        myAppState.isProcessing = true
-        MigrationUtils.runMigrationIfNeeded(context)
-        myAppState.isProcessing = false
+        try {
+            myAppState.isProcessing = true
+            MigrationUtils.runMigrationIfNeeded(context)
+        } finally {
+            withContext(NonCancellable) {
+                myAppState.isProcessing = false
+            }
+        }
     }
     LaunchedEffect(Unit) {
         myAppState.checkForUpdates(false)
@@ -132,6 +139,8 @@ fun MyApp(myAppState: MyAppState, initialUri: Uri? = null, screenWidth: Int, scr
         val hiddenFoldersListState = rememberLazyListState()
         
         val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
+
+        var lastScreen by remember { mutableStateOf<Screen?>(null) }
 
         val isNavBarVisible by remember {
             derivedStateOf {
@@ -215,7 +224,7 @@ fun MyApp(myAppState: MyAppState, initialUri: Uri? = null, screenWidth: Int, scr
             if (pullRefreshState.isRefreshing) {
                 if (pullToRefreshEnabled) {
                     delay(1000)
-                    myAppState.refreshTrigger++
+                    myAppState.refreshMedia()
                 }
                 pullRefreshState.endRefresh()
             }
@@ -290,32 +299,45 @@ fun MyApp(myAppState: MyAppState, initialUri: Uri? = null, screenWidth: Int, scr
             }
         }
         LaunchedEffect(favorites.toList()) {
-            FavoritesRepository.saveFavorites(context, favorites.toSet())
+            withContext(Dispatchers.IO) {
+                FavoritesRepository.saveFavorites(context, favorites.toSet())
+            }
         }
         LaunchedEffect(myAppState.currentScreen) {
-            val screen = myAppState.currentScreen as? Screen.FolderContent
-            if (screen?.scrollToItemUri != null) {
-                val index = screen.folder.items.indexOfFirst { it.uri == screen.scrollToItemUri }
-                if (index != -1) {
+            val current = myAppState.currentScreen
+            val last = lastScreen
+
+            if (current is Screen.FolderContent) {
+                if (current.scrollToItemUri != null) {
+                    val index = current.folder.items.indexOfFirst { it.uri == current.scrollToItemUri }
+                    if (index != -1) {
+                        coroutineScope.launch {
+                            folderContentGridState.scrollToItem(index)
+                        }
+                    }
+                } else if ((last as? Screen.FolderContent)?.folder?.id != current.folder.id) {
                     coroutineScope.launch {
-                        folderContentGridState.scrollToItem(index)
+                        folderContentGridState.scrollToItem(0)
                     }
                 }
-            } else if (myAppState.currentScreen is Screen.FolderContent) {
-                coroutineScope.launch {
-                    folderContentGridState.scrollToItem(0)
-                }
             }
-            if (myAppState.currentScreen is Screen.ViewHistory) {
+
+            if (current is Screen.ViewHistory && last !is Screen.ViewHistory) {
                 coroutineScope.launch {
                     viewHistoryGridState.scrollToItem(0)
                 }
             }
-            if (myAppState.currentScreen is Screen.Favorites && (myAppState.currentScreen as Screen.Favorites).openAlbumName != null) {
-                coroutineScope.launch {
-                    favoritesContentGridState.scrollToItem(0)
+
+            if (current is Screen.Favorites && current.openAlbumName != null) {
+                if ((last as? Screen.Favorites)?.openAlbumName != current.openAlbumName) {
+                    coroutineScope.launch {
+                        favoritesContentGridState.scrollToItem(0)
+                    }
                 }
             }
+            
+            lastScreen = current
+
             if (myAppState.currentScreen !is Screen.FolderContent && myAppState.currentScreen !is Screen.Favorites && myAppState.currentScreen !is Screen.ViewHistory) {
                 myAppState.isSearchActive = false
                 myAppState.searchQuery = ""
@@ -442,9 +464,20 @@ fun MyApp(myAppState: MyAppState, initialUri: Uri? = null, screenWidth: Int, scr
                         }
                         Button(
                             onClick = {
-                                ViewHistoryRepository.clearHistory(context)
-                                myAppState.viewHistory = persistentListOf()
-                                myAppState.showClearHistoryDialog = false
+                                coroutineScope.launch(Dispatchers.IO) {
+                                    try {
+                                        myAppState.isProcessing = true
+                                        ViewHistoryRepository.clearHistory(context)
+                                        withContext(Dispatchers.Main) {
+                                            myAppState.viewHistory = persistentListOf()
+                                            myAppState.showClearHistoryDialog = false
+                                        }
+                                    } finally {
+                                        withContext(NonCancellable + Dispatchers.Main) {
+                                            myAppState.isProcessing = false
+                                        }
+                                    }
+                                }
                             },
                             colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
                         ) {
@@ -573,7 +606,8 @@ fun MyApp(myAppState: MyAppState, initialUri: Uri? = null, screenWidth: Int, scr
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .background(Color.Black.copy(alpha = 0.5f)),
+                        .background(Color.Black.copy(alpha = 0.5f))
+                        .pointerInput(Unit) {}, // Блокируем клики во время загрузки
                     contentAlignment = Alignment.Center
                 ) {
                     CircularProgressIndicator()
