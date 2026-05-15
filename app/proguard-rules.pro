@@ -3,7 +3,7 @@
 # https://github.com/consumer-proguard-rules/rules.
 
 # Disabling optimization as it seems to be causing issues with cryptography.
--dontoptimize
+#-dontoptimize
 
 # Keep the data class used by Gson untouched
 -keep class com.example.nkdsify.ui.utils.ViewedItem { *; }

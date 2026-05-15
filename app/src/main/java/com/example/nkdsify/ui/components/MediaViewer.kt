@@ -57,7 +57,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
 
-@OptIn(ExperimentalFoundationApi::class)
+@OptIn(androidx.media3.common.util.UnstableApi::class, ExperimentalFoundationApi::class)
 @Composable
 fun MediaViewer(
     myAppState: MyAppState,
@@ -76,6 +76,49 @@ fun MediaViewer(
 
     val view = LocalView.current
     val window = (view.context as Activity).window
+
+    // Создаем один общий плеер для всего MediaViewer
+    val exoPlayer = remember {
+        val loadControl = androidx.media3.exoplayer.DefaultLoadControl.Builder()
+            .setBufferDurationsMs(
+                5000,  // minBufferMs
+                10000, // maxBufferMs
+                500,   // bufferForPlaybackMs
+                1000   // bufferForPlaybackAfterRebufferMs
+            )
+            .setPrioritizeTimeOverSizeThresholds(true)
+            .build()
+        
+        androidx.media3.exoplayer.ExoPlayer.Builder(context)
+            .setLoadControl(loadControl)
+            .build()
+    }
+
+    DisposableEffect(exoPlayer) {
+        onDispose {
+            exoPlayer.release()
+        }
+    }
+
+    // Управляем источником данных общего плеера при перелистывании
+    LaunchedEffect(pagerState.currentPage) {
+        val item = items[pagerState.currentPage]
+        if (item.isVideo) {
+            val mediaItem = androidx.media3.common.MediaItem.fromUri(item.uri)
+            if (isSecretMode) {
+                val dataSourceFactory = com.example.nkdsify.ui.utils.AesDataSourceFactory()
+                val mediaSource = androidx.media3.exoplayer.source.ProgressiveMediaSource.Factory(dataSourceFactory)
+                    .createMediaSource(mediaItem)
+                exoPlayer.setMediaSource(mediaSource)
+            } else {
+                exoPlayer.setMediaItem(mediaItem)
+            }
+            exoPlayer.prepare()
+        } else {
+            exoPlayer.stop()
+            exoPlayer.clearMediaItems()
+        }
+    }
 
     DisposableEffect(view) {
         val originalLightStatusBars = WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars
@@ -197,6 +240,7 @@ fun MediaViewer(
                     if (item.isVideo) {
                         VideoPlayerPage(
                             uri = item.uri,
+                            exoPlayer = exoPlayer,
                             isFullyVisible = isFullyVisible,
                             isCurrentPage = isCurrentPage,
                             isMuted = isMuted,
@@ -230,6 +274,7 @@ fun MediaViewer(
                     if (item.isVideo) {
                         VideoPlayerPage(
                             uri = item.uri,
+                            exoPlayer = exoPlayer,
                             isFullyVisible = isFullyVisible,
                             isCurrentPage = isCurrentPage,
                             isMuted = isMuted,

@@ -88,6 +88,7 @@ fun AnimatedPlayPauseIcon(
 @Composable
 fun VideoPlayerPage(
     uri: Uri,
+    exoPlayer: ExoPlayer, // Передаем плеер снаружи
     isFullyVisible: Boolean,
     isCurrentPage: Boolean,
     isMuted: Boolean,
@@ -99,58 +100,19 @@ fun VideoPlayerPage(
     bottomPadding: Dp = 0.dp
 ) {
     val context = LocalContext.current
-    
-    // Агрессивный LoadControl для минимизации памяти
-    val loadControl = remember {
-        DefaultLoadControl.Builder()
-            .setBufferDurationsMs(
-                5000,  // minBufferMs: только 5 секунд
-                10000, // maxBufferMs
-                500,   // bufferForPlaybackMs
-                1000   // bufferForPlaybackAfterRebufferMs
-            )
-            .setPrioritizeTimeOverSizeThresholds(true)
-            .build()
-    }
 
-    val exoPlayer = remember {
-        ExoPlayer.Builder(context)
-            .setLoadControl(loadControl)
-            .build().apply {
-                if (isSecretMode) {
-                    val dataSourceFactory = AesDataSourceFactory()
-                    val mediaSource = ProgressiveMediaSource.Factory(dataSourceFactory)
-                        .createMediaSource(androidx.media3.common.MediaItem.fromUri(uri))
-                    setMediaSource(mediaSource)
-                } else {
-                    setMediaItem(androidx.media3.common.MediaItem.fromUri(uri))
-                }
-                prepare()
+    LaunchedEffect(isFullyVisible, isCurrentPage) {
+        if (isFullyVisible && isCurrentPage) {
+            exoPlayer.playWhenReady = true
+        } else if (!isCurrentPage) {
+            // Если ушли со страницы, ставим на паузу (но не стопаем весь плеер, так как он общий)
+            if (exoPlayer.currentMediaItem?.localConfiguration?.uri == uri) {
+                exoPlayer.pause()
             }
-    }
-
-    LaunchedEffect(isFullyVisible) {
-        exoPlayer.playWhenReady = isFullyVisible
+        }
     }
 
     var seekDirection by remember { mutableStateOf<SeekDirection?>(null) }
-
-    LaunchedEffect(isCurrentPage) {
-        if (!isCurrentPage) {
-            exoPlayer.stop() // Агрессивно останавливаем и очищаем буферы
-            exoPlayer.seekTo(0)
-        } else {
-            if (exoPlayer.playbackState == Player.STATE_IDLE) {
-                exoPlayer.prepare() // Переподготавливаем если было остановлено
-            }
-        }
-    }
-
-    DisposableEffect(Unit) {
-        onDispose {
-            exoPlayer.release()
-        }
-    }
 
     var isPlaying by remember { mutableStateOf(false) }
     var playbackState by remember { mutableIntStateOf(Player.STATE_IDLE) }
@@ -287,7 +249,21 @@ fun VideoPlayerPage(
             }
     ) {
         AndroidView(
-            factory = { PlayerView(it).apply { useController = false; player = exoPlayer } },
+            factory = { context ->
+                PlayerView(context).apply {
+                    useController = false
+                }
+            },
+            update = { playerView ->
+                // Прикрепляем общий плеер к View только если это текущая страница
+                if (isCurrentPage) {
+                    if (playerView.player != exoPlayer) {
+                        playerView.player = exoPlayer
+                    }
+                } else {
+                    playerView.player = null
+                }
+            },
             modifier = Modifier.fillMaxSize().graphicsLayer { scaleX = scale; scaleY = scale; translationX = offsetX; translationY = offsetY }
         )
 

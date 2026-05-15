@@ -1,565 +1,287 @@
-# Анализ проекта MyGalleryApp (Nekolery)
-
-## Описание проекта
-**Николери** (Nekolery) - полнофункциональное приложение галереи для Android, созданное на Kotlin с использованием Jetpack Compose и Material 3.
-
-**Особенность**: Проект был создан с помощью ИИ (Google Gemini, OpenAI ChatGPT) как эксперимент.
-
-**Версия**: 2.0.21  
-**Минимальный SDK**: 30  
-**Целевой SDK**: 36 (Android 16)  
-**Язык**: Kotlin 2.0.21
-
----
-
-## 🏗️ Архитектура проекта
-
-### Многоуровневая структура
-
-```
-mygalleryapp/
-├── app/                          # Основное приложение
-│   ├── src/
-│   │   ├── main/
-│   │   │   ├── java/com/example/nkdsify/
-│   │   │   │   ├── MainActivity.kt              # Точка входа
-│   │   │   │   ├── MyApp.kt                     # Главная Composable
-│   │   │   │   ├── MyAppState.kt                # Глобальное состояние
-│   │   │   │   ├── ExternalMediaActivity.kt     # Просмотр внешних файлов
-│   │   │   │   ├── ContextUtils.kt              # Утилиты контекста
-│   │   │   │   ├── NotificationUtils.kt         # Уведомления
-│   │   │   │   ├── data/
-│   │   │   │   │   ├── DataModels.kt            # Модели данных
-│   │   │   │   │   └── MediaLoader.kt           # Загрузка медиа
-│   │   │   │   └── ui/
-│   │   │   │       ├── MyAppNavigation.kt       # Навигация между экранами
-│   │   │   │       ├── MyAppTopBar.kt           # Верхняя панель
-│   │   │   │       ├── MyAppBottomBar.kt        # Нижняя панель
-│   │   │   │       ├── MyAppFAB.kt              # Плавающая кнопка
-│   │   │   │       ├── AppBars.kt               # Конфигурация панелей
-│   │   │   │       ├── components/              # Переиспользуемые компоненты
-│   │   │   │       ├── screens/                 # UI экранов
-│   │   │   │       ├── dialogs/                 # Диалоги
-│   │   │   │       ├── impl/                    # Реализация экранов
-│   │   │   │       ├── editor/                  # Редактор фото/видео
-│   │   │   │       ├── theme/                   # Тема оформления
-│   │   │   │       └── utils/                   # Утилиты UI
-│   │   │   └── res/                             # Ресурсы
-│   │   └── AndroidManifest.xml
-│   └── build.gradle.kts
-├── baselineprofile/              # Baseline Profile для оптимизации
-├── core-common/                  # Общая библиотека
-└── gradle/libs.versions.toml     # Версии зависимостей
-```
-
----
-
-## 📊 Модель данных
-
-### Основные классы
-
-#### **Sealed Classes (Навигация)**
-```kotlin
-sealed class Screen {
-    object Folders
-    data class FolderContent(val folder: MediaFolder, val scrollToItemUri: Uri?)
-    data class Favorites(val openAlbumName: String?)
-    object Settings
-    object TagManagement
-    object Trash
-    object AllMedia
-    data class MediaByTag(val tag: String)
-    object SecretStorage
-    object ViewHistory
-    object About
-    object Help
-    object HiddenFolders
-}
-```
-
-#### **Data Classes**
-
-1. **MediaItem** - Элемент медиа (файл)
-```kotlin
-data class MediaItem(
-    val uri: Uri,
-    val name: String,
-    val absolutePath: String,
-    val isVideo: Boolean = false,
-    val size: Long,
-    val dateAdded: Long,
-    val dateModified: Long
-)
-```
-
-2. **MediaFolder** - Папка с медиа
-```kotlin
-data class MediaFolder(
-    val id: Long,
-    val name: String,
-    val items: ImmutableList<MediaItem>,
-    val coverUri: Uri? = null,
-    val totalSize: Long,
-    val dateRange: Pair<Long, Long>,
-    val itemCount: Int
-)
-```
-
-3. **MediaViewerState** - Состояние просмотра медиа
-```kotlin
-data class MediaViewerState(
-    val items: ImmutableList<MediaItem>,
-    val startIndex: Int,
-    val isExternal: Boolean = false
-)
-```
-
-4. **MediaDetails** - Детали медиа файла
-```kotlin
-data class MediaDetails(
-    val name: String,
-    val size: Long,
-    val dateAdded: Long,
-    val dateModified: Long,
-    val path: String,
-    val resolution: String,
-    val isVideo: Boolean,
-    val exif: ExifInterface? = null,
-    val duration: Long = 0L
-)
-```
-
-#### **Enums**
-
-```kotlin
-enum class SortType {
-    ALPHABET, DATE_MODIFIED, DATE_ADDED, SIZE
-}
-
-enum class Theme {
-    SYSTEM, LIGHT, DARK, AMOLED
-}
-
-enum class ZoomType {
-    DOUBLE_TAP, PINCH
-}
-
-enum class Language(val code: String) {
-    SYSTEM("system"), ENGLISH("en"), RUSSIAN("ru"), SPECIAL("xx")
-}
-
-enum class BlurType {
-    BLUR, PLACEHOLDER
-}
-
-enum class ViewerControlsPosition {
-    TOP, BOTTOM
-}
-
-enum class AppFontFamily {
-    SYSTEM, JETBRAINS_MONO, GOOGLE_SANS
-}
-
-enum class MediaTypeFilter {
-    ALL, PHOTOS, VIDEOS
-}
-```
-
----
-
-## 🌍 Глобальное состояние приложения (MyAppState)
-
-Синглтон-подобный класс, управляющий всеми состояниями приложения:
-
-### Состояния для настроек
-- `isBlurEnabled` - размытие включено
-- `selectedTheme` - выбранная тема
-- `selectedLanguage` - язык
-- `isVibrationEnabled` - вибрация
-- `isMuteVideoByDefault` - звук видео по умолчанию
-- `autoDeleteTrashEnabled` / `autoDeleteTrashDays` - автоудаление из корзины
-- `selectedFontFamily` - шрифт приложения
-
-### Состояния для UI
-- `currentScreen` - текущий экран
-- `isSearchActive` / `searchQuery` - поиск
-- `selectedItems` - выбранные элементы
-- `showTagDialog`, `showDetailsDialog` и т.д. - видимость диалогов
-
-### Состояния для данных
-- `allFolders` - все папки
-- `allMedia` - все медиа на устройстве
-- `favoriteItems` - избранные
-- `trashedItems` - в корзине
-- `secretItems` - в секретном хранилище
-- `viewHistory` - история просмотра
-
-### Grid States (для прокрутки)
-- `foldersGridState`
-- `folderContentGridState`
-- `favoritesGridState`
-- `trashGridState`
-- `allMediaGridState`
-- `secretGridState`
-- и т.д.
-
----
-
-## 🔌 Основные компоненты
-
-### MainActivity
-- Установка splash screen
-- Инициализация sensor manager для shake detector
-- Обработка разрешений
-- Интеграция с внешними медиа
-
-### MyApp (Главная Composable)
-- Инициализация grid states
-- Управление корутинами
-- Загрузка избранных и тегов
-- Pull-to-refresh
-- Кэширование данных
-
-### MyAppNavigation
-- Switch между экранами с анимацией
-- Фильтрация элементов
-- Сортировка
-- Поиск с поддержкой тегов
-
----
-
-## 💾 Repositories (Управление данными)
-
-### 1. **SettingsRepository** 
-Хранит все настройки в SharedPreferences
-```
-Ключи: blur_enabled, theme, language, font_family, zoom_type и т.д.
-```
-
-### 2. **FavoritesRepository**
-Управляет избранными папками
-```kotlin
-fun saveFavorites(context: Context, favorites: Set<String>)
-fun getFavorites(context: Context): Set<String>
-```
-
-### 3. **TagsRepository**
-Система тегирования медиа
-```kotlin
-fun getTags(context: Context): Map<String, Set<String>>
-fun saveTags(context: Context, tags: Map<String, Set<String>>)
-fun getTagsForItem(context: Context, path: String): Set<String>
-fun setTagsForItem(context: Context, path: String, tags: Set<String>)
-```
-
-### 4. **SecretRepository**
-Зашифрованное хранилище медиа
-- Использует AES шифрование (CBC mode, PKCS7)
-- Хранит файлы в `.secret` папке
-- Создает зашифрованные миниатюры
-
-### 5. **TrashRepository**
-Управление корзиной с отложенным удалением
-
-### 6. **ViewHistoryRepository**
-История просмотра медиа
-
----
-
-## 🔐 Безопасность и Криптография
-
-### CryptoUtils
-- **Алгоритм**: AES-256 в режиме CBC с PKCS7 паддингом
-- **Управление ключами**: Android KeyStore
-- **IV**: Генерируется автоматически, записывается в начало потока
-- **Использование**: Шифрование секретного хранилища
-
-```kotlin
-fun encrypt(inputStream: InputStream, outputStream: OutputStream)
-fun decrypt(inputStream: InputStream, outputStream: OutputStream)
-```
-
-### BiometricUtils
-- Поддержка биометрической аутентификации (отпечатки, Face ID)
-
----
-
-## 📱 Экраны (Screens)
-
-1. **FoldersScreen** - Сетка папок с медиа
-2. **FolderContentScreen** - Содержимое папки
-3. **FavoritesScreen** - Избранные папки
-4. **AllMediaScreen** - Все медиа на устройстве
-5. **TrashScreen** - Корзина
-6. **SecretStorageScreen** - Секретное хранилище (зашифрованное)
-7. **TagManagementScreen** - Управление тегами
-8. **ViewHistoryScreen** - История просмотра
-9. **SettingsScreen** - Настройки приложения
-10. **HiddenFoldersScreen** - Скрытые папки
-11. **AboutScreen** - О приложении
-12. **HelpScreen** - Помощь
-
----
-
-## 🎨 UI Компоненты
-
-### MediaViewer
-Основной компонент для просмотра медиа
-- Поддержка свайпа между фото
-- Сжатие по пальцам (Pinch to Zoom)
-- Двойной тап для зума
-- Поддержка видео с ExoPlayer
-- Контролы в верхней/нижней части
-- Размытие (Blur/Placeholder)
-- История просмотра
-
-### MediaGrid
-Сетка для отображения медиа
-- Lazy grid для оптимизации
-- Селектор элементов
-- Поддержка blur типов
-
-### VideoPlayerPage
-Плеер видео на базе ExoPlayer
-- Media3 экосистема
-- Цикличное воспроизведение
-- Приглушение звука
-
-### ZoomableImage
-Компонент для увеличиваемых изображений
-
----
-
-## 🔄 Загрузка медиа (MediaLoader)
-
-### loadAllMedia()
-```kotlin
-fun loadAllMedia(
-    context: Context,
-    sortType: SortType,
-    sortAscending: Boolean,
-    hiddenFolderIds: Set<String>,
-    selectedDate: Long? = null
-): ImmutableList<MediaItem>
-```
-- Запрос к MediaStore
-- Фильтрация по дате
-- Сортировка (по дате, имени, размеру)
-- Исключение скрытых папок
-
-### loadMediaFolders()
-Загрузка всех папок с их содержимым
-
-### loadFavoriteMediaItems()
-Загрузка элементов из избранных папок
-
-### loadTrashedMediaItems()
-Загрузка удаленных элементов
-
----
-
-## 🎯 Особенности приложения
-
-### 1. **Система тегирования**
-- Создание произвольных тегов
-- Присвоение тегов элементам и папкам
-- Фильтрация по тегам в поиске
-- Резервное копирование/восстановление тегов
-
-### 2. **Размытие (Blur)**
-- **Глобальное размытие** - все папки/медиа
-- **Размытие в папках** - папка целиком размыта
-- **Размытие в корзине** - удаленные файлы размыты
-- **Размытие конкретных элементов** - отдельные файлы
-- **Два типа**: BLUR (фон) или PLACEHOLDER
-
-### 3. **Секретное хранилище**
-- Зашифрованное AES хранилище
-- Скрытая папка `.secret`
-- Криптографически защищенные миниатюры
-- Требует биометрической аутентификации
-
-### 4. **Shake to Blur**
-- Акселерометр для обнаружения встряхивания
-- Быстрое включение/отключение размытия
-
-### 5. **FAB (Floating Action Button)**
-- Перемешивание медиа
-- Запуск камеры
-- Пользовательские действия
-
-### 6. **История просмотра**
-- Отслеживание просмотренных файлов
-- Фильтрация по дате
-- Полная очистка
-
-### 7. **Резервное копирование**
-- Экспорт тегов и избранных
-- Импорт из JSON
-- GSON для сериализации
-
-### 8. **Проверка обновлений**
-- GitHub API для получения последнего релиза
-- Загрузка APK
-- Уведомления обновлений
-
-### 9. **Поддержка язык**
-- Русский (ru)
-- Английский (en)
-- Системный (system)
-- "Специальный" язык (easter egg)
-
-### 10. **Редактирование фото**
-- Встроенный фото-редактор
-- Рисование на фото
-- Обрезка изображений (CropImageActivity)
-- Экспорт отредактированных файлов
-
-### 11. **Автоудаление корзины**
-- Параметр дней до автоудаления
-- Фоновая очистка
-
----
-
-## 🔗 Зависимости и библиотеки
-
-### Compose & Material
-- Jetpack Compose BOM 2024.06.00
-- Material 3
-- Compose Animation
-- Reorderable lists
-
-### Media & Image
-- Coil 2.7.0 (загрузка и кэширование изображений)
-- Media3 1.3.1 (видеоплеер ExoPlayer)
-- ExifInterface 1.3.7 (EXIF данные)
-- android-image-cropper 4.5.0 (обрезка фото)
-
-### Networking & Data
-- Retrofit 2.9.0
-- GSON 2.10.1
-- Paging 3.3.6
+# Deep Analysis of MyGalleryApp Project
+
+## Project Overview
+- **Package Name**: `com.example.nkdsify` (applicationId: `com.nkds.hosikoouma.nekolery`)
+- **Application Label**: Nekolery
+- **Minimum SDK**: 30
+- **Target SDK**: 36
+- **Version**: 2.0.21 (versionCode: 41)
+- **Primary Language**: Kotlin with Jetpack Compose
+- **Architecture**: MVVM-like with Compose UI, Repository pattern for data handling
+
+## Build Configuration
+### Top-level build.gradle.kts
+- Uses version catalogs (`libs.versions.toml` implied)
+- Applies aliases for common plugins:
+  - android.application
+  - kotlin.android
+  - kotlin.compose
+  - android.library
+
+### App-level build.gradle.kts
+- **Plugins**:
+  - com.android.application
+  - org.jetbrains.kotlin.android
+  - org.jetbrains.kotlin.plugin.compose
+- **Android Configuration**:
+  - compileSdk: 36
+  - defaultConfig:
+    - applicationId: com.nkds.hosikoouma.nekolery
+    - minSdk: 30
+    - targetSdk: 36
+    - versionCode: 41
+    - versionName: "2.0.21"
+    - testInstrumentationRunner: androidx.test.runner.AndroidJUnitRunner
+  - buildTypes:
+    - release: minifyEnabled true, shrinkResources true with proguard
+    - debug: minifyEnabled false, shrinkResources false, applicationIdSuffix ".debug"
+  - buildFeatures: compose = true
+  - packaging: excludes META-INF/{AL2.0,LGPL2.1}
+  - compileOptions: source/targetCompatibility JavaVersion.VERSION_17
+  - kotlinOptions: jvmTarget "17"
+
+## Dependencies Analysis
+### Core Dependencies
+- **Compose BOM**: androidx.compose:compose-bom:2024.06.00
+- **Compose UI**: foundation, ui, material3, material-icons-extended
+- **AndroidX**:
+  - core-ktx: v1.13.1
+  - activity-compose: 1.9.0
+  - core-splashscreen: 1.0.1
+  - appcompat: 1.6.1
+  - exifinterface: 1.3.7
+  - lifecycle-viewmodel-compose, lifecycle-runtime-compose
+  - paging-runtime-ktx: 3.3.6, paging-compose: 3.3.6
+  - graphics-shapes: 1.0.1
+  - biometric: 1.1.0
+- **Image Loading**: Coil (compose, gif, video)
+- **Networking**: Retrofit with Gson converter
+- **Media**:
+  - Media3: exoplayer, ui, transformer, effect, common (all 1.3.1)
+  - Android Image Cropper: com.vanniktech:android-image-cropper:4.5.0
+- **Utilities**:
+  - Gson: 2.10.1
+  - Kotlinx Collections Immutable: 0.3.7
+  - Reorderable: 2.4.1
+- **Testing**:
+  - JUnit: 4.13.2
+  - Mockito: 4.5.1
+  - Mockk: 1.13.3
+  - AndroidX Test: ext:junit, espresso-core, compose ui-test
+
+## AndroidManifest.xml Analysis
+### Permissions
+- POST_NOTIFICATIONS
+- READ_MEDIA_IMAGES
+- READ_EXTERNAL_STORAGE
+- READ_MEDIA_VIDEO
+- MANAGE_EXTERNAL_STORAGE
+- WRITE_EXTERNAL_STORAGE
+- VIBRATE
+- INTERNET
+- SET_WALLPAPER
+- CAMERA (with android.hardware.camera feature, required=false)
+
+### Components
+1. **MainActivity** (.MainActivity)
+   - Launcher activity
+   - Theme: @style/Theme.App.Starting
+   - windowSoftInputMode: adjustResize
+
+2. **ExternalMediaActivity** (.ExternalMediaActivity)
+   - Exported: true
+   - Theme: Theme.AppCompat.NoActionBar
+   - Screen orientation: portrait
+   - Handles VIEW and EDIT actions for image/* and video/* MIME types
+   - Supports content scheme for images
+
+3. **EditActivity** (.ui.editor.EditActivity)
+   - Exported: false
+   - Screen orientation: portrait
+   - Theme: Theme.AppCompat.NoActionBar
+
+4. **VideoEditActivity** (.ui.editor.video.VideoEditActivity)
+   - Similar to EditActivity
+
+5. **CropImageActivity** (com.canhub.cropper.CropImageActivity)
+   - Theme: Theme.AppCompat
+
+### Intent Filters
+- MainActivity: MAIN action, LAUNCHER category
+- ExternalMediaActivity: 
+  - VIEW action for image/* and video/* (with BROWSABLE and DEFAULT categories)
+  - EDIT action for image/* and video/* (with DEFAULT category)
+  - VIEW action with content scheme for image/*
+
+## Source Code Structure Analysis
+### Key Directories
+- `app/src/main/java/com/example/nkdsify/`: Base application classes
+- `app/src/main/java/com/example/nkdsify/data/`: Data models and media loading
+- `app/src/main/java/com/example/nkdsify/ui/`: UI components and screens
+- `app/src/main/java/com/example/nkdsify/ui/components/`: Reusable UI components
+- `app/src/main/java/com/example/nkdsify/ui/dialogs/`: Dialog implementations
+- `app/src/main/java/com/example/nkdsify/ui/editor/`: Photo and video editors
+- `app/src/main/java/com/example/nkdsify/ui/impl/`: Screen implementations
+- `app/src/main/java/com/example/nkdsify/ui/screens/`: Screen composables
+- `app/src/main/java/com/example/nkdsify/ui/theme/`: Theme definitions
+- `app/src/main/java/com/example/nkdsify/ui/utils/`: Utility classes
+
+### Application Classes
+- **MyApp.kt**: Application class
+- **MyAppState.kt**: Application state management
+- **ContextUtils.kt**: Context utilities
+- **DataModels.kt**: Data models (MediaItem, Folder, Tag, etc.)
+- **MediaLoader.kt**: Media loading functionality
+- **ExternalMediaActivity.kt**: Handles external media intents
+- **MainActivity.kt**: Main activity hosting Compose UI
+- **NotificationUtils.kt**: Notification handling
+
+### UI Components
+#### Theme
+- **Color.kt**: Color definitions (light/dark themes)
+- **Theme.kt**: Theme setup (MaterialTheme configuration)
+- **Type.kt**: Typography definitions
+
+#### Screens
+- WelcomeScreen.kt: Onboarding/tutorial screen
+- SettingsScreen.kt: Settings interface
+- FavoritesScreen.kt: Favorite media view
+- FoldersGrid.kt: Folder grid display
+- HelpScreen.kt: Help/documentation
+- HiddenFoldersScreen.kt: Hidden folders management
+- SecretStorageScreen.kt: Encrypted media storage
+- TagManagementScreen.kt: Tag creation and management
+- TrashScreen.kt: Deleted items recovery
+- ViewHistoryScreen.kt: Recently viewed media
+- AboutScreen.kt: App information
+- SettingsComponents.kt: Reusable settings UI components
+- SettingsState.kt: Settings state management
+
+#### Components
+- MediaGrid.kt: Grid display for media items
+- MediaViewer.kt: Fullscreen media viewer
+- VideoPlayerPage.kt: Video playback interface
+- VideoPreviewSlideshow.kt: Video preview slideshow
+- ZoomableImage.kt: Pinch-to-zoom image viewer
+- AlbumDetailsDialog.kt: Album/folder details dialog
+- BackupAndRestoreDialog.kt: Backup/restore functionality
+- FolderSelectionDialog.kt: Folder selection interface
+- HiddenFoldersDialog.kt: Hidden folders management dialog
+- TagEditDialog.kt: Tag editing dialog
+- TagVisualTransformation.kt: Tag text transformation
+- UpdateDialog.kt: Update notification dialog
+- Various utility components (PointerEvent, lexapro, Coil wrappers)
+
+#### Editor
+- PhotoEditorScreen.kt/ViewModel: Photo editing interface
+- VideoEditorScreen.kt/ViewModel: Video editing interface
+- EditorModels.kt: Shared editor models
+
+#### Dialogs
+- DeletionDialogs.kt: Delete confirmation dialogs
+- FolderDialogs.kt: Folder creation/renaming dialogs
+- InfoDialogs.kt: Information display dialogs
+- OthersDialogs.kt: Miscellaneous dialogs
+- PermissionPermanentlyDeniedDialog.kt: Permission rationale dialog
+- RestorationDialogs.kt: Restore from trash dialog
+- SpecialLanguageDialog.kt: Language selection dialog
+- TagDialogs.kt: Tag management dialogs
+
+### Utility Classes
+- **AesStreamingDataSource.kt**: AES encrypted data streaming
+- **BiometricUtils.kt**: Biometric authentication helpers
+- **CryptoUtils.kt**: Cryptographic operations
+- **EncryptedImageDecoder.kt**: Decrypts encrypted images
+- **EnumExtensions.kt**: Enum utility extensions
+- **FavoritesRepository.kt**: Favorite media storage
+- **FileUtils.kt**: File operations
+- **GithubUpdateChecker.kt**: GitHub-based update checking
+- **MediaSanitizer.kt**: Media file sanitization
+- **MigrationUtils.kt**: Database/migrations handling
+- **QueryParser.kt**: Search/query parsing
+- **SecretRepository.kt**: Encrypted media storage
+- **SettingsRepository.kt**: Settings persistence
+- **ShakeDetector.kt**: Shake gesture detection
+- **ShapeUtils.kt**: Custom shape generation
+- **TagsRepository.kt**: Tag management
+- **TrashRepository.kt**: Deleted items management
+- **Utils.kt**: General utility functions
+- **VibrationUtils.kt**: Vibration patterns
+- **VideoFrameExtractor.kt**: Video frame extraction
+- **ViewHistoryRepository.kt**: View history tracking
+
+## Architecture Patterns
+1. **Presentation Layer**: Jetpack Compose with unidirectional data flow
+2. **State Management**: ViewModel classes (via lifecycle-viewmodel-compose) for UI state
+3. **Data Layer**: Repository pattern for data access (FavoritesRepository, SecretRepository, etc.)
+4. **Dependency Injection**: Manual instantiation (no DI framework observed)
+5. **Threading**: Coroutines for async operations (implied by suspend functions in repositories)
+6. **Persistence**: 
+   - Room database (evidenced by kls_database.db file)
+   - SharedPreferences via SettingsRepository
+   - File system for media storage
+
+## Features Identified
+### Media Management
+- Browse media by folders, tags, favorites, view history
+- Support for images and videos
+- Media loading with Coil (including GIF and video support)
+- Media viewer with zoom, rotation, and slideshow capabilities
+- Video playback with Media3/ExoPlayer
+
+### Organization
+- Custom folders creation and management
+- Tag-based categorization
+- Favorite marking
+- Recently viewed history
+- Hidden folders (password/PIN protected)
+- Secret storage (encrypted media)
+
+### Editing
+- Photo editor (crop, rotate, adjust, filters, draw, text, stickers)
+- Video editor (trim, adjust, filters, etc.)
+- Integration with Android Image Cropper library
 
 ### Security
-- Biometric 1.1.0
-- Android KeyStore для криптографии
+- Biometric authentication for secret/hidden folders
+- AES encryption for secret media storage
+- Password/PIN protection for hidden folders
 
 ### Utilities
-- Kotlin Collections Immutable
-- Calvin Reorderable 2.4.1
+- Backup and restore functionality
+- Wallpaper setting
+- Media sanitization (potentially for privacy)
+- Shake gesture detection (possibly for emergency hide)
+- Vibration feedback
+- Update checking via GitHub
 
----
+### Settings
+- Appearance (theme, icon style)
+- Behavior (launch actions, sorting)
+- Privacy (lock methods, hidden folders)
+- Advanced (database, storage locations)
+- About and help sections
 
-## 📄 AndroidManifest.xml
+## Observations and Potential Issues
+1. **Permission Requests**: Requests MANAGE_EXTERNAL_STORAGE (Android 11+) which is sensitive and requires special handling
+2. **Database File**: kls_database.db in root directory (should ideally be in app's private directory)
+3. **Wide Range of Features**: App attempts to be a full-featured gallery/editor/locker which may impact performance
+4. **Complex Dependencies**: Many libraries increase APK size and potential conflicts
+5. **Custom Implementations**: Several utility classes suggest custom solutions where existing libraries might suffice
+6. **Compose Usage**: Proper adoption of Jetpack Compose for modern UI
+7. **Security Focus**: Strong emphasis on privacy and security features (encryption, biometrics)
 
-### Требуемые разрешения
-```xml
-READ_MEDIA_IMAGES, READ_MEDIA_VIDEO
-READ_EXTERNAL_STORAGE, WRITE_EXTERNAL_STORAGE
-MANAGE_EXTERNAL_STORAGE
-VIBRATE, INTERNET
-SET_WALLPAPER, CAMERA
-POST_NOTIFICATIONS
-```
+## Recommendations
+1. Move database to app's private directory for better security
+2. Consider reducing permission requests to only what's necessary
+3. Implement proper permission handling for MANAGE_EXTERNAL_STORAGE (if targeting Android 13+)
+4. Consider modularizing features to improve build times and maintainability
+5. Add proper error logging and crash reporting
+6. Implement automated UI tests for critical flows
+7. Consider using Android App Bundle for size optimization
+8. Review and optimize image/video loading for memory efficiency
+9. Ensure proper cleanup of resources (especially in editors)
+10. Consider using WorkManager for background operations like backup
 
-### Активности
-1. **MainActivity** - Главная активность
-2. **ExternalMediaActivity** - Просмотр внешних файлов (intent filter для VIEW/EDIT)
-3. **EditActivity** - Редактор фото
-4. **VideoEditActivity** - Редактор видео
-5. **CropImageActivity** - Обрезка изображений
-
----
-
-## 🚀 Процесс запуска
-
-1. **Splash Screen** установлен в `onCreate`
-2. **ShakeDetector** инициализируется
-3. **Permissions** запрашиваются у пользователя
-4. **MigrationUtils** выполняет миграции данных
-5. **Settings** загружаются из SharedPreferences
-6. **Медиа** загружается в фоновом потоке (корутины)
-7. **MyApp** Composable рендерится
-
----
-
-## 📊 Стек технологий
-
-| Слой | Технология |
-|------|-----------|
-| **UI Framework** | Jetpack Compose + Material 3 |
-| **Язык** | Kotlin 2.0.21 |
-| **Состояние** | Compose State (mutableStateOf) |
-| **Навигация** | Custom Screen sealed class |
-| **Параллелизм** | Kotlin Coroutines |
-| **Изображения** | Coil ImageLoader |
-| **Видео** | Media3 (ExoPlayer) |
-| **Хранилище** | SharedPreferences + FileSystem + Android KeyStore |
-| **Сеть** | Retrofit + GSON |
-| **Безопасность** | AES Encryption (Android KeyStore) |
-
----
-
-## 🎓 Ключевые паттерны и практики
-
-1. **State Hoisting** - Глобальное состояние в MyAppState
-2. **Immutable Collections** - Использование ImmutableList
-3. **Sealed Classes** - Типобезопасная навигация
-4. **Repository Pattern** - Отделение источников данных
-5. **Lazy Loading** - LazyGrid/LazyList для оптимизации
-6. **Coroutine Scopes** - Управление асинхронными операциями
-7. **Composition Locals** - LocalContext, LocalImageLoader и т.д.
-8. **Defensive Copying** - Использование копирования состояния
-
----
-
-## 🔍 Потоки данных (Data Flow)
-
-```
-MediaStore 
-    ↓
-MediaLoader.loadAllMedia() / loadMediaFolders() ...
-    ↓
-MyAppState (allFolders, allMedia, etc.)
-    ↓
-MyAppNavigation (фильтрация, сортировка, поиск)
-    ↓
-UI Screens (FoldersScreen, FolderContentScreen и т.д.)
-    ↓
-MediaViewer (просмотр с контролами)
-```
-
----
-
-## 📝 Замечания по коду
-
-1. **GEMINI комментарии** - В коде есть комментарии типа "GEMINI НЕ ТРОГАЙ ЭТУ АНОТАЦИЮ" (следы работы с ИИ)
-2. **TODO** - Есть места, требующие завершения/оптимизации
-3. **Многоязычность** - Весь текст в `strings.xml`
-4. **Dark Mode** - Полная поддержка AMOLED темы
-5. **Accessibility** - Используются правильные паттерны Compose
-
----
-
-## ✨ Возможные улучшения
-
-1. Добавить database (Room) для локального кэширования
-2. Оптимизировать загрузку больших количеств файлов
-3. Добавить поддержку RAW и других форматов
-4. Реализовать batch operations для лучшей производительности
-5. Добавить unit тесты
-6. Улучшить обработку ошибок
-7. Добавить analytics
-
----
-
-## 🎯 Заключение
-
-Это полнофункциональное, хорошо структурированное приложение галереи, демонстрирующее:
-- Продвинутый уровень работы с Jetpack Compose
-- Правильную архитектуру многоэкранного приложения
-- Сложную работу с медиа, включая видео и криптографию
-- Полный цикл функционала (от загрузки до обработки и сохранения)
-
-Проект готов к дальнейшей разработке и может служить отличной базой для добавления новых функций.
-
+## Conclusion
+MyGalleryApp is a feature-rich Android gallery application built with modern Kotlin and Jetpack Compose. It combines media viewing, organization, editing, and security features in a single package. The architecture follows modern Android practices with Compose UI, ViewModel state management, and Repository pattern for data access. While ambitious in scope, the app demonstrates good use of Android Jetpack libraries and Kotlin language features. The extensive utility classes indicate attention to detail in areas like security (encryption, biometrics) and user experience (gestures, vibrations). The presence of a database file in the root directory and broad permission requests are areas that could be improved for better security and privacy compliance.
