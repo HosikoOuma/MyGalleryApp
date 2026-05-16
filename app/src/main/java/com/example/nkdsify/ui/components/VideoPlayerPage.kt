@@ -20,6 +20,7 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -88,7 +89,7 @@ fun AnimatedPlayPauseIcon(
 @Composable
 fun VideoPlayerPage(
     uri: Uri,
-    exoPlayer: ExoPlayer, // Передаем плеер снаружи
+    exoPlayer: ExoPlayer,
     isFullyVisible: Boolean,
     isCurrentPage: Boolean,
     isMuted: Boolean,
@@ -97,7 +98,9 @@ fun VideoPlayerPage(
     onMuteClick: () -> Unit,
     isLoopVideoEnabled: Boolean,
     isSecretMode: Boolean = false,
-    bottomPadding: Dp = 0.dp
+    bottomPadding: Dp = 0.dp,
+    isInPipMode: Boolean = false,
+    onPictureInPictureClick: (() -> Unit)? = null
 ) {
     val context = LocalContext.current
 
@@ -130,6 +133,7 @@ fun VideoPlayerPage(
 
     val lifecycleOwner = LocalLifecycleOwner.current
     var wasPlayingBeforePause by rememberSaveable { mutableStateOf(false) }
+    val currentIsInPipMode by rememberUpdatedState(isInPipMode)
 
     DisposableEffect(exoPlayer) {
         val listener = object : Player.Listener {
@@ -168,7 +172,7 @@ fun VideoPlayerPage(
         val observer = LifecycleEventObserver { _, event ->
             when (event) {
                 Lifecycle.Event.ON_PAUSE -> {
-                    if (exoPlayer.isPlaying) {
+                    if (!currentIsInPipMode && exoPlayer.isPlaying) {
                         wasPlayingBeforePause = true
                         exoPlayer.pause()
                     }
@@ -267,85 +271,92 @@ fun VideoPlayerPage(
             modifier = Modifier.fillMaxSize().graphicsLayer { scaleX = scale; scaleY = scale; translationX = offsetX; translationY = offsetY }
         )
 
-        AnimatedVisibility(visible = controlsVisible || seekDirection != null, enter = fadeIn(), exit = fadeOut(), modifier = Modifier.fillMaxSize()) {
-            Box(modifier = Modifier.background(Color.Black.copy(alpha = 0.6f)))
-        }
+        if (!isInPipMode) {
+            AnimatedVisibility(visible = controlsVisible || seekDirection != null, enter = fadeIn(), exit = fadeOut(), modifier = Modifier.fillMaxSize()) {
+                Box(modifier = Modifier.background(Color.Black.copy(alpha = 0.6f)))
+            }
 
-        val seekAnimSide = if (seekDirection == SeekDirection.FORWARD) Alignment.CenterEnd else Alignment.CenterStart
-        AnimatedVisibility(visible = seekDirection != null, enter = fadeIn(), exit = fadeOut(), modifier = Modifier.align(seekAnimSide)) {
-            Icon(
-                imageVector = if (seekDirection == SeekDirection.FORWARD) Icons.Default.FastForward else Icons.Default.FastRewind,
-                contentDescription = null,
-                tint = Color.White.copy(alpha = 0.7f),
-                modifier = Modifier.size(64.dp).padding(horizontal = 16.dp)
-            )
-        }
+            val seekAnimSide = if (seekDirection == SeekDirection.FORWARD) Alignment.CenterEnd else Alignment.CenterStart
+            AnimatedVisibility(visible = seekDirection != null, enter = fadeIn(), exit = fadeOut(), modifier = Modifier.align(seekAnimSide)) {
+                Icon(
+                    imageVector = if (seekDirection == SeekDirection.FORWARD) Icons.Default.FastForward else Icons.Default.FastRewind,
+                    contentDescription = null,
+                    tint = Color.White.copy(alpha = 0.7f),
+                    modifier = Modifier.size(64.dp).padding(horizontal = 16.dp)
+                )
+            }
 
-        AnimatedVisibility(visible = controlsVisible, enter = fadeIn(), exit = fadeOut(), modifier = Modifier.fillMaxSize()) {
-            Box(modifier = Modifier.fillMaxSize()) {
-                if (playbackState == Player.STATE_BUFFERING) {
-                    CircularProgressIndicator(modifier = Modifier.align(Alignment.Center), color = Color.White)
-                }
-
-                Column(
-                    modifier = Modifier
-                        .align(Alignment.BottomCenter)
-                        .fillMaxWidth()
-                        .navigationBarsPadding()
-                        .padding(bottom = maxOf(bottomPadding, 80.dp))
-                        .padding(16.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    IconButton(
-                        onClick = {
-                            if (playbackState == Player.STATE_ENDED) { exoPlayer.seekTo(0); exoPlayer.play() }
-                            else { if (exoPlayer.isPlaying) exoPlayer.pause() else exoPlayer.play() }
-                        },
-                        modifier = Modifier.padding(bottom = 16.dp).size(64.dp).clip(RoundedCornerShape(16.dp))
-                            .border(1.dp, Color.White.copy(alpha = 0.1f), shape = RoundedCornerShape(16.dp))
-                            .background(Color.Black.copy(alpha = 0.5f))
-                    ) {
-                        AnimatedPlayPauseIcon(isPlaying = isPlaying && playbackState != Player.STATE_ENDED, size = 40.dp, tint = Color.White)
+            AnimatedVisibility(visible = controlsVisible, enter = fadeIn(), exit = fadeOut(), modifier = Modifier.fillMaxSize()) {
+                Box(modifier = Modifier.fillMaxSize()) {
+                    if (playbackState == Player.STATE_BUFFERING) {
+                        CircularProgressIndicator(modifier = Modifier.align(Alignment.Center), color = Color.White)
                     }
 
-                    Slider(
-                        value = if (totalDuration > 0) playbackPosition.toFloat() / totalDuration.toFloat() else 0f,
-                        onValueChange = { newProgress ->
-                            isSeeking = true
-                            val newPosition = (newProgress * totalDuration.toFloat()).toLong()
-                            playbackPosition = newPosition
-                            exoPlayer.seekTo(newPosition)
-                        },
-                        onValueChangeFinished = {
-                            isSeeking = false
-                        },
+                    Column(
                         modifier = Modifier
+                            .align(Alignment.BottomCenter)
                             .fillMaxWidth()
-                            .padding(vertical = 8.dp),
-                        colors = SliderDefaults.colors(
-                            thumbColor = MaterialTheme.colorScheme.primary,
-                            activeTrackColor = MaterialTheme.colorScheme.primary,
-                            inactiveTrackColor = Color.White.copy(alpha = 0.3f)
-                        )
-                    )
+                            .navigationBarsPadding()
+                            .padding(bottom = maxOf(bottomPadding, 80.dp))
+                            .padding(16.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        IconButton(
+                            onClick = {
+                                if (playbackState == Player.STATE_ENDED) { exoPlayer.seekTo(0); exoPlayer.play() }
+                                else { if (exoPlayer.isPlaying) exoPlayer.pause() else exoPlayer.play() }
+                            },
+                            modifier = Modifier.padding(bottom = 16.dp).size(64.dp).clip(RoundedCornerShape(16.dp))
+                                .border(1.dp, Color.White.copy(alpha = 0.1f), shape = RoundedCornerShape(16.dp))
+                                .background(Color.Black.copy(alpha = 0.5f))
+                        ) {
+                            AnimatedPlayPauseIcon(isPlaying = isPlaying && playbackState != Player.STATE_ENDED, size = 40.dp, tint = Color.White)
+                        }
 
-                    Row(modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                         Text(text = formatDuration(playbackPosition), color = Color.White)
-                         Row(horizontalArrangement = Arrangement.spacedBy(0.dp)) {
-                             IconButton(onClick = onMuteClick) {
-                                 Icon(imageVector = if (isMuted) Icons.AutoMirrored.Filled.VolumeOff else Icons.AutoMirrored.Filled.VolumeUp, contentDescription = null, tint = Color.White)
-                             }
-                             Box {
-                                 IconButton(onClick = { showSpeedMenu = true }) { Icon(imageVector = Icons.Default.Speed, contentDescription = null, tint = Color.White) }
-                                 DropdownMenu(expanded = showSpeedMenu, onDismissRequest = { showSpeedMenu = false }) {
-                                     listOf(0.5f, 1.0f, 1.5f, 2.0f).forEach { speedValue ->
-                                         DropdownMenuItem(text = { Text(text = "${speedValue}x") }, onClick = { speed = speedValue; exoPlayer.setPlaybackSpeed(speed); showSpeedMenu = false })
+                        Slider(
+                            value = if (totalDuration > 0) playbackPosition.toFloat() / totalDuration.toFloat() else 0f,
+                            onValueChange = { newProgress ->
+                                isSeeking = true
+                                val newPosition = (newProgress * totalDuration.toFloat()).toLong()
+                                playbackPosition = newPosition
+                                exoPlayer.seekTo(newPosition)
+                            },
+                            onValueChangeFinished = {
+                                isSeeking = false
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 8.dp),
+                            colors = SliderDefaults.colors(
+                                thumbColor = MaterialTheme.colorScheme.primary,
+                                activeTrackColor = MaterialTheme.colorScheme.primary,
+                                inactiveTrackColor = Color.White.copy(alpha = 0.3f)
+                            )
+                        )
+
+                        Row(modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                             Text(text = formatDuration(playbackPosition), color = Color.White)
+                             Row(horizontalArrangement = Arrangement.spacedBy(0.dp)) {
+                                 IconButton(onClick = onMuteClick) {
+                                     Icon(imageVector = if (isMuted) Icons.AutoMirrored.Filled.VolumeOff else Icons.AutoMirrored.Filled.VolumeUp, contentDescription = null, tint = Color.White)
+                                 }
+                                 if (onPictureInPictureClick != null) {
+                                     IconButton(onClick = onPictureInPictureClick) {
+                                         Icon(imageVector = Icons.Default.PictureInPictureAlt, contentDescription = null, tint = Color.White)
+                                     }
+                                 }
+                                 Box {
+                                     IconButton(onClick = { showSpeedMenu = true }) { Icon(imageVector = Icons.Default.Speed, contentDescription = null, tint = Color.White) }
+                                     DropdownMenu(expanded = showSpeedMenu, onDismissRequest = { showSpeedMenu = false }) {
+                                         listOf(0.5f, 1.0f, 1.5f, 2.0f).forEach { speedValue ->
+                                             DropdownMenuItem(text = { Text(text = "${speedValue}x") }, onClick = { speed = speedValue; exoPlayer.setPlaybackSpeed(speed); showSpeedMenu = false })
+                                         }
                                      }
                                  }
                              }
+                             Text(text = formatDuration(totalDuration), color = Color.White)
                          }
-                         Text(text = formatDuration(totalDuration), color = Color.White)
-                     }
+                    }
                 }
             }
         }

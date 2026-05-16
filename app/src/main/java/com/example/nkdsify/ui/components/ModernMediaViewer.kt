@@ -1,9 +1,14 @@
 package com.example.nkdsify.ui.components
 
 import android.app.Activity
+import android.app.PictureInPictureParams
 import android.content.Intent
 import android.net.Uri
+import android.util.Rational
 import android.view.WindowInsets
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
@@ -85,8 +90,55 @@ fun ModernMediaViewer(
             .build()
     }
 
+    val mediaSession = remember {
+        androidx.media3.session.MediaSession.Builder(context, exoPlayer)
+            .setId(java.util.UUID.randomUUID().toString())
+            .build()
+    }
+
     DisposableEffect(exoPlayer) {
-        onDispose { exoPlayer.release() }
+        onDispose {
+            mediaSession.release()
+            exoPlayer.release()
+        }
+    }
+
+    var isInPipMode by remember { mutableStateOf(false) }
+    val pipLifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(pipLifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                val act = context as? Activity
+                if (act?.isInPictureInPictureMode != true) {
+                    isInPipMode = false
+                }
+            }
+        }
+        pipLifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            pipLifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
+
+    val currentItem = items.getOrNull(pagerState.currentPage)
+    val activity = context as? Activity
+    val onPictureInPictureClick: (() -> Unit)? = remember(currentItem?.isVideo, isSecretMode) {
+        if (currentItem?.isVideo == true && !isSecretMode) {
+            {
+                val videoSize = exoPlayer.videoSize
+                val aspectRatio = if (videoSize.width > 0 && videoSize.height > 0) {
+                    Rational(videoSize.width, videoSize.height)
+                } else {
+                    Rational(16, 9)
+                }
+                val params = PictureInPictureParams.Builder()
+                    .setAspectRatio(aspectRatio)
+                    .build()
+                isInPipMode = true
+                val success = activity?.enterPictureInPictureMode(params) ?: false
+                if (!success) isInPipMode = false
+            }
+        } else null
     }
 
     // Управление источником данных
@@ -237,7 +289,9 @@ fun ModernMediaViewer(
                             onMuteClick = { isMuted = !isMuted },
                             isLoopVideoEnabled = myAppState.isLoopVideoEnabled,
                             isSecretMode = isSecretMode,
-                            bottomPadding = if (myAppState.viewerControlsPosition == ViewerControlsPosition.BOTTOM) 80.dp else 0.dp
+                            bottomPadding = if (myAppState.viewerControlsPosition == ViewerControlsPosition.BOTTOM) 80.dp else 0.dp,
+                            isInPipMode = isInPipMode,
+                            onPictureInPictureClick = onPictureInPictureClick
                         )
                     } else {
                         ZoomableImage(
@@ -253,7 +307,6 @@ fun ModernMediaViewer(
         }
 
         // Кнопки управления (Glassmorphism)
-        val currentItem = items.getOrNull(pagerState.currentPage)
         
         AnimatedVisibility(
             visible = controlsVisible,
