@@ -39,8 +39,7 @@ fun UpdateDialog(
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
-        sheetState = sheetState,
-        windowInsets = WindowInsets(0)
+        sheetState = sheetState
     ) {
         Column(
             modifier = Modifier

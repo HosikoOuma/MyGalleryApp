@@ -49,6 +49,7 @@ fun MyAppFAB(
         && screen !is Screen.ViewHistory
         && screen !is Screen.About
         && screen !is Screen.Help
+        && screen !is Screen.MediaViewer
     ) {
         val interactionSource = remember { MutableInteractionSource() }
         val isPressed by interactionSource.collectIsPressedAsState()
@@ -139,7 +140,7 @@ fun MyAppFAB(
                         MediaViewerState(items = shuffledItems.toImmutableList(), startIndex = 0)
                     } else null
                 }
-                viewerState?.let { myAppState.viewerState = it }
+                viewerState?.let { myAppState.currentScreen = Screen.MediaViewer(it) }
             }
         }
         if (useLargeFab) {

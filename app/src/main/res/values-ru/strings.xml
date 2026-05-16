@@ -228,6 +228,7 @@
     <string name="font_family_default">Системный</string>
     <string name="font_family_google_sans">Google Sans</string>
     <string name="font_family_jetbrains_mono">JetBrains Mono</string>
+    <string name="font_family_nunito">Nunito</string>
     <string name="details_name_label">Имя</string>
     <string name="details_size_label">Размер</string>
     <string name="details_date_added_label">Дата Добавления</string>

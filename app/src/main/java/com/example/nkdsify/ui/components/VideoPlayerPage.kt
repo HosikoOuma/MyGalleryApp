@@ -292,7 +292,7 @@ fun VideoPlayerPage(
                         .align(Alignment.BottomCenter)
                         .fillMaxWidth()
                         .navigationBarsPadding()
-                        .padding(bottom = bottomPadding) 
+                        .padding(bottom = maxOf(bottomPadding, 80.dp))
                         .padding(16.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
@@ -329,23 +329,23 @@ fun VideoPlayerPage(
                         )
                     )
 
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                        Text(text = formatDuration(playbackPosition), color = Color.White)
-                        Row(horizontalArrangement = Arrangement.spacedBy(0.dp)) {
-                            IconButton(onClick = onMuteClick) {
-                                Icon(imageVector = if (isMuted) Icons.AutoMirrored.Filled.VolumeOff else Icons.AutoMirrored.Filled.VolumeUp, contentDescription = null, tint = Color.White)
-                            }
-                            Box {
-                                IconButton(onClick = { showSpeedMenu = true }) { Icon(imageVector = Icons.Default.Speed, contentDescription = null, tint = Color.White) }
-                                DropdownMenu(expanded = showSpeedMenu, onDismissRequest = { showSpeedMenu = false }) {
-                                    listOf(0.5f, 1.0f, 1.5f, 2.0f).forEach { speedValue ->
-                                        DropdownMenuItem(text = { Text(text = "${speedValue}x") }, onClick = { speed = speedValue; exoPlayer.setPlaybackSpeed(speed); showSpeedMenu = false })
-                                    }
-                                }
-                            }
-                        }
-                        Text(text = formatDuration(totalDuration), color = Color.White)
-                    }
+                    Row(modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                         Text(text = formatDuration(playbackPosition), color = Color.White)
+                         Row(horizontalArrangement = Arrangement.spacedBy(0.dp)) {
+                             IconButton(onClick = onMuteClick) {
+                                 Icon(imageVector = if (isMuted) Icons.AutoMirrored.Filled.VolumeOff else Icons.AutoMirrored.Filled.VolumeUp, contentDescription = null, tint = Color.White)
+                             }
+                             Box {
+                                 IconButton(onClick = { showSpeedMenu = true }) { Icon(imageVector = Icons.Default.Speed, contentDescription = null, tint = Color.White) }
+                                 DropdownMenu(expanded = showSpeedMenu, onDismissRequest = { showSpeedMenu = false }) {
+                                     listOf(0.5f, 1.0f, 1.5f, 2.0f).forEach { speedValue ->
+                                         DropdownMenuItem(text = { Text(text = "${speedValue}x") }, onClick = { speed = speedValue; exoPlayer.setPlaybackSpeed(speed); showSpeedMenu = false })
+                                     }
+                                 }
+                             }
+                         }
+                         Text(text = formatDuration(totalDuration), color = Color.White)
+                     }
                 }
             }
         }

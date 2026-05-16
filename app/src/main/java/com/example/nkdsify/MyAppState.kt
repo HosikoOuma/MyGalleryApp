@@ -135,6 +135,7 @@ class MyAppState(
     var allMedia by mutableStateOf<ImmutableList<MediaItem>>(persistentListOf())
     var viewerState by mutableStateOf<MediaViewerState?>(null)
     var previousViewerState by mutableStateOf<MediaViewerState?>(null)
+    var previousScreen by mutableStateOf<Screen>(Screen.Folders)
     var currentScreen by mutableStateOf<Screen>(Screen.Folders)
     val sanitizedFoldersState = mutableStateOf<ImmutableList<MediaFolder>>(persistentListOf())
     var sortType by mutableStateOf(SortType.DATE_MODIFIED)

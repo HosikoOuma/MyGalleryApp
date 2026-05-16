@@ -22,12 +22,14 @@ sealed class Screen {
     data object About : Screen()
     data object Help : Screen()
     data object HiddenFolders : Screen()
+    data class MediaViewer(val state: MediaViewerState, val isSecret: Boolean = false) : Screen()
 }
 
 enum class AppFontFamily {
     SYSTEM,
     JETBRAINS_MONO,
-    GOOGLE_SANS
+    GOOGLE_SANS,
+    NUNITO
 }
 
 val JetBrainsMonoFontFamily = FontFamily(
@@ -40,6 +42,15 @@ val GoogleSansFontFamily = FontFamily(
     Font(R.font.gsr, FontWeight.Normal),
     Font(R.font.gsb, FontWeight.Bold),
     Font(R.font.gsm, FontWeight.Medium),
+)
+val NunitoFontFamily = FontFamily(
+    Font(R.font.nunito_regular, FontWeight.Normal),
+    Font(R.font.nunito_bold, FontWeight.Bold),
+    Font(R.font.nunito_medium, FontWeight.Medium),
+    Font(R.font.nunito_light, FontWeight.Light),
+    Font(R.font.nunito_semibold, FontWeight.SemiBold),
+    Font(R.font.nunito_extrabold, FontWeight.ExtraBold),
+    Font(R.font.nunito_black, FontWeight.Black),
 )
 enum class MediaTypeFilter {
     ALL,

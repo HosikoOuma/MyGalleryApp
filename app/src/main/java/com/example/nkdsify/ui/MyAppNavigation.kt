@@ -1,21 +1,16 @@
-package com.example.nkdsify.ui
-
-import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInHorizontally
-import androidx.compose.animation.slideOutHorizontally
-import androidx.compose.animation.togetherWith
+import androidx.compose.animation.*
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.ExperimentalComposeUiApi
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.SoftwareKeyboardController
 import coil.ImageLoader
@@ -28,8 +23,9 @@ import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
 import java.util.*
 import com.example.nkdsify.ui.impl.*
+import com.example.nkdsify.ui.components.ModernMediaViewer
 
-@OptIn(ExperimentalComposeUiApi::class)
+@OptIn(ExperimentalComposeUiApi::class, ExperimentalSharedTransitionApi::class)
 @Composable
 fun MyAppNavigation(
     myAppState: MyAppState,
@@ -158,128 +154,157 @@ fun MyAppNavigation(
          }
      }
 
+    SharedTransitionLayout {
+        AnimatedContent(targetState = myAppState.currentScreen, transitionSpec = {
+            fun getScreenOrder(screen: Screen): Int = when (screen) {
+                is Screen.Folders -> 0
+                is Screen.AllMedia -> 1
+                is Screen.Favorites -> if (screen.openAlbumName == null) 2 else 12
+                is Screen.Trash -> 3
+                is Screen.Settings -> 4
+                is Screen.HiddenFolders -> 5
+                is Screen.SecretStorage -> 6
+                is Screen.ViewHistory -> 7
+                is Screen.MediaViewer -> 100 // Viewer should be on top
+                is Screen.FolderContent -> 10
+                is Screen.TagManagement -> 14
+                is Screen.MediaByTag -> 15
+                is Screen.About -> 20
+                is Screen.Help -> 21
+            }
 
-    AnimatedContent(targetState = myAppState.currentScreen, transitionSpec = {
-        fun getScreenOrder(screen: Screen): Int = when (screen) {
-            is Screen.Folders -> 0
-            is Screen.AllMedia -> 1
-            is Screen.Favorites -> if (screen.openAlbumName == null) 2 else 12
-            is Screen.Trash -> 3
-            is Screen.Settings -> 4
-            is Screen.HiddenFolders -> 5
-            is Screen.SecretStorage -> 6
-            is Screen.ViewHistory -> 7
-            is Screen.FolderContent -> 10
-            is Screen.TagManagement -> 14
-            is Screen.MediaByTag -> 15
-            is Screen.About -> 20
-            is Screen.Help -> 21
-        }
+            val initialOrder = getScreenOrder(initialState)
+            val targetOrder = getScreenOrder(targetState)
 
-        val initialOrder = getScreenOrder(initialState)
-        val targetOrder = getScreenOrder(targetState)
+            if (targetState is Screen.MediaViewer || initialState is Screen.MediaViewer) {
+                // Special transition for viewer
+                fadeIn(animationSpec = tween(400)) togetherWith fadeOut(animationSpec = tween(400))
+            } else if (targetOrder > initialOrder) {
+                (slideInHorizontally { it } + fadeIn()) togetherWith (slideOutHorizontally { -it } + fadeOut())
+            } else if (targetOrder < initialOrder) {
+                (slideInHorizontally { -it } + fadeIn()) togetherWith (slideOutHorizontally { it } + fadeOut())
+            } else {
+                fadeIn() togetherWith fadeOut()
+            }
+        }, label = "Screen Animation") { screen ->
+            when (screen) {
+                is Screen.Folders -> FoldersScreen(
+                    visibleFolders = visibleFolders,
+                    imageLoader = imageLoader,
+                    keyboardController = keyboardController,
+                    myAppState = myAppState,
+                    gridState = foldersGridState,
+                    sharedTransitionScope = this@SharedTransitionLayout,
+                    animatedVisibilityScope = this@AnimatedContent
+                )
 
-        if (targetOrder > initialOrder) {
-            (slideInHorizontally { it } + fadeIn()) togetherWith (slideOutHorizontally { -it } + fadeOut())
-        } else if (targetOrder < initialOrder) {
-            (slideInHorizontally { -it } + fadeIn()) togetherWith (slideOutHorizontally { it } + fadeOut())
-        } else {
-            fadeIn() togetherWith fadeOut()
-        }
-    }, label = "Screen Animation") { screen ->
-        when (screen) {
-            is Screen.Folders -> FoldersScreen(
-                visibleFolders = visibleFolders,
-                imageLoader = imageLoader,
-                keyboardController = keyboardController,
-                myAppState = myAppState,
-                gridState = foldersGridState
-            )
+                is Screen.About -> AboutScreen()
+                is Screen.Help -> HelpScreen()
 
-            is Screen.About -> AboutScreen()
-            is Screen.Help -> HelpScreen()
+                is Screen.HiddenFolders -> HiddenFoldersScreen(
+                    myAppState = myAppState,
+                    listState = hiddenFoldersListState
+                )
 
-            is Screen.HiddenFolders -> HiddenFoldersScreen(
-                myAppState = myAppState,
-                listState = hiddenFoldersListState
-            )
+                is Screen.FolderContent -> FolderContentScreen(
+                    screen = screen,
+                    sortComparator = sortComparator,
+                    myAppState = myAppState,
+                    imageLoader = imageLoader,
+                    gridState = folderContentGridState,
+                    keyboardController = keyboardController,
+                    sharedTransitionScope = this@SharedTransitionLayout,
+                    animatedVisibilityScope = this@AnimatedContent
+                )
 
-            is Screen.FolderContent -> FolderContentScreen(
-                screen = screen,
-                sortComparator = sortComparator,
-                myAppState = myAppState,
-                imageLoader = imageLoader,
-                gridState = folderContentGridState,
-                keyboardController = keyboardController
-            )
+                is Screen.Favorites -> FavoritesScreenImpl(
+                    filteredFavoriteItems = filteredFavoriteItems,
+                    favorites = favorites,
+                    myAppState = myAppState,
+                    imageLoader = imageLoader,
+                    gridState = favoritesGridState,
+                    contentGridState = favoritesContentGridState,
+                    keyboardController = keyboardController,
+                    context = context,
+                    openAlbumName = screen.openAlbumName,
+                    sharedTransitionScope = this@SharedTransitionLayout,
+                    animatedVisibilityScope = this@AnimatedContent
+                )
 
-            is Screen.Favorites -> FavoritesScreenImpl(
-                filteredFavoriteItems = filteredFavoriteItems,
-                favorites = favorites,
-                myAppState = myAppState,
-                imageLoader = imageLoader,
-                gridState = favoritesGridState,
-                contentGridState = favoritesContentGridState,
-                keyboardController = keyboardController,
-                context = context,
-                openAlbumName = screen.openAlbumName
-            )
+                is Screen.Settings -> SettingsScreenImpl(
+                    myAppState = myAppState,
+                    coroutineScope = coroutineScope,
+                    context = context,
+                    onFontFamilyChange = onFontFamilyChange
+                )
 
-            is Screen.Settings -> SettingsScreenImpl(
-                myAppState = myAppState,
-                coroutineScope = coroutineScope,
-                context = context,
-                onFontFamilyChange = onFontFamilyChange
-            )
+                is Screen.TagManagement -> TagManagementScreenImpl(
+                    myAppState = myAppState,
+                    onAddNewTag = onAddNewTag,
+                    onMoveTag = onMoveTag,
+                    context = context
+                )
 
-            is Screen.TagManagement -> TagManagementScreenImpl(
-                myAppState = myAppState,
-                onAddNewTag = onAddNewTag,
-                onMoveTag = onMoveTag,
-                context = context
-            )
+                is Screen.Trash -> TrashScreenImpl(
+                    myAppState = myAppState,
+                    imageLoader = imageLoader,
+                    gridState = trashGridState,
+                    keyboardController = keyboardController,
+                    context = context,
+                    isNavBarVisible = isNavBarVisible, // Передаем состояние
+                    sharedTransitionScope = this@SharedTransitionLayout,
+                    animatedVisibilityScope = this@AnimatedContent
+                )
 
-            is Screen.Trash -> TrashScreenImpl(
-                myAppState = myAppState,
-                imageLoader = imageLoader,
-                gridState = trashGridState,
-                keyboardController = keyboardController,
-                context = context,
-                isNavBarVisible = isNavBarVisible // Передаем состояние
-            )
+                is Screen.AllMedia -> AllMediaScreenImpl(
+                    filteredAllMedia = filteredAllMedia,
+                    favorites = favorites,
+                    myAppState = myAppState,
+                    imageLoader = imageLoader,
+                    gridState = allMediaGridState,
+                    keyboardController = keyboardController,
+                    sharedTransitionScope = this@SharedTransitionLayout,
+                    animatedVisibilityScope = this@AnimatedContent
+                )
 
-            is Screen.AllMedia -> AllMediaScreenImpl(
-                filteredAllMedia = filteredAllMedia,
-                favorites = favorites,
-                myAppState = myAppState,
-                imageLoader = imageLoader,
-                gridState = allMediaGridState,
-                keyboardController = keyboardController
-            )
+                is Screen.MediaByTag -> MediaByTagScreenImpl(
+                    myAppState = myAppState,
+                    screen = screen,
+                    imageLoader = imageLoader,
+                    gridState = favoritesGridState,
+                    keyboardController = keyboardController,
+                    sharedTransitionScope = this@SharedTransitionLayout,
+                    animatedVisibilityScope = this@AnimatedContent
+                )
 
-            is Screen.MediaByTag -> MediaByTagScreenImpl(
-                myAppState = myAppState,
-                screen = screen,
-                imageLoader = imageLoader,
-                gridState = favoritesGridState,
-                keyboardController = keyboardController
-            )
+                is Screen.SecretStorage -> SecretStorageScreenImpl(
+                    myAppState = myAppState,
+                    imageLoader = imageLoader,
+                    gridState = secretGridState,
+                    keyboardController = keyboardController,
+                    sharedTransitionScope = this@SharedTransitionLayout,
+                    animatedVisibilityScope = this@AnimatedContent
+                )
 
-            is Screen.SecretStorage -> SecretStorageScreenImpl(
-                myAppState = myAppState,
-                imageLoader = imageLoader,
-                gridState = secretGridState,
-                keyboardController = keyboardController
-            )
+                is Screen.ViewHistory -> ViewHistoryScreenImpl(
+                    filteredViewHistory = filteredViewHistory,
+                    favorites = favorites,
+                    myAppState = myAppState,
+                    imageLoader = imageLoader,
+                    gridState = viewHistoryGridState,
+                    keyboardController = keyboardController,
+                    sharedTransitionScope = this@SharedTransitionLayout,
+                    animatedVisibilityScope = this@AnimatedContent
+                )
 
-            is Screen.ViewHistory -> ViewHistoryScreenImpl(
-                filteredViewHistory = filteredViewHistory,
-                favorites = favorites,
-                myAppState = myAppState,
-                imageLoader = imageLoader,
-                gridState = viewHistoryGridState,
-                keyboardController = keyboardController
-            )
+                is Screen.MediaViewer -> ModernMediaViewer(
+                    myAppState = myAppState,
+                    state = screen.state,
+                    isSecretMode = screen.isSecret,
+                    sharedTransitionScope = this@SharedTransitionLayout,
+                    animatedVisibilityScope = this@AnimatedContent
+                )
+            }
         }
     }
 }

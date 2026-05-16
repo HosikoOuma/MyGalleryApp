@@ -1,5 +1,8 @@
 package com.example.nkdsify.ui.impl
 
+import androidx.compose.animation.AnimatedVisibilityScope
+import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.derivedStateOf
@@ -16,6 +19,7 @@ import com.example.nkdsify.ui.utils.parseQueryString
 import kotlinx.collections.immutable.toImmutableList
 import java.util.Comparator
 
+@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun FolderContentScreen(
     screen: Screen.FolderContent,
@@ -23,7 +27,9 @@ fun FolderContentScreen(
     myAppState: MyAppState,
     imageLoader: ImageLoader,
     gridState: LazyGridState,
-    keyboardController: SoftwareKeyboardController?
+    keyboardController: SoftwareKeyboardController?,
+    sharedTransitionScope: SharedTransitionScope? = null,
+    animatedVisibilityScope: AnimatedVisibilityScope? = null
 ) {
     val folder = myAppState.allFolders.find { it.id == screen.folder.id } ?: screen.folder
 
@@ -56,7 +62,8 @@ fun FolderContentScreen(
         isBlurEnabled = myAppState.isBlurInFolderEnabled,
         onItemClick = { item ->
             keyboardController?.hide()
-            myAppState.viewerState = MediaViewerState(items = items, startIndex = items.indexOf(item))
+            val state = MediaViewerState(items = items, startIndex = items.indexOf(item))
+            myAppState.currentScreen = Screen.MediaViewer(state)
         },
         onToggleSelection = { item ->
             if (myAppState.selectedItems.contains(item.uri)) {
@@ -70,6 +77,8 @@ fun FolderContentScreen(
         gridState = gridState,
         blurredUris = myAppState.blurredUris,
         isVideoPreviewSlideshowEnabled = myAppState.isVideoPreviewSlideshowEnabled,
-        videoSlideshowIntervalMs = myAppState.videoSlideshowIntervalMs
+        videoSlideshowIntervalMs = myAppState.videoSlideshowIntervalMs,
+        sharedTransitionScope = sharedTransitionScope,
+        animatedVisibilityScope = animatedVisibilityScope
     )
 }

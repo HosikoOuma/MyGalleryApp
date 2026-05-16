@@ -226,6 +226,7 @@
     <string name="font_family_default">Default</string>
     <string name="font_family_google_sans">Google Sans</string>
     <string name="font_family_jetbrains_mono">JetBrains Mono</string>
+    <string name="font_family_nunito">Nunito</string>
     <string name="details_name_label">Name</string>
     <string name="details_size_label">Size</string>
     <string name="details_date_added_label">Date Added</string>

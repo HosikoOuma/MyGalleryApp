@@ -37,8 +37,7 @@ fun AlbumDetailsDialog(details: AlbumDetails, onDismiss: () -> Unit) {
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
-        sheetState = sheetState,
-        windowInsets = WindowInsets(0)
+        sheetState = sheetState
     ) {
         Column(
             modifier = Modifier

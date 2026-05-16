@@ -1,6 +1,9 @@
 package com.example.nkdsify.ui.screens
 
 import android.net.Uri
+import androidx.compose.animation.AnimatedVisibilityScope
+import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -19,7 +22,7 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.FrontHand
-import androidx.compose.material.ripple.rememberRipple
+import androidx.compose.material3.ripple
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -40,6 +43,7 @@ import com.example.nkdsify.data.BlurType
 import com.example.nkdsify.data.MediaItem
 import com.example.nkdsify.ui.components.MediaGrid
 
+@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun FavoritesScreen(
     items: List<MediaItem>,
@@ -60,7 +64,9 @@ fun FavoritesScreen(
     blurType: BlurType,
     blurredUris: Set<String> = emptySet(),
     isVideoPreviewSlideshowEnabled: Boolean = false,
-    videoSlideshowIntervalMs: Long = 800L
+    videoSlideshowIntervalMs: Long = 800L,
+    sharedTransitionScope: SharedTransitionScope? = null,
+    animatedVisibilityScope: AnimatedVisibilityScope? = null
 ) {
     val taggedAlbums = items
         .flatMap { item -> (tags[item.absolutePath] ?: emptySet()).map { tag -> tag to item } }
@@ -89,7 +95,9 @@ fun FavoritesScreen(
             gridState = contentGridState,
             blurredUris = blurredUris,
             isVideoPreviewSlideshowEnabled = isVideoPreviewSlideshowEnabled,
-            videoSlideshowIntervalMs = videoSlideshowIntervalMs
+            videoSlideshowIntervalMs = videoSlideshowIntervalMs,
+            sharedTransitionScope = sharedTransitionScope,
+            animatedVisibilityScope = animatedVisibilityScope
         )
     } else {
         if (displayAlbums.isEmpty()) {
@@ -110,7 +118,7 @@ fun FavoritesScreen(
                                 .aspectRatio(1f)
                                 .clickable(
                                     interactionSource = remember { MutableInteractionSource() },
-                                    indication = rememberRipple(),
+                                    indication = ripple(),
                                     onClick = { onOpenAlbum(albumName) }
                                 ),
                             elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)

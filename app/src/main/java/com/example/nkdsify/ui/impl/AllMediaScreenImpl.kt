@@ -1,5 +1,8 @@
 package com.example.nkdsify.ui.impl
 
+import androidx.compose.animation.AnimatedVisibilityScope
+import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.SoftwareKeyboardController
@@ -7,10 +10,12 @@ import coil.ImageLoader
 import com.example.nkdsify.MyAppState
 import com.example.nkdsify.data.MediaItem
 import com.example.nkdsify.data.MediaViewerState
+import com.example.nkdsify.data.Screen
 import com.example.nkdsify.ui.components.MediaGrid
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
 
+@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun AllMediaScreenImpl(
     filteredAllMedia: ImmutableList<MediaItem>,
@@ -18,7 +23,9 @@ fun AllMediaScreenImpl(
     myAppState: MyAppState,
     imageLoader: ImageLoader,
     gridState: LazyGridState,
-    keyboardController: SoftwareKeyboardController?
+    keyboardController: SoftwareKeyboardController?,
+    sharedTransitionScope: SharedTransitionScope? = null,
+    animatedVisibilityScope: AnimatedVisibilityScope? = null
 ) {
     MediaGrid(
         items = filteredAllMedia,
@@ -28,7 +35,8 @@ fun AllMediaScreenImpl(
         isBlurEnabled = myAppState.isBlurAllMediaEnabled,
         onItemClick = { item ->
             keyboardController?.hide()
-            myAppState.viewerState = MediaViewerState(items = filteredAllMedia.toImmutableList(), startIndex = filteredAllMedia.indexOf(item))
+            val state = MediaViewerState(items = filteredAllMedia.toImmutableList(), startIndex = filteredAllMedia.indexOf(item))
+            myAppState.currentScreen = Screen.MediaViewer(state)
         },
         onToggleSelection = { item ->
             if (myAppState.selectedItems.contains(item.uri)) {
@@ -42,6 +50,8 @@ fun AllMediaScreenImpl(
         gridState = gridState,
         blurredUris = myAppState.blurredUris,
         isVideoPreviewSlideshowEnabled = myAppState.isVideoPreviewSlideshowEnabled,
-        videoSlideshowIntervalMs = myAppState.videoSlideshowIntervalMs
+        videoSlideshowIntervalMs = myAppState.videoSlideshowIntervalMs,
+        sharedTransitionScope = sharedTransitionScope,
+        animatedVisibilityScope = animatedVisibilityScope
     )
 }

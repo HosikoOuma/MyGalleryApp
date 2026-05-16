@@ -4,6 +4,9 @@ import android.graphics.Bitmap
 import android.net.Uri
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.AnimatedVisibilityScope
+import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
@@ -72,7 +75,7 @@ import java.time.format.DateTimeFormatter
 import com.example.nkdsify.R
 import coil.size.Size
 
-@OptIn(ExperimentalFoundationApi::class)
+@OptIn(ExperimentalFoundationApi::class, ExperimentalSharedTransitionApi::class)
 @Composable
 fun MediaGrid(
     modifier: Modifier = Modifier,
@@ -89,7 +92,9 @@ fun MediaGrid(
     blurredUris: Set<String> = emptySet(),
     isVideoPreviewSlideshowEnabled: Boolean = false,
     videoSlideshowIntervalMs: Long = 800L,
-    useLowQualityVideoPreview: Boolean = false
+    useLowQualityVideoPreview: Boolean = false,
+    sharedTransitionScope: SharedTransitionScope? = null,
+    animatedVisibilityScope: AnimatedVisibilityScope? = null
 ) {
     if (items.isEmpty()) {
         Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -119,9 +124,21 @@ fun MediaGrid(
                 val isIndividualBlurred = item.uri.toString() in blurredUris
                 val effectiveBlur = isBlurEnabled || isIndividualBlurred
                 Box(modifier = Modifier.padding(4.dp)) {
+                    val sharedModifier = if (sharedTransitionScope != null && animatedVisibilityScope != null) {
+                        with(sharedTransitionScope) {
+                            Modifier.sharedElement(
+                                rememberSharedContentState(key = "item_${item.uri}"),
+                                animatedVisibilityScope = animatedVisibilityScope
+                            )
+                        }
+                    } else {
+                        Modifier
+                    }
+
                     Card(modifier = Modifier
                         .fillMaxSize()
                         .aspectRatio(1f)
+                        .then(sharedModifier)
                         .pointerInput(item, isSelectionMode) {
                             detectTapGestures(onTap = {
                                 if (isSelectionMode) {

@@ -2,6 +2,9 @@ package com.example.nkdsify.ui.screens
 
 import android.net.Uri
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.AnimatedVisibilityScope
+import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.fadeIn
@@ -34,6 +37,7 @@ import com.example.nkdsify.data.BlurType
 import com.example.nkdsify.data.MediaItem
 import com.example.nkdsify.ui.components.MediaGrid
 
+@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun TrashScreen(
     items: List<MediaItem>,
@@ -49,7 +53,9 @@ fun TrashScreen(
     isNavBarVisible: Boolean,
     blurredUris: Set<String> = emptySet(),
     isVideoPreviewSlideshowEnabled: Boolean = false,
-    videoSlideshowIntervalMs: Long = 800L
+    videoSlideshowIntervalMs: Long = 800L,
+    sharedTransitionScope: SharedTransitionScope? = null,
+    animatedVisibilityScope: AnimatedVisibilityScope? = null
 ) {
     if (items.isEmpty()) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -94,7 +100,9 @@ fun TrashScreen(
             gridState = gridState,
             blurredUris = blurredUris,
             isVideoPreviewSlideshowEnabled = isVideoPreviewSlideshowEnabled,
-            videoSlideshowIntervalMs = videoSlideshowIntervalMs
+            videoSlideshowIntervalMs = videoSlideshowIntervalMs,
+            sharedTransitionScope = sharedTransitionScope,
+            animatedVisibilityScope = animatedVisibilityScope
         )
 
         AnimatedVisibility(

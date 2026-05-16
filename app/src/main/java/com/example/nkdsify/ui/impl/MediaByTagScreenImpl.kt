@@ -1,5 +1,8 @@
 package com.example.nkdsify.ui.impl
 
+import androidx.compose.animation.AnimatedVisibilityScope
+import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
@@ -11,13 +14,16 @@ import com.example.nkdsify.data.Screen
 import com.example.nkdsify.ui.components.MediaGrid
 import kotlinx.collections.immutable.toImmutableList
 
+@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun MediaByTagScreenImpl(
     myAppState: MyAppState,
     screen: Screen.MediaByTag,
     imageLoader: ImageLoader,
     gridState: LazyGridState,
-    keyboardController: SoftwareKeyboardController?
+    keyboardController: SoftwareKeyboardController?,
+    sharedTransitionScope: SharedTransitionScope? = null,
+    animatedVisibilityScope: AnimatedVisibilityScope? = null
 ) {
     val mediaWithTag = remember(myAppState.allMedia, myAppState.tags, screen.tag) {
         val urisWithTag = myAppState.tags.filter { it.value.contains(screen.tag) }.keys
@@ -31,7 +37,8 @@ fun MediaByTagScreenImpl(
         isBlurEnabled = myAppState.isBlurInFolderEnabled,
         onItemClick = { item ->
             keyboardController?.hide()
-            myAppState.viewerState = MediaViewerState(items = mediaWithTag, startIndex = mediaWithTag.indexOf(item))
+            val state = MediaViewerState(items = mediaWithTag, startIndex = mediaWithTag.indexOf(item))
+            myAppState.currentScreen = Screen.MediaViewer(state)
         },
         onToggleSelection = { item ->
             if (myAppState.selectedItems.contains(item.uri)) {
@@ -45,6 +52,8 @@ fun MediaByTagScreenImpl(
         gridState = gridState,
         blurredUris = myAppState.blurredUris,
         isVideoPreviewSlideshowEnabled = myAppState.isVideoPreviewSlideshowEnabled,
-        videoSlideshowIntervalMs = myAppState.videoSlideshowIntervalMs
+        videoSlideshowIntervalMs = myAppState.videoSlideshowIntervalMs,
+        sharedTransitionScope = sharedTransitionScope,
+        animatedVisibilityScope = animatedVisibilityScope
     )
 }

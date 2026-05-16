@@ -1,5 +1,8 @@
 package com.example.nkdsify.ui.screens
 
+import androidx.compose.animation.AnimatedVisibilityScope
+import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -18,7 +21,7 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.FrontHand
-import androidx.compose.material.ripple.rememberRipple
+import androidx.compose.material3.ripple
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -42,6 +45,7 @@ import com.example.nkdsify.data.MediaFolder
 import com.example.nkdsify.ui.utils.SettingsRepository.isVibrationEnabled
 import com.example.nkdsify.ui.utils.performVibration
 
+@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun FoldersGrid(
     folders: List<MediaFolder>,
@@ -50,8 +54,9 @@ fun FoldersGrid(
     isBlurEnabled: Boolean,
     gridState: LazyGridState,
     isShowFileCountEnabled: Boolean,
-    blurType: BlurType
-
+    blurType: BlurType,
+    sharedTransitionScope: SharedTransitionScope? = null,
+    animatedVisibilityScope: AnimatedVisibilityScope? = null
 ) {
     val context = LocalContext.current
     if (folders.isEmpty()) {
@@ -74,7 +79,7 @@ fun FoldersGrid(
                         .aspectRatio(1f)
                         .clickable(
                             interactionSource = remember { MutableInteractionSource() },
-                            indication = rememberRipple(),
+                            indication = ripple(),
                             onClick = { onFolderClick(folder)
                                 if (isVibrationEnabled(context)) performVibration(context)
                             }

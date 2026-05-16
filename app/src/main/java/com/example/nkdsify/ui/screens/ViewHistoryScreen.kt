@@ -1,6 +1,9 @@
 package com.example.nkdsify.ui.screens
 
 import android.net.Uri
+import androidx.compose.animation.AnimatedVisibilityScope
+import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -16,6 +19,7 @@ import com.example.nkdsify.data.BlurType
 import com.example.nkdsify.data.MediaItem
 import com.example.nkdsify.ui.components.MediaGrid
 
+@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun ViewHistoryScreen(
     items: List<MediaItem>,
@@ -30,7 +34,9 @@ fun ViewHistoryScreen(
     blurType: BlurType,
     blurredUris: Set<String> = emptySet(),
     isVideoPreviewSlideshowEnabled: Boolean = false,
-    videoSlideshowIntervalMs: Long = 800L
+    videoSlideshowIntervalMs: Long = 800L,
+    sharedTransitionScope: SharedTransitionScope? = null,
+    animatedVisibilityScope: AnimatedVisibilityScope? = null
 ) {
     if (items.isEmpty()) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -51,7 +57,9 @@ fun ViewHistoryScreen(
                 blurType = blurType,
                 blurredUris = blurredUris,
                 isVideoPreviewSlideshowEnabled = isVideoPreviewSlideshowEnabled,
-                videoSlideshowIntervalMs = videoSlideshowIntervalMs
+                videoSlideshowIntervalMs = videoSlideshowIntervalMs,
+                sharedTransitionScope = sharedTransitionScope,
+                animatedVisibilityScope = animatedVisibilityScope
             )
         }
     }

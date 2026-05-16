@@ -82,8 +82,7 @@ fun OthersDialogs(myAppState: MyAppState) {
         val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
         ModalBottomSheet(
             onDismissRequest = { myAppState.showHelpAttentionDialog = false },
-            sheetState = sheetState,
-            windowInsets = WindowInsets(0)
+            sheetState = sheetState
         ) {
             Column(
                 modifier = Modifier

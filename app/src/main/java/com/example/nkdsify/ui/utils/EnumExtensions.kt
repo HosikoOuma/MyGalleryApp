@@ -26,6 +26,7 @@ fun AppFontFamily.getDisplayName(): String {
         AppFontFamily.SYSTEM -> stringResource(R.string.font_family_default)
         AppFontFamily.JETBRAINS_MONO -> stringResource(R.string.font_family_jetbrains_mono)
         AppFontFamily.GOOGLE_SANS -> stringResource(R.string.font_family_google_sans)
+        AppFontFamily.NUNITO -> stringResource(R.string.font_family_nunito)
     }
 }
 

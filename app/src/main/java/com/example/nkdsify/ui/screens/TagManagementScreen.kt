@@ -180,7 +180,7 @@ fun TagManagementScreen(
         ModalBottomSheet(
             onDismissRequest = { tagToDelete = null },
             sheetState = sheetState,
-            windowInsets = WindowInsets(0)
+            
         ) {
             Column(
                 modifier = Modifier

@@ -47,7 +47,7 @@ fun BackupAndRestoreDialog(
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
-        windowInsets = WindowInsets(0)
+        
     ) {
         Column(
             modifier = Modifier

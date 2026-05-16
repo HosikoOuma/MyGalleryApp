@@ -23,6 +23,7 @@ import androidx.core.view.WindowCompat
 import com.example.nkdsify.data.AppFontFamily
 import com.example.nkdsify.data.GoogleSansFontFamily
 import com.example.nkdsify.data.JetBrainsMonoFontFamily
+import com.example.nkdsify.data.NunitoFontFamily
 import com.example.nkdsify.data.Theme
 
 private val LightColors = lightColorScheme(
@@ -135,6 +136,26 @@ fun NkdsifyAppTheme(
                 labelLarge = defaultTypography.labelLarge.copy(fontFamily = GoogleSansFontFamily),
                 labelMedium = defaultTypography.labelMedium.copy(fontFamily = GoogleSansFontFamily),
                 labelSmall = defaultTypography.labelSmall.copy(fontFamily = GoogleSansFontFamily)
+            )
+        }
+        AppFontFamily.NUNITO -> {
+            val defaultTypography = Typography()
+            Typography(
+                displayLarge = defaultTypography.displayLarge.copy(fontFamily = NunitoFontFamily),
+                displayMedium = defaultTypography.displayMedium.copy(fontFamily = NunitoFontFamily),
+                displaySmall = defaultTypography.displaySmall.copy(fontFamily = NunitoFontFamily),
+                headlineLarge = defaultTypography.headlineLarge.copy(fontFamily = NunitoFontFamily),
+                headlineMedium = defaultTypography.headlineMedium.copy(fontFamily = NunitoFontFamily),
+                headlineSmall = defaultTypography.headlineSmall.copy(fontFamily = NunitoFontFamily),
+                titleLarge = defaultTypography.titleLarge.copy(fontFamily = NunitoFontFamily),
+                titleMedium = defaultTypography.titleMedium.copy(fontFamily = NunitoFontFamily),
+                titleSmall = defaultTypography.titleSmall.copy(fontFamily = NunitoFontFamily),
+                bodyLarge = defaultTypography.bodyLarge.copy(fontFamily = NunitoFontFamily),
+                bodyMedium = defaultTypography.bodyMedium.copy(fontFamily = NunitoFontFamily),
+                bodySmall = defaultTypography.bodySmall.copy(fontFamily = NunitoFontFamily),
+                labelLarge = defaultTypography.labelLarge.copy(fontFamily = NunitoFontFamily),
+                labelMedium = defaultTypography.labelMedium.copy(fontFamily = NunitoFontFamily),
+                labelSmall = defaultTypography.labelSmall.copy(fontFamily = NunitoFontFamily)
             )
         }
 

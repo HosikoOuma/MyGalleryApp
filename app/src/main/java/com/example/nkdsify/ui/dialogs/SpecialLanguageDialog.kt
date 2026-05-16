@@ -47,8 +47,7 @@ fun SpecialLanguageDialog(
 
     ModalBottomSheet(
         onDismissRequest = onDismissRequest,
-        sheetState = sheetState,
-        windowInsets = WindowInsets(0)
+        sheetState = sheetState
     ) {
         Column(
             modifier = Modifier

@@ -62,7 +62,7 @@ dependencies {
     implementation(libs.androidx.compose.ui.text)
     implementation(libs.ui)
     // Import the Compose BOM. This should be first to control the versions of other Compose libraries.
-    val composeBom = platform("androidx.compose:compose-bom:2024.06.00")
+    val composeBom = platform(libs.androidx.compose.bom)
     implementation(composeBom)
     androidTestImplementation(composeBom)
     implementation("androidx.compose.foundation:foundation")

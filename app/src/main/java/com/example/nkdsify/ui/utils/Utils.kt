@@ -209,7 +209,7 @@ private fun BaseConfirmDialog(
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
-        windowInsets = WindowInsets(0)
+        
     ) {
         Column(
             modifier = Modifier
@@ -352,7 +352,7 @@ fun ExternalMediaErrorDialog(onDismiss: () -> Unit) {
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
-        windowInsets = WindowInsets(0)
+        
     ) {
         Column(
             modifier = Modifier
@@ -411,7 +411,7 @@ fun MediaDetailsDialog(
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
-        windowInsets = WindowInsets(0)
+        
     ) {
         Column(
             modifier = Modifier
@@ -628,7 +628,7 @@ fun SelectionDetailsDialog(
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
-        windowInsets = WindowInsets(0)
+        
     ) {
         Column(
             modifier = Modifier

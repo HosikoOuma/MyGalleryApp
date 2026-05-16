@@ -61,5 +61,10 @@ fun MyAppBackHandler(myAppState: MyAppState) {
         is Screen.Folders -> {
             // Top-level screen, do nothing special. Let system handle it.
         }
+        is Screen.MediaViewer -> {
+            BackHandler(enabled = canNavigateBack) {
+                myAppState.currentScreen = Screen.Folders // TODO: Better back stack
+            }
+        }
     }
 }

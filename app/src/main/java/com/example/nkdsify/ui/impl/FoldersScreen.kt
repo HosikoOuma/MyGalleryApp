@@ -1,5 +1,8 @@
 package com.example.nkdsify.ui.impl
 
+import androidx.compose.animation.AnimatedVisibilityScope
+import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.SoftwareKeyboardController
@@ -10,13 +13,16 @@ import com.example.nkdsify.data.Screen
 import com.example.nkdsify.ui.screens.FoldersGrid
 import kotlinx.collections.immutable.ImmutableList
 
+@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun FoldersScreen(
     visibleFolders: ImmutableList<MediaFolder>,
     imageLoader: ImageLoader,
     keyboardController: SoftwareKeyboardController?,
     myAppState: MyAppState,
-    gridState: LazyGridState
+    gridState: LazyGridState,
+    sharedTransitionScope: SharedTransitionScope? = null,
+    animatedVisibilityScope: AnimatedVisibilityScope? = null
 ) {
     FoldersGrid(
         folders = visibleFolders,
@@ -28,6 +34,8 @@ fun FoldersScreen(
         isBlurEnabled = myAppState.isBlurEnabled,
         gridState = gridState,
         isShowFileCountEnabled = myAppState.isShowFileCountEnabled,
-        blurType = myAppState.selectedBlurType
+        blurType = myAppState.selectedBlurType,
+        sharedTransitionScope = sharedTransitionScope,
+        animatedVisibilityScope = animatedVisibilityScope
     )
 }

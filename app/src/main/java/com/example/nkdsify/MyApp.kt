@@ -2,6 +2,7 @@
 
 package com.example.nkdsify
 
+import MyAppNavigation
 import androidx.compose.ui.input.pointer.pointerInput
 import com.example.nkdsify.ui.MyAppTopBar
 import com.example.nkdsify.ui.MyAppBottomBar
@@ -11,7 +12,7 @@ import com.example.nkdsify.ui.dialogs.TagDialogs
 import com.example.nkdsify.ui.dialogs.FolderDialogs
 import com.example.nkdsify.ui.dialogs.InfoDialogs
 import com.example.nkdsify.ui.dialogs.OthersDialogs
-import com.example.nkdsify.ui.MyAppNavigation
+import com.example.nkdsify.ui.*
 import android.app.Activity
 import android.app.DownloadManager
 import android.content.BroadcastReceiver
@@ -45,8 +46,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.*
-import androidx.compose.material3.pulltorefresh.PullToRefreshContainer
-import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
+import androidx.compose.material3.pulltorefresh.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
@@ -144,19 +144,22 @@ fun MyApp(myAppState: MyAppState, initialUri: Uri? = null, screenWidth: Int, scr
 
         val isNavBarVisible by remember {
             derivedStateOf {
-                val currentGridState = when (val screen = myAppState.currentScreen) {
-                    is Screen.Folders -> foldersGridState
-                    is Screen.FolderContent -> folderContentGridState
-                    is Screen.Favorites -> if (screen.openAlbumName != null) favoritesContentGridState else favoritesGridState
-                    is Screen.Trash -> trashGridState
-                    is Screen.AllMedia -> allMediaGridState
-                    is Screen.SecretStorage -> secretGridState
-                    is Screen.ViewHistory -> viewHistoryGridState
-                    is Screen.HiddenFolders -> hiddenFoldersListState
-                    else -> null
+                if (myAppState.currentScreen is Screen.MediaViewer) false
+                else {
+                    val currentGridState = when (val screen = myAppState.currentScreen) {
+                        is Screen.Folders -> foldersGridState
+                        is Screen.FolderContent -> folderContentGridState
+                        is Screen.Favorites -> if (screen.openAlbumName != null) favoritesContentGridState else favoritesGridState
+                        is Screen.Trash -> trashGridState
+                        is Screen.AllMedia -> allMediaGridState
+                        is Screen.SecretStorage -> secretGridState
+                        is Screen.ViewHistory -> viewHistoryGridState
+                        is Screen.HiddenFolders -> hiddenFoldersListState
+                        else -> null
+                    }
+                    val isScrolling = currentGridState?.isScrollInProgress ?: false
+                    !isScrolling || myAppState.isSelectionMode
                 }
-                val isScrolling = currentGridState?.isScrollInProgress ?: false
-                !isScrolling || myAppState.isSelectionMode
             }
         }
 
@@ -216,17 +219,15 @@ fun MyApp(myAppState: MyAppState, initialUri: Uri? = null, screenWidth: Int, scr
 
         val pullToRefreshEnabled = myAppState.currentScreen !is Screen.Settings && myAppState.currentScreen !is Screen.TagManagement
         
-        val pullRefreshState = key(myAppState.currentScreen) {
-            rememberPullToRefreshState()
-        }
+        var isRefreshing by remember { mutableStateOf(false) }
         
-        LaunchedEffect(pullRefreshState.isRefreshing) {
-            if (pullRefreshState.isRefreshing) {
+        LaunchedEffect(isRefreshing) {
+            if (isRefreshing) {
                 if (pullToRefreshEnabled) {
                     delay(1000)
                     myAppState.refreshMedia()
                 }
-                pullRefreshState.endRefresh()
+                isRefreshing = false
             }
         }
 
@@ -307,6 +308,10 @@ fun MyApp(myAppState: MyAppState, initialUri: Uri? = null, screenWidth: Int, scr
             val current = myAppState.currentScreen
             val last = lastScreen
 
+            if (current is Screen.MediaViewer) {
+                myAppState.previousScreen = last ?: Screen.Folders
+            }
+
             if (current is Screen.FolderContent) {
                 if (current.scrollToItemUri != null) {
                     val index = current.folder.items.indexOfFirst { it.uri == current.scrollToItemUri }
@@ -315,20 +320,20 @@ fun MyApp(myAppState: MyAppState, initialUri: Uri? = null, screenWidth: Int, scr
                             folderContentGridState.scrollToItem(index)
                         }
                     }
-                } else if ((last as? Screen.FolderContent)?.folder?.id != current.folder.id) {
+                } else if (last !is Screen.MediaViewer && (last as? Screen.FolderContent)?.folder?.id != current.folder.id) {
                     coroutineScope.launch {
                         folderContentGridState.scrollToItem(0)
                     }
                 }
             }
 
-            if (current is Screen.ViewHistory && last !is Screen.ViewHistory) {
+            if (current is Screen.ViewHistory && last !is Screen.ViewHistory && last !is Screen.MediaViewer) {
                 coroutineScope.launch {
                     viewHistoryGridState.scrollToItem(0)
                 }
             }
 
-            if (current is Screen.Favorites && current.openAlbumName != null) {
+            if (current is Screen.Favorites && current.openAlbumName != null && last !is Screen.MediaViewer) {
                 if ((last as? Screen.Favorites)?.openAlbumName != current.openAlbumName) {
                     coroutineScope.launch {
                         favoritesContentGridState.scrollToItem(0)
@@ -411,29 +416,29 @@ fun MyApp(myAppState: MyAppState, initialUri: Uri? = null, screenWidth: Int, scr
             }
         }
 
-        val title = when (val screen = myAppState.currentScreen) {
-            is Screen.Folders -> stringResource(id = R.string.screen_title_folders)
-            is Screen.FolderContent -> screen.folder.name
-            is Screen.Favorites -> screen.openAlbumName ?: stringResource(id = R.string.screen_title_favorites)
-            is Screen.Settings -> stringResource(id = R.string.screen_title_settings)
-            is Screen.TagManagement -> stringResource(id = R.string.screen_title_manage_tags)
-            is Screen.Trash -> stringResource(id = R.string.screen_title_trash)
-            is Screen.AllMedia -> stringResource(id = R.string.screen_title_all_media)
-            is Screen.MediaByTag -> screen.tag
-            is Screen.SecretStorage -> stringResource(id = R.string.secret_storage)
-            is Screen.ViewHistory -> stringResource(id = R.string.view_history_title)
-            is Screen.About -> stringResource(id = R.string.about_button)
-            is Screen.Help -> stringResource(id = R.string.help_button)
-            is Screen.HiddenFolders -> stringResource(id = R.string.manage_hidden_folders_button)
-        }
+            val title = when (val screen = myAppState.currentScreen) {
+                is Screen.Folders -> stringResource(id = R.string.screen_title_folders)
+                is Screen.FolderContent -> screen.folder.name
+                is Screen.Favorites -> screen.openAlbumName ?: stringResource(id = R.string.screen_title_favorites)
+                is Screen.Settings -> stringResource(id = R.string.screen_title_settings)
+                is Screen.TagManagement -> stringResource(id = R.string.screen_title_manage_tags)
+                is Screen.Trash -> stringResource(id = R.string.screen_title_trash)
+                is Screen.AllMedia -> stringResource(id = R.string.screen_title_all_media)
+                is Screen.MediaByTag -> screen.tag
+                is Screen.SecretStorage -> stringResource(id = R.string.secret_storage)
+                is Screen.ViewHistory -> stringResource(id = R.string.view_history_title)
+                is Screen.About -> stringResource(id = R.string.about_button)
+                is Screen.Help -> stringResource(id = R.string.help_button)
+                is Screen.HiddenFolders -> stringResource(id = R.string.manage_hidden_folders_button)
+                is Screen.MediaViewer -> "" // No title for viewer
+            }
 
         OthersDialogs(myAppState = myAppState)
         if (myAppState.showClearHistoryDialog) {
             val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
             ModalBottomSheet(
                 onDismissRequest = { myAppState.showClearHistoryDialog = false },
-                sheetState = sheetState,
-                windowInsets = WindowInsets(0) // Убираем отступ, чтобы BS был во весь экран
+                sheetState = sheetState
             ) {
                 Column(
                     modifier = Modifier
@@ -519,59 +524,70 @@ fun MyApp(myAppState: MyAppState, initialUri: Uri? = null, screenWidth: Int, scr
             Scaffold(
                 modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
                 topBar = {
-                    MyAppTopBar(
-                        myAppState = myAppState,
-                        title = title,
-                        favorites = favorites,
-                        context = context,
-                        isVibrationEnabled = myAppState.isVibrationEnabled,
-                        scrollBehavior = scrollBehavior
-                    )
+                    if (myAppState.currentScreen !is Screen.MediaViewer) {
+                        MyAppTopBar(
+                            myAppState = myAppState,
+                            title = title,
+                            favorites = favorites,
+                            context = context,
+                            isVibrationEnabled = myAppState.isVibrationEnabled,
+                            scrollBehavior = scrollBehavior
+                        )
+                    }
                 },
                 bottomBar = { },
-                floatingActionButton = { },
-                contentWindowInsets = WindowInsets(0, 0, 0, 0)
+                floatingActionButton = { }
             ) { innerPadding ->
-                val boxModifier = if (pullToRefreshEnabled) {
-                    Modifier
-                        .padding(innerPadding)
-                        .nestedScroll(pullRefreshState.nestedScrollConnection)
-                } else {
-                    Modifier.padding(innerPadding)
-                }
-                Box(modifier = boxModifier) {
-                    if (myAppState.hasPermissions) {
-                        MyAppNavigation(
-                            myAppState = myAppState,
-                            isNavBarVisible = isNavBarVisible 
-                        )
+                val isViewer = myAppState.currentScreen is Screen.MediaViewer
+                val boxModifier = if (isViewer) Modifier else Modifier.padding(innerPadding)
 
-                    } else {
-                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                Text(stringResource(id = R.string.permission_required_message))
-                                Spacer(Modifier.height(8.dp))
-                                Button(onClick = {
-                                    if (myAppState.isVibrationEnabled) performVibration(context)
-                                    permissionLauncher.launch(myAppState.permissionsToRequest)
-                                }) {
-                                    Text(stringResource(id = R.string.grant_permission_button))
+                if (pullToRefreshEnabled) {
+                    PullToRefreshBox(
+                        isRefreshing = isRefreshing,
+                        onRefresh = { isRefreshing = true },
+                        modifier = boxModifier
+                    ) {
+                        if (myAppState.hasPermissions) {
+                            MyAppNavigation(
+                                myAppState = myAppState,
+                                isNavBarVisible = isNavBarVisible 
+                            )
+                        } else {
+                            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Text(stringResource(id = R.string.permission_required_message))
+                                    Spacer(Modifier.height(8.dp))
+                                    Button(onClick = {
+                                        if (myAppState.isVibrationEnabled) performVibration(context)
+                                        permissionLauncher.launch(myAppState.permissionsToRequest)
+                                    }) {
+                                        Text(stringResource(id = R.string.grant_permission_button))
+                                    }
                                 }
                             }
                         }
                     }
-                    
-                    if (pullToRefreshEnabled) {
-                        PullToRefreshContainer(
-                            modifier = Modifier
-                                .align(Alignment.TopCenter)
-                                .graphicsLayer {
-                                    val isCollapsed = scrollBehavior.state.collapsedFraction > 0.1f
-                                    val isActivelyRefreshing = pullRefreshState.isRefreshing || pullRefreshState.verticalOffset > 0.5f
-                                    this.alpha = if (isCollapsed || !isActivelyRefreshing) 0f else 1f
-                                },
-                            state = pullRefreshState,
-                        )
+                } else {
+                    Box(modifier = boxModifier) {
+                        if (myAppState.hasPermissions) {
+                            MyAppNavigation(
+                                myAppState = myAppState,
+                                isNavBarVisible = isNavBarVisible 
+                            )
+                        } else {
+                            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Text(stringResource(id = R.string.permission_required_message))
+                                    Spacer(Modifier.height(8.dp))
+                                    Button(onClick = {
+                                        if (myAppState.isVibrationEnabled) performVibration(context)
+                                        permissionLauncher.launch(myAppState.permissionsToRequest)
+                                    }) {
+                                        Text(stringResource(id = R.string.grant_permission_button))
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -614,30 +630,6 @@ fun MyApp(myAppState: MyAppState, initialUri: Uri? = null, screenWidth: Int, scr
                 }
             }
 
-            if (myAppState.viewerState != null) {
-                BackHandler { myAppState.viewerState = null }
-                val isTrashViewing = myAppState.viewerState?.items?.map { it.uri }?.intersect(myAppState.trashedItems.map { it.uri }.toSet())?.isNotEmpty() ?: false
-                MediaViewer(
-                    myAppState = myAppState,
-                    items = myAppState.viewerState!!.items,
-                    startIndex = myAppState.viewerState!!.startIndex,
-                    favorites = favorites,
-                    imageLoader = imageLoader,
-                    isExternal = myAppState.viewerState!!.isExternal,
-                    isTrashMode = isTrashViewing
-                )
-             }
-             if (myAppState.secretViewerState != null) {
-                 BackHandler { myAppState.secretViewerState = null }
-                MediaViewer(
-                    myAppState = myAppState,
-                    items = myAppState.secretViewerState!!.items,
-                    startIndex = myAppState.secretViewerState!!.startIndex,
-                    favorites = mutableListOf(), 
-                    imageLoader = imageLoader,
-                    isSecretMode = true
-                )
-             }
          }
      }
  }
